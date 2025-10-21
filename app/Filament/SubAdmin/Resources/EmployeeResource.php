@@ -31,6 +31,40 @@ class EmployeeResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Employees';
 
+    // Permission checks
+    public static function canViewAny(): bool
+    {
+        return Auth::user()->can('view_employees');
+    }
+
+    public static function canCreate(): bool
+    {
+        return Auth::user()->can('create_employees');
+    }
+
+    public static function canEdit($record): bool
+    {
+        // Prevent editing sub-admins (only allow editing employees)
+        if ($record->role === 'subadmin') {
+            return false;
+        }
+        return Auth::user()->can('edit_employees');
+    }
+
+    public static function canDelete($record): bool
+    {
+        // Prevent deleting sub-admins (only allow deleting employees)
+        if ($record->role === 'subadmin') {
+            return false;
+        }
+        return Auth::user()->can('delete_employees');
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        return Auth::user()->can('delete_employees');
+    }
+
     public static function form(Schema $schema): Schema
     {
         return $schema
@@ -59,7 +93,13 @@ class EmployeeResource extends Resource
                             ->default('employee'),
 
                         Forms\Components\Hidden::make('tenant_id')
-                            ->default(fn() => Auth::id()),
+                            ->default(function () {
+                                // Sub-admins set their own ID as tenant
+                                // Employees inherit their tenant_id
+                                return Auth::user()->role === 'subadmin'
+                                    ? Auth::id()
+                                    : Auth::user()->tenant_id;
+                            }),
 
                         Forms\Components\Toggle::make('is_active')
                             ->label('Active')
@@ -67,7 +107,25 @@ class EmployeeResource extends Resource
                             ->required(),
 
                         Forms\Components\Select::make('roles')
-                            ->relationship('roles', 'name')
+                            ->relationship(
+                                'roles',
+                                'name',
+                                function ($query) {
+                                    $user = Auth::user();
+
+                                    if ($user->role === 'subadmin') {
+                                        // Sub-admins see Administrator and their own tenant's roles
+                                        return $query->where(function ($q) use ($user) {
+                                            $q->whereNull('tenant_id') // Administrator
+                                                ->orWhere('tenant_id', $user->id);
+                                        });
+                                    } else {
+                                        // Employees see only their tenant's roles (not Administrator)
+                                        return $query->where('tenant_id', $user->tenant_id)
+                                            ->where('name', '!=', 'Administrator');
+                                    }
+                                }
+                            )
                             ->multiple()
                             ->preload()
                             ->searchable()
@@ -129,9 +187,19 @@ class EmployeeResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
-            ->where('role', 'employee')
-            ->where('tenant_id', Auth::id());
+        // Sub-admins see all employees under them
+        // Employees only see other employees (not sub-admins)
+        $query = parent::getEloquentQuery();
+
+        if (Auth::user()->role === 'subadmin') {
+            // Sub-admins see all their employees
+            return $query->where('role', 'employee')
+                ->where('tenant_id', Auth::id());
+        } else {
+            // Employees see only other employees (same tenant)
+            return $query->where('role', 'employee')
+                ->where('tenant_id', Auth::user()->tenant_id);
+        }
     }
 
     public static function getRelations(): array

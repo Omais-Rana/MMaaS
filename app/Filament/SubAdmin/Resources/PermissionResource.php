@@ -15,6 +15,7 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Illuminate\Support\Facades\Auth;
 
 class PermissionResource extends Resource
 {
@@ -25,6 +26,35 @@ class PermissionResource extends Resource
     protected static ?string $navigationLabel = 'Permissions';
 
     protected static string|\UnitEnum|null $navigationGroup = 'Access Control';
+
+    // Hide from navigation - permissions are managed through roles
+    protected static bool $shouldRegisterNavigation = false;
+
+    // Permission checks
+    public static function canViewAny(): bool
+    {
+        return Auth::user()->can('view_permissions');
+    }
+
+    public static function canCreate(): bool
+    {
+        return Auth::user()->can('create_permissions');
+    }
+
+    public static function canEdit($record): bool
+    {
+        return Auth::user()->can('edit_permissions');
+    }
+
+    public static function canDelete($record): bool
+    {
+        return Auth::user()->can('delete_permissions');
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        return Auth::user()->can('delete_permissions');
+    }
 
     public static function form(Schema $schema): Schema
     {

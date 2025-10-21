@@ -16,6 +16,8 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Eloquent\Builder;
 
 class RoleResource extends Resource
 {
@@ -23,9 +25,43 @@ class RoleResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-shield-check';
 
-    protected static ?string $navigationLabel = 'Roles';
+    protected static ?string $navigationLabel = 'Roles & Permissions';
 
     protected static string|\UnitEnum|null $navigationGroup = 'Access Control';
+
+    // Permission checks
+    public static function canViewAny(): bool
+    {
+        return Auth::user()->can('view_roles');
+    }
+
+    public static function canCreate(): bool
+    {
+        return Auth::user()->can('create_roles');
+    }
+
+    public static function canEdit($record): bool
+    {
+        // Employees cannot edit the Administrator role
+        if (Auth::user()->role === 'employee' && $record->name === 'Administrator') {
+            return false;
+        }
+        return Auth::user()->can('edit_roles');
+    }
+
+    public static function canDelete($record): bool
+    {
+        // Employees cannot delete the Administrator role
+        if (Auth::user()->role === 'employee' && $record->name === 'Administrator') {
+            return false;
+        }
+        return Auth::user()->can('delete_roles');
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        return Auth::user()->can('delete_roles');
+    }
 
     public static function form(Schema $schema): Schema
     {
@@ -39,6 +75,15 @@ class RoleResource extends Resource
                             ->maxLength(255)
                             ->helperText('Enter a unique role name (e.g., Manager, Editor)')
                             ->columnSpanFull(),
+
+                        Forms\Components\Hidden::make('tenant_id')
+                            ->default(function () {
+                                // Sub-admins set their own ID as tenant
+                                // Employees inherit their tenant_id
+                                return Auth::user()->role === 'subadmin'
+                                    ? Auth::id()
+                                    : Auth::user()->tenant_id;
+                            }),
                     ]),
 
                 Section::make('Permissions')
@@ -86,17 +131,32 @@ class RoleResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('name')
+                    ->label('Role Name')
                     ->searchable()
+                    ->sortable()
+                    ->weight('bold'),
+
+                Tables\Columns\TextColumn::make('permissions_count')
+                    ->counts('permissions')
+                    ->label('Permissions')
+                    ->badge()
+                    ->color('success')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('permissions.name')
-                    ->label('Permissions')
+                    ->label('Permission Details')
                     ->badge()
-                    ->searchable(),
+                    ->separator(',')
+                    ->limit(3)
+                    ->searchable()
+                    ->toggleable()
+                    ->wrap(),
 
                 Tables\Columns\TextColumn::make('users_count')
                     ->counts('users')
-                    ->label('Users')
+                    ->label('Assigned Users')
+                    ->badge()
+                    ->color('info')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('created_at')
@@ -116,6 +176,28 @@ class RoleResource extends Resource
                     DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        $user = Auth::user();
+
+        // Scope roles by tenant
+        if ($user->role === 'subadmin') {
+            // Sub-admins see Administrator role (null tenant_id) and their own roles
+            $query->where(function ($q) use ($user) {
+                $q->whereNull('tenant_id') // Administrator role
+                    ->orWhere('tenant_id', $user->id); // Their own roles
+            });
+        } elseif ($user->role === 'employee') {
+            // Employees see only roles from their tenant (not Administrator)
+            $query->where('tenant_id', $user->tenant_id)
+                ->where('name', '!=', 'Administrator');
+        }
+
+        return $query;
     }
 
     public static function getRelations(): array
