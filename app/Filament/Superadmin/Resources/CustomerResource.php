@@ -36,6 +36,7 @@ class CustomerResource extends Resource
         return $schema
             ->components([
                 Section::make('Customer Information')
+                    ->maxWidth('md')
                     ->schema([
                         Forms\Components\TextInput::make('name')
                             ->required()
@@ -53,7 +54,7 @@ class CustomerResource extends Resource
                             ->dehydrated(fn($state) => filled($state))
                             ->required(fn(string $context): bool => $context === 'create')
                             ->maxLength(255)
-                            ->helperText('Leave blank to keep current password'),
+                            ->helperText(fn(string $context): ?string => $context === 'edit' ? 'Leave blank to keep current password' : null),
 
                         Forms\Components\Hidden::make('role')
                             ->default('customer'),
@@ -63,7 +64,6 @@ class CustomerResource extends Resource
                             ->default(true)
                             ->required(),
                     ])
-                    ->columns(2),
             ]);
     }
 
@@ -83,11 +83,6 @@ class CustomerResource extends Resource
                     ->label('Active')
                     ->boolean()
                     ->sortable(),
-
-                Tables\Columns\TextColumn::make('roles.name')
-                    ->label('Roles')
-                    ->badge()
-                    ->searchable(),
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()

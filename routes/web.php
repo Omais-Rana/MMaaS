@@ -1,7 +1,7 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
@@ -25,6 +25,26 @@ Route::get('/login', function () {
     // Redirect to user panel login
     return redirect('/user/login');
 })->name('login');
+
+// Unified registration - redirect to user registration
+Route::get('/register', fn() => redirect('/user/register'))->name('register');
+
+// Dashboard route - redirect to appropriate panel based on role
+Route::get('/dashboard', function () {
+    if (Auth::check()) {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        return match ($user->role) {
+            'superadmin' => redirect('/user'),
+            'subadmin', 'employee' => redirect('/panel'),
+            'customer' => redirect('/portal'),
+            default => redirect('/'),
+        };
+    }
+
+    return redirect('/login');
+})->name('dashboard');
 
 // Redirect panel-specific logins to unified login
 Route::get('/panel/login', fn() => redirect('/login'));

@@ -9,11 +9,14 @@ use Filament\Resources\Pages\ListRecords;
 class ListCustomers extends ListRecords
 {
     protected static string $resource = CustomerResource::class;
+    protected static ?string $title = 'Manage Customers';
 
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
+            Actions\CreateAction::make()
+                ->label('Add Customer')
+                ->createAnother(false),
         ];
     }
 }

@@ -10,6 +10,8 @@ class CreateRole extends CreateRecord
 {
     protected static string $resource = RoleResource::class;
 
+    protected static bool $canCreateAnother = false;
+
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         // Ensure tenant_id is set correctly

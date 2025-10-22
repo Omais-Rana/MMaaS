@@ -27,7 +27,10 @@ class SuperadminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('user')
+            ->brandName('Dashboard')
             ->login(\App\Filament\Superadmin\Pages\Auth\Login::class)
+            ->registration(\App\Filament\Customer\Pages\Auth\Register::class)
+            ->breadcrumbs(false)
             ->colors([
                 'primary' => Color::Amber,
             ])
@@ -56,6 +59,7 @@ class SuperadminPanelProvider extends PanelProvider
                 Authenticate::class,
                 \App\Http\Middleware\RedirectNonSuperadmin::class,
             ])
-            ->brandName('Dashboard');
+            ->resourceCreatePageRedirect('index')
+            ->resourceEditPageRedirect('index');
     }
 }

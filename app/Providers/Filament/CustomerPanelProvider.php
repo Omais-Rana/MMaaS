@@ -29,6 +29,8 @@ class CustomerPanelProvider extends PanelProvider
             ->registration()
             ->passwordReset()
             ->emailVerification()
+            ->profile()
+            ->brandName('Customer Portal')
             ->colors([
                 'primary' => Color::Green,
             ])
@@ -55,6 +57,7 @@ class CustomerPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ])
-            ->brandName('Customer Portal');
+            ->resourceCreatePageRedirect('index')
+            ->resourceEditPageRedirect('index');
     }
 }

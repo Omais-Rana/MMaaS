@@ -27,6 +27,7 @@ class SubAdminPanelProvider extends PanelProvider
             ->id('panel')
             ->path('panel')
             ->login()
+            ->brandName('Management Panel')
             ->colors([
                 'primary' => Color::Blue,
             ])
@@ -54,6 +55,7 @@ class SubAdminPanelProvider extends PanelProvider
                 Authenticate::class,
                 ApplyTenantScopes::class,
             ])
-            ->brandName('Management Panel');
+            ->resourceCreatePageRedirect('index')
+            ->resourceEditPageRedirect('index');
     }
 }

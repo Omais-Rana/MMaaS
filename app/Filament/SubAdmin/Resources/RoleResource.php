@@ -147,7 +147,6 @@ class RoleResource extends Resource
                     ->label('Permission Details')
                     ->badge()
                     ->separator(',')
-                    ->limit(3)
                     ->searchable()
                     ->toggleable()
                     ->wrap(),

@@ -25,17 +25,18 @@ class SubAdminResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-user-group';
 
-    protected static ?string $navigationLabel = 'Sub-Admins';
+    protected static ?string $navigationLabel = 'Operators';
 
-    protected static ?string $modelLabel = 'Sub-Admin';
+    protected static ?string $modelLabel = 'Operator';
 
-    protected static ?string $pluralModelLabel = 'Sub-Admins';
+    protected static ?string $pluralModelLabel = 'Operators';
 
     public static function form(Schema $schema): Schema
     {
         return $schema
             ->components([
-                Section::make('Sub-Admin Information')
+                Section::make('Operator Information')
+                    ->maxWidth('md')
                     ->schema([
                         Forms\Components\TextInput::make('name')
                             ->required()
@@ -53,7 +54,7 @@ class SubAdminResource extends Resource
                             ->dehydrated(fn($state) => filled($state))
                             ->required(fn(string $context): bool => $context === 'create')
                             ->maxLength(255)
-                            ->helperText('Leave blank to keep current password'),
+                            ->helperText(fn(string $context): ?string => $context === 'edit' ? 'Leave blank to keep current password' : null),
 
                         Forms\Components\Hidden::make('role')
                             ->default('subadmin'),
@@ -62,8 +63,7 @@ class SubAdminResource extends Resource
                             ->label('Active')
                             ->default(true)
                             ->required(),
-                    ])
-                    ->columns(2),
+                    ]),
             ]);
     }
 
@@ -72,6 +72,7 @@ class SubAdminResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('name')
+                    ->label('Service')
                     ->searchable()
                     ->sortable(),
 
@@ -79,14 +80,14 @@ class SubAdminResource extends Resource
                     ->searchable()
                     ->sortable(),
 
-                Tables\Columns\IconColumn::make('is_active')
-                    ->label('Active')
-                    ->boolean()
-                    ->sortable(),
-
                 Tables\Columns\TextColumn::make('employees_count')
                     ->counts('employees')
                     ->label('Employees')
+                    ->sortable(),
+
+                Tables\Columns\IconColumn::make('is_active')
+                    ->label('Active')
+                    ->boolean()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('created_at')

@@ -9,6 +9,8 @@ class CreateSubAdmin extends CreateRecord
 {
     protected static string $resource = SubAdminResource::class;
 
+    protected static bool $canCreateAnother = false;
+
     protected function afterCreate(): void
     {
         // Automatically assign Administrator role to new sub-admins
