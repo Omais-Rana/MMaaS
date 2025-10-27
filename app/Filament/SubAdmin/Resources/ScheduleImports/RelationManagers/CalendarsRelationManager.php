@@ -2,6 +2,7 @@
 
 namespace App\Filament\SubAdmin\Resources\ScheduleImports\RelationManagers;
 
+use App\Models\CalendarDate;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -70,10 +71,51 @@ class CalendarsRelationManager extends RelationManager
                     ->formatStateUsing(fn (bool $state): string => $state ? '✓' : '—')
                     ->color(fn (bool $state): string => $state ? 'success' : 'gray')
                     ->alignCenter(),
+                TextColumn::make('exceptions')
+                    ->label(__('schedules.calendar_exceptions'))
+                    ->getStateUsing(function ($record) {
+                        $scheduleImportId = $this->getOwnerRecord()->id;
+                        $exceptionCount = CalendarDate::where('service_id', $record->service_id)
+                            ->where('schedule_import_id', $scheduleImportId)
+                            ->count();
+
+                        return $exceptionCount > 0 ? $exceptionCount : null;
+                    })
+                    ->badge()
+                    ->color('info')
+                    ->placeholder('—')
+                    ->tooltip(fn ($record) => $this->getExceptionTooltip($record))
+                    ->alignCenter(),
             ])
             ->defaultSort('service_id')
             ->striped()
             ->paginated([10, 25, 50])
             ->emptyStateDescription(__('schedules.calendar_empty_state'));
+    }
+
+    protected function getExceptionTooltip($record): ?string
+    {
+        $scheduleImportId = $this->getOwnerRecord()->id;
+        $exceptions = CalendarDate::where('service_id', $record->service_id)
+            ->where('schedule_import_id', $scheduleImportId)
+            ->orderBy('date')
+            ->limit(10)
+            ->get();
+
+        if ($exceptions->isEmpty()) {
+            return null;
+        }
+
+        $tooltip = "Exception dates:\n";
+        foreach ($exceptions as $exception) {
+            $type = $exception->exception_type === 1 ? 'Added' : 'Removed';
+            $tooltip .= "{$exception->date->format('M d, Y')} ({$type})\n";
+        }
+
+        if ($exceptions->count() === 10) {
+            $tooltip .= '... and more';
+        }
+
+        return $tooltip;
     }
 }

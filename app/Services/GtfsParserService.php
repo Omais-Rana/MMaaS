@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Calendar;
+use App\Models\CalendarDate;
 use App\Models\Route;
 use App\Models\ScheduleImport;
 use App\Models\Stop;
@@ -29,7 +30,7 @@ class GtfsParserService
     public function __construct(ScheduleImport $import)
     {
         $this->import = $import;
-        $this->extractPath = storage_path('app/temp/gtfs-' . uniqid());
+        $this->extractPath = storage_path('app/temp/gtfs-'.uniqid());
     }
 
     public function parse(string $filePath): array
@@ -44,6 +45,7 @@ class GtfsParserService
             $this->parseTrips();
             $this->parseStopTimes();
             $this->parseCalendar();
+            $this->parseCalendarDates();
 
             DB::commit();
 
@@ -82,7 +84,7 @@ class GtfsParserService
 
     protected function parseRoutes(): void
     {
-        $file = $this->extractPath . '/routes.txt';
+        $file = $this->extractPath.'/routes.txt';
 
         if (! file_exists($file)) {
             Log::warning('routes.txt not found in GTFS archive');
@@ -111,7 +113,7 @@ class GtfsParserService
 
     protected function parseStops(): void
     {
-        $file = $this->extractPath . '/stops.txt';
+        $file = $this->extractPath.'/stops.txt';
 
         if (! file_exists($file)) {
             Log::warning('stops.txt not found in GTFS archive');
@@ -132,7 +134,7 @@ class GtfsParserService
                 'stop_lon' => ! empty($row['stop_lon']) ? (float) $row['stop_lon'] : 0,
                 'zone_id' => ! empty($row['zone_id']) ? $row['zone_id'] : null,
                 'stop_code' => ! empty($row['stop_code']) ? $row['stop_code'] : null,
-                'wheelchair_boarding' => ! empty($row['wheelchair_boarding']) ? (int) $row['wheelchair_boarding'] : null,
+                'wheelchair_boarding' => isset($row['wheelchair_boarding']) && $row['wheelchair_boarding'] !== '' ? (int) $row['wheelchair_boarding'] : 2,
             ]);
 
             $this->stats['stops']++;
@@ -141,7 +143,7 @@ class GtfsParserService
 
     protected function parseTrips(): void
     {
-        $file = $this->extractPath . '/trips.txt';
+        $file = $this->extractPath.'/trips.txt';
 
         if (! file_exists($file)) {
             Log::warning('trips.txt not found in GTFS archive');
@@ -171,7 +173,7 @@ class GtfsParserService
                 'trip_headsign' => ! empty($row['trip_headsign']) ? $row['trip_headsign'] : null,
                 'trip_short_name' => ! empty($row['trip_short_name']) ? $row['trip_short_name'] : null,
                 'direction_id' => ! empty($row['direction_id']) ? (int) $row['direction_id'] : 0,
-                'wheelchair_accessible' => ! empty($row['wheelchair_accessible']) ? (int) $row['wheelchair_accessible'] : null,
+                'wheelchair_accessible' => isset($row['wheelchair_accessible']) && $row['wheelchair_accessible'] !== '' ? (int) $row['wheelchair_accessible'] : 2,
             ]);
 
             $this->stats['trips']++;
@@ -180,7 +182,7 @@ class GtfsParserService
 
     protected function parseStopTimes(): void
     {
-        $file = $this->extractPath . '/stop_times.txt';
+        $file = $this->extractPath.'/stop_times.txt';
 
         if (! file_exists($file)) {
             Log::warning('stop_times.txt not found in GTFS archive');
@@ -241,7 +243,7 @@ class GtfsParserService
 
     protected function parseCalendar(): void
     {
-        $file = $this->extractPath . '/calendar.txt';
+        $file = $this->extractPath.'/calendar.txt';
 
         if (! file_exists($file)) {
             Log::warning('calendar.txt not found in GTFS archive');
@@ -265,6 +267,29 @@ class GtfsParserService
                 'sunday' => ($row['sunday'] ?? '0') === '1',
                 'start_date' => $this->parseDate($row['start_date'] ?? ''),
                 'end_date' => $this->parseDate($row['end_date'] ?? ''),
+            ]);
+        }
+    }
+
+    protected function parseCalendarDates(): void
+    {
+        $file = $this->extractPath.'/calendar_dates.txt';
+
+        if (! file_exists($file)) {
+            Log::warning('calendar_dates.txt not found in GTFS archive');
+
+            return;
+        }
+
+        $rows = $this->parseCsv($file);
+
+        foreach ($rows as $row) {
+            CalendarDate::create([
+                'tenant_id' => $this->import->tenant_id,
+                'schedule_import_id' => $this->import->id,
+                'service_id' => $row['service_id'] ?? '',
+                'date' => $this->parseDate($row['date'] ?? ''),
+                'exception_type' => ! empty($row['exception_type']) ? (int) $row['exception_type'] : 1,
             ]);
         }
     }
@@ -312,7 +337,7 @@ class GtfsParserService
     {
         // GTFS dates are in YYYYMMDD format
         if (preg_match('/^(\d{4})(\d{2})(\d{2})$/', $date, $matches)) {
-            return $matches[1] . '-' . $matches[2] . '-' . $matches[3];
+            return $matches[1].'-'.$matches[2].'-'.$matches[3];
         }
 
         return now()->format('Y-m-d');
@@ -340,7 +365,7 @@ class GtfsParserService
                 continue;
             }
 
-            if (! $this->deleteDirectory($dir . DIRECTORY_SEPARATOR . $item)) {
+            if (! $this->deleteDirectory($dir.DIRECTORY_SEPARATOR.$item)) {
                 return false;
             }
         }

@@ -72,4 +72,9 @@ class ScheduleImport extends Model
     {
         return $this->hasMany(Calendar::class);
     }
+
+    public function calendarDates(): HasMany
+    {
+        return $this->hasMany(CalendarDate::class);
+    }
 }

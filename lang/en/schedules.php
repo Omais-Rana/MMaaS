@@ -113,6 +113,7 @@ return [
     'calendar_friday' => 'Friday',
     'calendar_saturday' => 'Saturday',
     'calendar_sunday' => 'Sunday',
+    'calendar_exceptions' => 'Exceptions',
 
     // Calendar Empty State
     'calendar_empty_state' => 'This import uses exception-based scheduling (calendar_dates.txt) rather than regular service calendars. Service exceptions define specific dates when services run differently from the regular schedule.',

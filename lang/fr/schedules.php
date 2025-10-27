@@ -113,6 +113,7 @@ return [
     'calendar_friday' => 'Vendredi',
     'calendar_saturday' => 'Samedi',
     'calendar_sunday' => 'Dimanche',
+    'calendar_exceptions' => 'Exceptions',
 
     // Calendar Empty State
     'calendar_empty_state' => 'Cette importation utilise une planification basée sur les exceptions (calendar_dates.txt) plutôt que des calendriers de service réguliers. Les exceptions de service définissent des dates spécifiques où les services fonctionnent différemment de l\'horaire régulier.',
