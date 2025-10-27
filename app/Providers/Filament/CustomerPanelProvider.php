@@ -17,6 +17,7 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Filafly\Themes\Brisk\BriskTheme;
 
 class CustomerPanelProvider extends PanelProvider
 {
@@ -58,6 +59,8 @@ class CustomerPanelProvider extends PanelProvider
                 Authenticate::class,
             ])
             ->resourceCreatePageRedirect('index')
-            ->resourceEditPageRedirect('index');
+            ->resourceEditPageRedirect('index')
+            ->viteTheme('resources/css/filament/admin/theme.css')
+            ->plugin(BriskTheme::make());
     }
 }

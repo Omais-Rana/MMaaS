@@ -7,6 +7,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "filafly/brisk": "^1.0",
         "filament/filament": "^4.1",
         "filament/spatie-laravel-settings-plugin": "^4.1",
         "laravel/framework": "^12.0",

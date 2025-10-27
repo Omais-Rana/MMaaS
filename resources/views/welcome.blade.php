@@ -8,21 +8,7 @@
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700" rel="stylesheet" />
 
-    {{-- Tailwind CSS CDN --}}
-    <script src="https://cdn.tailwindcss.com"></script>
-
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', system-ui, sans-serif;
-            line-height: 1.6;
-        }
-    </style>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
 <body class="bg-white dark:bg-gray-900 text-gray-900 dark:text-white">

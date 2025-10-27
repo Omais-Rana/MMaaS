@@ -1,0 +1,4 @@
+@import '../../../../vendor/filafly/brisk/resources/css/theme.css';
+
+@source '../../../../app/Filament/Superadmin/**/*';
+@source '../../../../resources/views/filament/superadmin/**/*';
