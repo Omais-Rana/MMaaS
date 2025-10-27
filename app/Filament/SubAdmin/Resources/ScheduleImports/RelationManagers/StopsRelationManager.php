@@ -18,7 +18,8 @@ class StopsRelationManager extends RelationManager
                     ->label(__('schedules.stop_code'))
                     ->searchable()
                     ->sortable()
-                    ->weight('bold'),
+                    ->weight('bold')
+                    ->width('120px'),
                 TextColumn::make('stop_name')
                     ->label(__('schedules.stop_name'))
                     ->searchable()
@@ -30,26 +31,30 @@ class StopsRelationManager extends RelationManager
                     ->numeric(decimalPlaces: 6)
                     ->copyable()
                     ->copyMessage(__('filament-actions::copy.single.messages.copied'))
-                    ->alignEnd(),
+                    ->width('140px')
+                    ->alignCenter(),
                 TextColumn::make('stop_lon')
                     ->label(__('schedules.stop_lon'))
                     ->numeric(decimalPlaces: 6)
                     ->copyable()
                     ->copyMessage(__('filament-actions::copy.single.messages.copied'))
-                    ->alignEnd(),
+                    ->width('140px')
+                    ->alignCenter(),
                 TextColumn::make('wheelchair_boarding')
                     ->label(__('schedules.stop_wheelchair'))
                     ->badge()
-                    ->formatStateUsing(fn (?int $state): string => match ($state) {
+                    ->formatStateUsing(fn(?int $state): string => match ($state) {
                         1 => __('schedules.wheelchair_yes'),
                         0 => __('schedules.wheelchair_no'),
                         default => __('schedules.wheelchair_unknown'),
                     })
-                    ->color(fn (?int $state): string => match ($state) {
+                    ->color(fn(?int $state): string => match ($state) {
                         1 => 'success',
                         0 => 'danger',
                         default => 'gray',
-                    }),
+                    })
+                    ->width('150px')
+                    ->alignCenter(),
             ])
             ->defaultSort('stop_name')
             ->striped()

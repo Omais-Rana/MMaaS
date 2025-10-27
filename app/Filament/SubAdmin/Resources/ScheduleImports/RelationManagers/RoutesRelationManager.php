@@ -20,12 +20,15 @@ class RoutesRelationManager extends RelationManager
                     ->searchable()
                     ->sortable()
                     ->weight('bold')
-                    ->size('lg'),
+                    ->size('lg')
+                    ->width('100px'),
                 ColorColumn::make('route_color')
                     ->label(__('schedules.route_color'))
-                    ->getStateUsing(fn ($record): ?string => $record->route_color ? '#'.$record->route_color : null)
+                    ->getStateUsing(fn($record): ?string => $record->route_color ? '#' . $record->route_color : null)
                     ->copyable()
-                    ->copyMessage(__('filament-actions::copy.single.messages.copied')),
+                    ->copyMessage(__('filament-actions::copy.single.messages.copied'))
+                    ->width('80px')
+                    ->alignCenter(),
                 TextColumn::make('route_long_name')
                     ->label(__('schedules.route_destination'))
                     ->searchable()
@@ -35,7 +38,7 @@ class RoutesRelationManager extends RelationManager
                 TextColumn::make('route_type')
                     ->label(__('schedules.route_type'))
                     ->badge()
-                    ->formatStateUsing(fn (string $state): string => match ((int) $state) {
+                    ->formatStateUsing(fn(string $state): string => match ((int) $state) {
                         0 => __('schedules.type_tram'),
                         1 => __('schedules.type_subway'),
                         2 => __('schedules.type_rail'),
@@ -46,19 +49,22 @@ class RoutesRelationManager extends RelationManager
                         7 => __('schedules.type_funicular'),
                         default => 'Unknown',
                     })
-                    ->color(fn (string $state): string => match ((int) $state) {
+                    ->color(fn(string $state): string => match ((int) $state) {
                         0, 1 => 'info',
                         2 => 'warning',
                         3 => 'success',
                         4, 5 => 'primary',
                         6, 7, 11, 12 => 'gray',
                         default => 'danger',
-                    }),
+                    })
+                    ->width('120px')
+                    ->alignCenter(),
                 TextColumn::make('trips_count')
                     ->counts('trips')
                     ->label(__('schedules.route_trips_count'))
                     ->sortable()
-                    ->alignEnd(),
+                    ->width('100px')
+                    ->alignCenter(),
             ])
             ->defaultSort('route_short_name')
             ->striped()
