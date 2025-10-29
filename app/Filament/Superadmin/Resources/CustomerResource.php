@@ -16,7 +16,6 @@ use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 
 class CustomerResource extends Resource
@@ -30,6 +29,26 @@ class CustomerResource extends Resource
     protected static ?string $modelLabel = 'Customer';
 
     protected static ?string $pluralModelLabel = 'Customers';
+
+    protected static ?string $recordTitleAttribute = 'name';
+
+    public static function getGlobalSearchResultTitle($record): string
+    {
+        return $record->name;
+    }
+
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['name', 'email'];
+    }
+
+    public static function getGlobalSearchResultDetails($record): array
+    {
+        return [
+            'Email' => $record->email,
+            'Status' => $record->is_active ? 'Active' : 'Inactive',
+        ];
+    }
 
     public static function form(Schema $schema): Schema
     {
@@ -63,7 +82,7 @@ class CustomerResource extends Resource
                             ->label('Active')
                             ->default(true)
                             ->required(),
-                    ])
+                    ]),
             ]);
     }
 

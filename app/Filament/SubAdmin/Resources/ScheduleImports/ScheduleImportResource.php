@@ -10,14 +10,37 @@ use App\Models\ScheduleImport;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
-use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
 class ScheduleImportResource extends Resource
 {
     protected static ?string $model = ScheduleImport::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCloudArrowUp;
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-s-calendar-days';
+
+    protected static ?int $navigationSort = 3;
+
+    protected static ?string $recordTitleAttribute = 'filename';
+
+    public static function getGlobalSearchResultTitle($record): string
+    {
+        return $record->filename ?? 'Schedule #' . $record->id;
+    }
+
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['filename', 'status'];
+    }
+
+    public static function getGlobalSearchResultDetails($record): array
+    {
+        return [
+            'Status' => ucfirst($record->status),
+            'Uploaded' => $record->created_at->diffForHumans(),
+            'Routes' => $record->routes()->count(),
+            'Stops' => $record->stops()->count(),
+        ];
+    }
 
     public static function getNavigationLabel(): string
     {

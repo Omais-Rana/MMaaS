@@ -2,3 +2,91 @@
 
 @source '../../../../app/Filament/Superadmin/**/*';
 @source '../../../../resources/views/filament/superadmin/**/*';
+
+body {
+    @apply bg-white dark:!bg-gray-950;
+}
+
+.fi-main {
+    @apply bg-white dark:!bg-gray-950 ltr:rounded-tl-3xl rtl:rounded-tr-3xl shadow !max-w-full !overflow-y-auto flex-grow;
+}
+
+.fi-main-ctn {
+    @apply bg-primary-100 dark:bg-gray-900;
+}
+
+.fi-topbar {
+    @apply ring-0 shadow-none bg-primary-100 dark:bg-gray-800 relative;
+}
+
+/* Topbar items */
+.fi-topbar-item .fi-topbar-item-btn {
+    @apply rounded-full px-4;
+}
+
+.fi-topbar-item.fi-active .fi-topbar-item-btn {
+    @apply bg-primary-600 dark:bg-primary-500 transition-all duration-300 rounded-full shadow-sm;
+}
+
+.fi-topbar-item.fi-active .fi-topbar-item-label,
+.fi-topbar-item.fi-active .fi-topbar-item-icon,
+.fi-topbar-item.fi-active .fi-topbar-group-toggle-icon {
+    @apply text-primary-50;
+}
+
+.fi-topbar-item .fi-topbar-item-btn .fi-badge {
+    @apply rounded-full bg-primary-600 dark:bg-primary-500 text-white;
+}
+
+.fi-topbar-item.fi-active .fi-topbar-item-btn .fi-badge {
+    @apply bg-primary-50 text-primary-900;
+}
+
+.fi-topbar-nav-groups .fi-dropdown .fi-badge {
+    @apply rounded-full bg-primary-600 dark:bg-primary-500 text-white;
+}
+
+.fi-page-header-main-ctn .fi-header .fi-header-heading {
+    position: relative !important;
+    display: inline-block !important;
+    isolation: isolate !important;
+}
+
+.fi-page-header-main-ctn .fi-header .fi-header-heading::after {
+    content: '' !important;
+    position: absolute !important;
+    z-index: -1 !important;
+    left: -0.25rem !important;
+    right: -0.25rem !important;
+    bottom: 0.25rem !important;
+    border-radius: 9999px !important;
+    height: 0.375rem !important;
+}
+
+.fi-sidebar-header {
+    @apply bg-transparent ring-0 shadow-none;
+}
+
+.fi-sidebar-nav{
+    @apply !bg-primary-100 dark:!bg-gray-900;
+}
+
+.fi-sidebar-item-active a {
+    @apply bg-primary-600 dark:bg-primary-950/70 hover:bg-primary-600 dark:hover:bg-primary-950/70 text-white dark:text-white;
+}
+
+.fi-sidebar-item-active .fi-sidebar-item-label {
+    @apply text-white dark:text-white;
+}
+
+.fi-sidebar-item-active svg {
+    @apply text-white dark:text-white;
+}
+
+.fi-sidebar-item:not(.fi-sidebar-item-active) a {
+    @apply dark:text-gray-400 hover:bg-primary-200 dark:hover:bg-primary-800/50 dark:hover:text-white;
+}
+
+.fi-sidebar-item:not(.fi-sidebar-item-active):hover a svg {
+    @apply dark:text-white;
+}

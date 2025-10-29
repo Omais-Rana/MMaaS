@@ -2,15 +2,15 @@
 
 return [
     // Navigation & Titles
-    'navigation_label' => 'Importations d\'Horaires',
+    'navigation_label' => 'Horaires',
     'navigation_group' => 'Gestion des Horaires',
-    'model_label' => 'Importation d\'Horaire',
-    'plural_label' => 'Importations d\'Horaires',
+    'model_label' => 'Horaire',
+    'plural_label' => 'Horaires',
 
     // Resource Pages
-    'create_title' => 'Télécharger un Horaire',
-    'list_title' => 'Importations d\'Horaires',
-    'view_title' => 'Voir l\'Importation d\'Horaire',
+    'create_title' => 'Importer un Horaire',
+    'list_title' => 'Horaires',
+    'view_title' => 'Voir l\'Horaire',
 
     // Form Fields
     'file_label' => 'Fichier GTFS',
@@ -62,6 +62,7 @@ return [
     'route_line' => 'Ligne',
     'route_destination' => 'Destination',
     'route_type' => 'Type',
+    'route_type_description' => 'Type de Service: :type',
     'route_color' => 'Couleur',
     'route_trips_count' => 'Nb. Trajets',
 
@@ -106,6 +107,9 @@ return [
     'calendar_service' => 'ID Service',
     'calendar_start' => 'Date de Début',
     'calendar_end' => 'Date de Fin',
+    'calendar_active_days' => 'Jours Actifs',
+    'calendar_exceptions' => 'Exceptions',
+    'calendar_operating_dates' => '# Dates',
     'calendar_monday' => 'Lundi',
     'calendar_tuesday' => 'Mardi',
     'calendar_wednesday' => 'Mercredi',
@@ -113,7 +117,42 @@ return [
     'calendar_friday' => 'Vendredi',
     'calendar_saturday' => 'Samedi',
     'calendar_sunday' => 'Dimanche',
-    'calendar_exceptions' => 'Exceptions',
+    'calendar_period_description' => 'Période d\'horaire : :start au :end',
+
+    // Day Abbreviations
+    'day_mon' => 'Lun',
+    'day_tue' => 'Mar',
+    'day_wed' => 'Mer',
+    'day_thu' => 'Jeu',
+    'day_fri' => 'Ven',
+    'day_sat' => 'Sam',
+    'day_sun' => 'Dim',
+
+    // Calendar Patterns
+    'calendar_pattern_weekdays' => 'Jours de semaine (Lun-Ven)',
+    'calendar_pattern_saturday' => 'Samedi seulement',
+    'calendar_pattern_sunday' => 'Dimanche seulement',
+    'calendar_pattern_daily' => 'Quotidien (tous les jours)',
+    'calendar_pattern_custom' => 'Modèle d\'horaire personnalisé',
+    'calendar_exception_based' => 'Basé sur exceptions',
+
+    // Exception Details
+    'view_schedule_details' => 'Voir les Détails',
+    'schedule_details_for_service' => 'Détails d\'Horaire pour :service',
+    'exceptions_removed' => 'Exceptions de Service (Jours Fermés)',
+    'exceptions_removed_description' => 'Le service ne fonctionne PAS à ces dates',
+    'exceptions_added' => 'Dates d\'Opération',
+    'exceptions_added_description' => 'Le service fonctionne à ces dates spécifiques (pour horaires basés sur exceptions)',
+    'view_dates' => 'Voir les Dates',
+    'operating_dates_for_service' => 'Dates d\'Opération pour :service',
+    'operating_dates' => 'Dates d\'Opération',
+    'operating_dates_description' => 'Le service fonctionne à ces dates spécifiques',
+    'non_operating_dates' => 'Dates Non-Opérationnelles',
+    'non_operating_dates_description' => 'Le service ne fonctionne PAS à ces dates',
+    'view_exceptions' => 'Voir les Exceptions',
+    'exceptions_for_service' => 'Exceptions pour :service',
+    'exception_dates' => 'Dates',
+    'close' => 'Fermer',
 
     // Calendar Empty State
     'calendar_empty_state' => 'Cette importation utilise une planification basée sur les exceptions (calendar_dates.txt) plutôt que des calendriers de service réguliers. Les exceptions de service définissent des dates spécifiques où les services fonctionnent différemment de l\'horaire régulier.',

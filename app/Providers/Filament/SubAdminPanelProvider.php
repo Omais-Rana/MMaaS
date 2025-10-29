@@ -29,14 +29,18 @@ class SubAdminPanelProvider extends PanelProvider
         return $panel
             ->id('panel')
             ->path('panel')
-            ->login()
+            ->login(\App\Filament\SubAdmin\Pages\Auth\Login::class)
             ->brandName('Management Panel')
+            ->globalSearch(true)
+            ->globalSearchKeyBindings(['command+k', 'ctrl+k'])
+            ->databaseNotifications()
+            ->databaseNotificationsPolling('10s')
             ->colors([
                 'primary' => Color::Blue,
             ])
             ->renderHook(
-                PanelsRenderHook::USER_MENU_BEFORE,
-                fn (): string => Blade::render('@livewire(\'language-switcher-action\')')
+                PanelsRenderHook::GLOBAL_SEARCH_BEFORE,
+                fn(): string => Blade::render('@livewire(\'language-switcher-action\')')
             )
             ->discoverResources(in: app_path('Filament/SubAdmin/Resources'), for: 'App\Filament\SubAdmin\Resources')
             ->discoverPages(in: app_path('Filament/SubAdmin/Pages'), for: 'App\Filament\SubAdmin\Pages')

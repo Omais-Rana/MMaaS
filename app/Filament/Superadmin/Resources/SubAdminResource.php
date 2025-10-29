@@ -5,19 +5,18 @@ namespace App\Filament\Superadmin\Resources;
 use App\Filament\Superadmin\Resources\SubAdminResource\Pages;
 use App\Models\User;
 use BackedEnum;
-use Filament\Forms;
-use Filament\Schemas\Components\Section;
-use Filament\Resources\Resource;
-use Filament\Schemas\Schema;
-use Filament\Support\Enums\IconSize;
-use Filament\Tables;
-use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\Hash;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Forms;
+use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
+use Filament\Tables;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Hash;
 
 class SubAdminResource extends Resource
 {
@@ -30,6 +29,26 @@ class SubAdminResource extends Resource
     protected static ?string $modelLabel = 'Operator';
 
     protected static ?string $pluralModelLabel = 'Operators';
+
+    protected static ?string $recordTitleAttribute = 'name';
+
+    public static function getGlobalSearchResultTitle($record): string
+    {
+        return $record->name;
+    }
+
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['name', 'email'];
+    }
+
+    public static function getGlobalSearchResultDetails($record): array
+    {
+        return [
+            'Email' => $record->email,
+            'Status' => $record->is_active ? 'Active' : 'Inactive',
+        ];
+    }
 
     public static function form(Schema $schema): Schema
     {

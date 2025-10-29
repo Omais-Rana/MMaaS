@@ -5,19 +5,19 @@ namespace App\Filament\SubAdmin\Resources;
 use App\Filament\SubAdmin\Resources\EmployeeResource\Pages;
 use App\Models\User;
 use BackedEnum;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Forms;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Filament\Schemas\Components\Section;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
 
 class EmployeeResource extends Resource
 {
@@ -30,6 +30,29 @@ class EmployeeResource extends Resource
     protected static ?string $modelLabel = 'Employee';
 
     protected static ?string $pluralModelLabel = 'Employees';
+
+    protected static ?int $navigationSort = 2;
+
+    protected static ?string $recordTitleAttribute = 'name';
+
+    public static function getGlobalSearchResultTitle($record): string
+    {
+        return $record->name;
+    }
+
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['name', 'email'];
+    }
+
+    public static function getGlobalSearchResultDetails($record): array
+    {
+        return [
+            'Email' => $record->email,
+            'Roles' => $record->roles->pluck('name')->join(', ') ?: 'No roles',
+            'Status' => $record->is_active ? 'Active' : 'Inactive',
+        ];
+    }
 
     // Permission checks
     public static function canViewAny(): bool
@@ -48,6 +71,7 @@ class EmployeeResource extends Resource
         if ($record->role === 'subadmin') {
             return false;
         }
+
         return Auth::user()->can('edit_employees');
     }
 
@@ -57,6 +81,7 @@ class EmployeeResource extends Resource
         if ($record->role === 'subadmin') {
             return false;
         }
+
         return Auth::user()->can('delete_employees');
     }
 

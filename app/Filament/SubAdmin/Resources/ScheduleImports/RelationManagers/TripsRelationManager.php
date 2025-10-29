@@ -35,6 +35,7 @@ class TripsRelationManager extends RelationManager
                     ->searchable()
                     ->sortable()
                     ->wrap()
+                    ->placeholder('N/A')
                     ->limit(50),
                 TextColumn::make('service_id')
                     ->label(__('schedules.trip_service'))
@@ -45,12 +46,12 @@ class TripsRelationManager extends RelationManager
                 TextColumn::make('direction_id')
                     ->label(__('schedules.trip_direction'))
                     ->badge()
-                    ->formatStateUsing(fn(?int $state): string => match ($state) {
+                    ->formatStateUsing(fn (?int $state): string => match ($state) {
                         0 => __('schedules.direction_outbound'),
                         1 => __('schedules.direction_inbound'),
                         default => __('schedules.direction_na'),
                     })
-                    ->color(fn(?int $state): string => match ($state) {
+                    ->color(fn (?int $state): string => match ($state) {
                         0 => 'info',
                         1 => 'warning',
                         default => 'gray',
@@ -60,12 +61,12 @@ class TripsRelationManager extends RelationManager
                 TextColumn::make('wheelchair_accessible')
                     ->label(__('schedules.trip_wheelchair'))
                     ->badge()
-                    ->formatStateUsing(fn(?int $state): string => match ($state) {
+                    ->formatStateUsing(fn (?int $state): string => match ($state) {
                         1 => __('schedules.wheelchair_yes'),
                         0 => __('schedules.wheelchair_no'),
                         default => __('schedules.wheelchair_unknown'),
                     })
-                    ->color(fn(?int $state): string => match ($state) {
+                    ->color(fn (?int $state): string => match ($state) {
                         1 => 'success',
                         0 => 'danger',
                         default => 'gray',

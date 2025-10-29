@@ -34,12 +34,16 @@ class SuperadminPanelProvider extends PanelProvider
             ->login(\App\Filament\Superadmin\Pages\Auth\Login::class)
             ->registration(\App\Filament\Customer\Pages\Auth\Register::class)
             ->breadcrumbs(false)
+            ->globalSearch(true)
+            ->globalSearchKeyBindings(['command+k', 'ctrl+k'])
+            ->databaseNotifications()
+            ->databaseNotificationsPolling('10s')
             ->colors([
                 'primary' => Color::Amber,
             ])
             ->renderHook(
-                PanelsRenderHook::USER_MENU_BEFORE,
-                fn (): string => Blade::render('@livewire(\'language-switcher-action\')')
+                PanelsRenderHook::GLOBAL_SEARCH_BEFORE,
+                fn(): string => Blade::render('@livewire(\'language-switcher-action\')')
             )
             ->discoverResources(in: app_path('Filament/Superadmin/Resources'), for: 'App\Filament\Superadmin\Resources')
             ->discoverPages(in: app_path('Filament/Superadmin/Pages'), for: 'App\Filament\Superadmin\Pages')

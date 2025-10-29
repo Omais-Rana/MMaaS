@@ -2,15 +2,15 @@
 
 return [
     // Navigation & Titles
-    'navigation_label' => 'Schedule Imports',
+    'navigation_label' => 'Schedules',
     'navigation_group' => 'Schedule Management',
-    'model_label' => 'Schedule Import',
-    'plural_label' => 'Schedule Imports',
+    'model_label' => 'Schedule',
+    'plural_label' => 'Schedules',
 
     // Resource Pages
-    'create_title' => 'Upload Schedule',
-    'list_title' => 'Schedule Imports',
-    'view_title' => 'View Schedule Import',
+    'create_title' => 'Import Schedule',
+    'list_title' => 'Schedules',
+    'view_title' => 'View Schedule',
 
     // Form Fields
     'file_label' => 'GTFS File',
@@ -62,6 +62,7 @@ return [
     'route_line' => 'Line',
     'route_destination' => 'Destination',
     'route_type' => 'Type',
+    'route_type_description' => 'Service Type: :type',
     'route_color' => 'Color',
     'route_trips_count' => '# Trips',
 
@@ -106,6 +107,9 @@ return [
     'calendar_service' => 'Service ID',
     'calendar_start' => 'Start Date',
     'calendar_end' => 'End Date',
+    'calendar_active_days' => 'Active Days',
+    'calendar_exceptions' => 'Exceptions',
+    'calendar_operating_dates' => '# Dates',
     'calendar_monday' => 'Monday',
     'calendar_tuesday' => 'Tuesday',
     'calendar_wednesday' => 'Wednesday',
@@ -113,7 +117,42 @@ return [
     'calendar_friday' => 'Friday',
     'calendar_saturday' => 'Saturday',
     'calendar_sunday' => 'Sunday',
-    'calendar_exceptions' => 'Exceptions',
+    'calendar_period_description' => 'Schedule Period: :start to :end',
+
+    // Day Abbreviations
+    'day_mon' => 'Mon',
+    'day_tue' => 'Tue',
+    'day_wed' => 'Wed',
+    'day_thu' => 'Thu',
+    'day_fri' => 'Fri',
+    'day_sat' => 'Sat',
+    'day_sun' => 'Sun',
+
+    // Calendar Patterns
+    'calendar_pattern_weekdays' => 'Weekdays (Mon-Fri)',
+    'calendar_pattern_saturday' => 'Saturday only',
+    'calendar_pattern_sunday' => 'Sunday only',
+    'calendar_pattern_daily' => 'Daily (all days)',
+    'calendar_pattern_custom' => 'Custom schedule pattern',
+    'calendar_exception_based' => 'Exception-based',
+
+    // Exception Details
+    'view_schedule_details' => 'View Details',
+    'schedule_details_for_service' => 'Schedule Details for :service',
+    'exceptions_removed' => 'Service Exceptions (Days Off)',
+    'exceptions_removed_description' => 'Service does NOT operate on these dates',
+    'exceptions_added' => 'Operating Dates',
+    'exceptions_added_description' => 'Service operates on these specific dates (for exception-based schedules)',
+    'view_dates' => 'View Dates',
+    'operating_dates_for_service' => 'Operating Dates for :service',
+    'operating_dates' => 'Operating Dates',
+    'operating_dates_description' => 'Service operates on these specific dates',
+    'non_operating_dates' => 'Non-Operating Dates',
+    'non_operating_dates_description' => 'Service does NOT operate on these dates',
+    'view_exceptions' => 'View Exceptions',
+    'exceptions_for_service' => 'Exceptions for :service',
+    'exception_dates' => 'Dates',
+    'close' => 'Close',
 
     // Calendar Empty State
     'calendar_empty_state' => 'This import uses exception-based scheduling (calendar_dates.txt) rather than regular service calendars. Service exceptions define specific dates when services run differently from the regular schedule.',

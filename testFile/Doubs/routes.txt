@@ -1,0 +1,10 @@
+﻿route_id,agency_id,route_short_name,route_long_name,route_type,route_color,route_text_color
+203,43,"203","Besançon - Pontarlier",3,,
+204,43,"204","Besançon - Pontarlier via Ornans",3,,
+206,43,"206","Pontarlier - Montbéliard",3,,
+207,43,"207","Besançon - Quingey",3,,
+201,43,"201","Besançon - Vesoul Express",3,,
+202,43,"202","Besançon - Vesoul via Rioz",3,,
+205,43,"205","Besançon - Gray",3,,
+208,43,"208","Vesoul - Gare Besançon FC TGV",3,,
+209,43,"209","Valdahon - Pontarlier",3,,

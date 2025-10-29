@@ -4,18 +4,18 @@ namespace App\Filament\SubAdmin\Resources;
 
 use App\Filament\SubAdmin\Resources\PermissionResource\Pages;
 use BackedEnum;
-use Filament\Forms;
-use Filament\Resources\Resource;
-use Filament\Schemas\Schema;
-use Filament\Schemas\Components\Section;
-use Filament\Tables;
-use Filament\Tables\Table;
-use Spatie\Permission\Models\Permission;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Forms;
+use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
+use Filament\Tables;
+use Filament\Tables\Table;
 use Illuminate\Support\Facades\Auth;
+use Spatie\Permission\Models\Permission;
 
 class PermissionResource extends Resource
 {
@@ -24,8 +24,6 @@ class PermissionResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-key';
 
     protected static ?string $navigationLabel = 'Permissions';
-
-    protected static string|\UnitEnum|null $navigationGroup = 'Access Control';
 
     // Hide from navigation - permissions are managed through roles
     protected static bool $shouldRegisterNavigation = false;

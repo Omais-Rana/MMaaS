@@ -19,6 +19,7 @@ class StopsRelationManager extends RelationManager
                     ->searchable()
                     ->sortable()
                     ->weight('bold')
+                    ->placeholder('N/A')
                     ->width('120px'),
                 TextColumn::make('stop_name')
                     ->label(__('schedules.stop_name'))
@@ -43,12 +44,12 @@ class StopsRelationManager extends RelationManager
                 TextColumn::make('wheelchair_boarding')
                     ->label(__('schedules.stop_wheelchair'))
                     ->badge()
-                    ->formatStateUsing(fn(?int $state): string => match ($state) {
+                    ->formatStateUsing(fn (?int $state): string => match ($state) {
                         1 => __('schedules.wheelchair_yes'),
                         0 => __('schedules.wheelchair_no'),
                         default => __('schedules.wheelchair_unknown'),
                     })
-                    ->color(fn(?int $state): string => match ($state) {
+                    ->color(fn (?int $state): string => match ($state) {
                         1 => 'success',
                         0 => 'danger',
                         default => 'gray',

@@ -3,12 +3,14 @@
         $currentLocale = auth()->user()->locale ?? 'en';
     @endphp
 
-    <x-filament::link wire:click="switchLanguage" tag="button" type="button"
-        class="flex items-center gap-1 cursor-pointer">
+    <x-filament::button wire:click="switchLanguage" color="gray" size="sm">
         @if ($currentLocale === 'en')
-            <span>🇫🇷 Français</span>
+            <x-filament::icon icon="heroicon-o-language" class="w-4 h-4" />
+            <span class="ml-2">Passer au Français</span>
         @else
-            <span>🇬🇧 English</span>
+            <x-filament::icon icon="heroicon-o-language" class="w-4 h-4" />
+            <span class="ml-2">Switch to English</span>
         @endif
-    </x-filament::link>
+    </x-filament::button>
+
 </div>

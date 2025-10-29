@@ -4,20 +4,20 @@ namespace App\Filament\SubAdmin\Resources;
 
 use App\Filament\SubAdmin\Resources\RoleResource\Pages;
 use BackedEnum;
-use Filament\Forms;
-use Filament\Schemas\Components\Section;
-use Filament\Resources\Resource;
-use Filament\Schemas\Schema;
-use Filament\Tables;
-use Filament\Tables\Table;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Illuminate\Support\Facades\Auth;
+use Filament\Forms;
+use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
+use Filament\Tables;
+use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class RoleResource extends Resource
 {
@@ -27,7 +27,27 @@ class RoleResource extends Resource
 
     protected static ?string $navigationLabel = 'Roles & Permissions';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Access Control';
+    protected static ?int $navigationSort = 4;
+
+    protected static ?string $recordTitleAttribute = 'name';
+
+    public static function getGlobalSearchResultTitle($record): string
+    {
+        return $record->name;
+    }
+
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['name'];
+    }
+
+    public static function getGlobalSearchResultDetails($record): array
+    {
+        return [
+            'Permissions' => $record->permissions_count ?? $record->permissions()->count(),
+            'Users' => $record->users_count ?? $record->users()->count(),
+        ];
+    }
 
     // Permission checks
     public static function canViewAny(): bool
@@ -46,6 +66,7 @@ class RoleResource extends Resource
         if (Auth::user()->role === 'employee' && $record->name === 'Administrator') {
             return false;
         }
+
         return Auth::user()->can('edit_roles');
     }
 
@@ -55,6 +76,7 @@ class RoleResource extends Resource
         if (Auth::user()->role === 'employee' && $record->name === 'Administrator') {
             return false;
         }
+
         return Auth::user()->can('delete_roles');
     }
 
@@ -106,8 +128,10 @@ class RoleResource extends Resource
                                         if (in_array($parts[1], ['roles', 'permissions'])) {
                                             return 'Access Control';
                                         }
+
                                         return $module;
                                     }
+
                                     return 'Other';
                                 });
 
@@ -118,6 +142,7 @@ class RoleResource extends Resource
                                         $options[$permission->id] = $module . ': ' . str_replace('_', ' ', ucwords($permission->name, '_'));
                                     }
                                 }
+
                                 return $options;
                             })
                             ->helperText('Check the permissions you want to assign to this role'),

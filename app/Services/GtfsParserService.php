@@ -30,7 +30,7 @@ class GtfsParserService
     public function __construct(ScheduleImport $import)
     {
         $this->import = $import;
-        $this->extractPath = storage_path('app/temp/gtfs-' . uniqid());
+        $this->extractPath = storage_path('app/temp/gtfs-'.uniqid());
     }
 
     public function parse(string $filePath): array
@@ -84,7 +84,7 @@ class GtfsParserService
 
     protected function parseRoutes(): void
     {
-        $file = $this->extractPath . '/routes.txt';
+        $file = $this->extractPath.'/routes.txt';
 
         if (! file_exists($file)) {
             Log::warning('routes.txt not found in GTFS archive');
@@ -95,10 +95,15 @@ class GtfsParserService
         $rows = $this->parseCsv($file);
 
         foreach ($rows as $row) {
+            // Validate required field
+            if (empty($row['route_id'])) {
+                throw new Exception('Invalid GTFS data: route_id is required but missing in routes.txt');
+            }
+
             Route::create([
                 'tenant_id' => $this->import->tenant_id,
                 'schedule_import_id' => $this->import->id,
-                'route_id' => $row['route_id'] ?? '',
+                'route_id' => $row['route_id'],
                 'route_short_name' => ! empty($row['route_short_name']) ? $row['route_short_name'] : null,
                 'route_long_name' => $row['route_long_name'] ?? '',
                 'route_type' => $row['route_type'] ?? '',
@@ -113,7 +118,7 @@ class GtfsParserService
 
     protected function parseStops(): void
     {
-        $file = $this->extractPath . '/stops.txt';
+        $file = $this->extractPath.'/stops.txt';
 
         if (! file_exists($file)) {
             Log::warning('stops.txt not found in GTFS archive');
@@ -122,12 +127,44 @@ class GtfsParserService
         }
 
         $rows = $this->parseCsv($file);
+        $rowNumber = 1; // Start at 1 because header is row 0
 
         foreach ($rows as $row) {
+            $rowNumber++;
+
+            // Validate required field - trim and check
+            $stopId = trim($row['stop_id'] ?? '');
+
+            // Log every stop_id to debug
+            if ($rowNumber <= 5 || empty($stopId)) {
+                Log::error('Stop row debug', [
+                    'row_number' => $rowNumber,
+                    'stop_id_raw' => var_export($row['stop_id'] ?? 'NOT_SET', true),
+                    'stop_id_trimmed' => var_export($stopId, true),
+                    'stop_id_empty' => empty($stopId),
+                    'stop_id_equals_empty_string' => $stopId === '',
+                    'stop_name' => $row['stop_name'] ?? 'NOT_SET',
+                ]);
+            }
+
+            if ($stopId === '' || $stopId === null) {
+                Log::error('Empty stop_id detected', [
+                    'row_number' => $rowNumber,
+                    'row_data' => $row,
+                    'stop_id_value' => $row['stop_id'] ?? 'KEY_NOT_EXISTS',
+                    'stop_id_trimmed' => $stopId,
+                    'stop_id_isset' => isset($row['stop_id']),
+                    'row_keys' => array_keys($row),
+                ]);
+
+                $stopName = ! empty($row['stop_name']) ? $row['stop_name'] : 'unknown';
+                throw new Exception("Invalid GTFS data: stop_id is required but missing in stops.txt at row {$rowNumber} for stop: {$stopName}. Check logs for details.");
+            }
+
             Stop::create([
                 'tenant_id' => $this->import->tenant_id,
                 'schedule_import_id' => $this->import->id,
-                'stop_id' => $row['stop_id'] ?? '',
+                'stop_id' => $stopId,
                 'stop_name' => $row['stop_name'] ?? '',
                 'stop_desc' => ! empty($row['stop_desc']) ? $row['stop_desc'] : null,
                 'stop_lat' => ! empty($row['stop_lat']) ? (float) $row['stop_lat'] : 0,
@@ -143,7 +180,7 @@ class GtfsParserService
 
     protected function parseTrips(): void
     {
-        $file = $this->extractPath . '/trips.txt';
+        $file = $this->extractPath.'/trips.txt';
 
         if (! file_exists($file)) {
             Log::warning('trips.txt not found in GTFS archive');
@@ -154,6 +191,11 @@ class GtfsParserService
         $rows = $this->parseCsv($file);
 
         foreach ($rows as $row) {
+            // Validate required field
+            if (empty($row['trip_id'])) {
+                throw new Exception('Invalid GTFS data: trip_id is required but missing in trips.txt');
+            }
+
             $route = Route::where('tenant_id', $this->import->tenant_id)
                 ->where('route_id', $row['route_id'] ?? '')
                 ->first();
@@ -168,7 +210,7 @@ class GtfsParserService
                 'tenant_id' => $this->import->tenant_id,
                 'route_id' => $route->id,
                 'schedule_import_id' => $this->import->id,
-                'trip_id' => $row['trip_id'] ?? '',
+                'trip_id' => $row['trip_id'],
                 'service_id' => $row['service_id'] ?? '',
                 'trip_headsign' => ! empty($row['trip_headsign']) ? $row['trip_headsign'] : null,
                 'trip_short_name' => ! empty($row['trip_short_name']) ? $row['trip_short_name'] : null,
@@ -182,7 +224,7 @@ class GtfsParserService
 
     protected function parseStopTimes(): void
     {
-        $file = $this->extractPath . '/stop_times.txt';
+        $file = $this->extractPath.'/stop_times.txt';
 
         if (! file_exists($file)) {
             Log::warning('stop_times.txt not found in GTFS archive');
@@ -243,7 +285,7 @@ class GtfsParserService
 
     protected function parseCalendar(): void
     {
-        $file = $this->extractPath . '/calendar.txt';
+        $file = $this->extractPath.'/calendar.txt';
 
         if (! file_exists($file)) {
             Log::warning('calendar.txt not found in GTFS archive');
@@ -273,7 +315,7 @@ class GtfsParserService
 
     protected function parseCalendarDates(): void
     {
-        $file = $this->extractPath . '/calendar_dates.txt';
+        $file = $this->extractPath.'/calendar_dates.txt';
 
         if (! file_exists($file)) {
             Log::warning('calendar_dates.txt not found in GTFS archive');
@@ -302,10 +344,49 @@ class GtfsParserService
         if (($handle = fopen($file, 'r')) !== false) {
             $headers = fgetcsv($handle);
 
+            // Remove UTF-8 BOM from first header if present
+            if (! empty($headers[0])) {
+                $headers[0] = str_replace("\xEF\xBB\xBF", '', $headers[0]);
+            }
+
+            // Trim header values
+            $headers = array_map('trim', $headers);
+
+            // Debug: Log headers for stops.txt
+            if (str_contains($file, 'stops.txt')) {
+                Log::info('Parsing stops.txt - Headers', [
+                    'headers' => $headers,
+                    'header_count' => count($headers),
+                    'stop_id_index' => array_search('stop_id', $headers),
+                ]);
+            }
+
+            $lineNumber = 1;
             while (($data = fgetcsv($handle)) !== false) {
-                if (count($headers) === count($data)) {
-                    $rows[] = array_combine($headers, $data);
+                $lineNumber++;
+
+                // Trim data values
+                $data = array_map('trim', $data);
+
+                // Debug first few rows of stops.txt
+                if (str_contains($file, 'stops.txt') && $lineNumber <= 5) {
+                    Log::info("Parsing stops.txt - Line {$lineNumber}", [
+                        'data' => $data,
+                        'data_count' => count($data),
+                    ]);
                 }
+
+                // Pad data array if it has fewer columns than headers
+                if (count($data) < count($headers)) {
+                    $data = array_pad($data, count($headers), '');
+                }
+
+                // Truncate data array if it has more columns than headers
+                if (count($data) > count($headers)) {
+                    $data = array_slice($data, 0, count($headers));
+                }
+
+                $rows[] = array_combine($headers, $data);
             }
 
             fclose($handle);
@@ -337,7 +418,7 @@ class GtfsParserService
     {
         // GTFS dates are in YYYYMMDD format
         if (preg_match('/^(\d{4})(\d{2})(\d{2})$/', $date, $matches)) {
-            return $matches[1] . '-' . $matches[2] . '-' . $matches[3];
+            return $matches[1].'-'.$matches[2].'-'.$matches[3];
         }
 
         return now()->format('Y-m-d');
@@ -365,7 +446,7 @@ class GtfsParserService
                 continue;
             }
 
-            if (! $this->deleteDirectory($dir . DIRECTORY_SEPARATOR . $item)) {
+            if (! $this->deleteDirectory($dir.DIRECTORY_SEPARATOR.$item)) {
                 return false;
             }
         }

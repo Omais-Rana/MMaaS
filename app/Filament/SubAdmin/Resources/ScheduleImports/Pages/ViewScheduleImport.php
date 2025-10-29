@@ -9,7 +9,6 @@ use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
-use Filament\Support\Icons\Heroicon;
 
 class ViewScheduleImport extends ViewRecord
 {
@@ -17,7 +16,12 @@ class ViewScheduleImport extends ViewRecord
 
     public function hasCombinedRelationManagerTabsWithContent(): bool
     {
-        return true;
+        return false;
+    }
+
+    public function getContentTabLabel(): ?string
+    {
+        return null;
     }
 
     protected function getHeaderActions(): array
@@ -36,22 +40,9 @@ class ViewScheduleImport extends ViewRecord
                         Grid::make(2)
                             ->schema([
                                 TextEntry::make('filename')
-                                    ->label(__('schedules.import_filename')),
-                                TextEntry::make('status')
-                                    ->badge()
-                                    ->formatStateUsing(fn(string $state): string => __("schedules.status_{$state}"))
-                                    ->color(fn(string $state): string => match ($state) {
-                                        'completed' => 'success',
-                                        'processing' => 'warning',
-                                        'failed' => 'danger',
-                                        default => 'gray',
-                                    })
-                                    ->icon(fn(string $state): Heroicon => match ($state) {
-                                        'completed' => Heroicon::CheckCircle,
-                                        'processing' => Heroicon::Clock,
-                                        'failed' => Heroicon::XCircle,
-                                        default => Heroicon::QuestionMarkCircle,
-                                    }),
+                                    ->label(__('schedules.import_filename'))
+                                    ->limit(15)
+                                    ->tooltip(fn ($record) => $record->filename),
                                 TextEntry::make('created_at')
                                     ->label(__('schedules.import_uploaded_at'))
                                     ->dateTime(),
@@ -75,7 +66,7 @@ class ViewScheduleImport extends ViewRecord
                                     ->suffix(' trips'),
                             ]),
                     ])
-                    ->visible(fn($record) => $record->status === 'completed'),
+                    ->visible(fn ($record) => $record->status === 'completed'),
                 Section::make(__('schedules.section_error_details'))
                     ->schema([
                         TextEntry::make('error_message')
@@ -83,7 +74,7 @@ class ViewScheduleImport extends ViewRecord
                             ->columnSpanFull()
                             ->markdown(),
                     ])
-                    ->visible(fn($record) => $record->status === 'failed' && $record->error_message),
+                    ->visible(fn ($record) => $record->status === 'failed' && $record->error_message),
             ]);
     }
 }

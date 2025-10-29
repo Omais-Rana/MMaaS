@@ -28,7 +28,7 @@ class CustomerPanelProvider extends PanelProvider
         return $panel
             ->id('portal')
             ->path('portal')
-            ->login()
+            ->login(\App\Filament\Customer\Pages\Auth\Login::class)
             ->registration()
             ->passwordReset()
             ->emailVerification()
