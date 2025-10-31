@@ -34,12 +34,13 @@ class CustomerPanelProvider extends PanelProvider
             ->emailVerification()
             ->profile()
             ->brandName('Customer Portal')
+            ->breadcrumbs(false)
             ->colors([
                 'primary' => Color::Green,
             ])
             ->renderHook(
                 PanelsRenderHook::USER_MENU_BEFORE,
-                fn (): string => Blade::render('@livewire(\'language-switcher-action\')')
+                fn(): string => Blade::render('@livewire(\'language-switcher-action\')')
             )
             ->discoverResources(in: app_path('Filament/Customer/Resources'), for: 'App\Filament\Customer\Resources')
             ->discoverPages(in: app_path('Filament/Customer/Pages'), for: 'App\Filament\Customer\Pages')

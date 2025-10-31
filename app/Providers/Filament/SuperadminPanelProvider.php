@@ -38,11 +38,12 @@ class SuperadminPanelProvider extends PanelProvider
             ->globalSearchKeyBindings(['command+k', 'ctrl+k'])
             ->databaseNotifications()
             ->databaseNotificationsPolling('10s')
+            ->breadcrumbs(false)
             ->colors([
                 'primary' => Color::Amber,
             ])
             ->renderHook(
-                PanelsRenderHook::GLOBAL_SEARCH_BEFORE,
+                PanelsRenderHook::SIDEBAR_NAV_START,
                 fn(): string => Blade::render('@livewire(\'language-switcher-action\')')
             )
             ->discoverResources(in: app_path('Filament/Superadmin/Resources'), for: 'App\Filament\Superadmin\Resources')
@@ -52,8 +53,7 @@ class SuperadminPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Superadmin/Widgets'), for: 'App\Filament\Superadmin\Widgets')
             ->widgets([
-                AccountWidget::class,
-                FilamentInfoWidget::class,
+                \App\Filament\Superadmin\Widgets\SuperadminStatsOverview::class,
             ])
             ->middleware([
                 EncryptCookies::class,

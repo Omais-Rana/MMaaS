@@ -35,11 +35,12 @@ class SubAdminPanelProvider extends PanelProvider
             ->globalSearchKeyBindings(['command+k', 'ctrl+k'])
             ->databaseNotifications()
             ->databaseNotificationsPolling('10s')
+            ->breadcrumbs(false)
             ->colors([
                 'primary' => Color::Blue,
             ])
             ->renderHook(
-                PanelsRenderHook::GLOBAL_SEARCH_BEFORE,
+                PanelsRenderHook::SIDEBAR_NAV_START,
                 fn(): string => Blade::render('@livewire(\'language-switcher-action\')')
             )
             ->discoverResources(in: app_path('Filament/SubAdmin/Resources'), for: 'App\Filament\SubAdmin\Resources')
@@ -49,7 +50,8 @@ class SubAdminPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/SubAdmin/Widgets'), for: 'App\Filament\SubAdmin\Widgets')
             ->widgets([
-                AccountWidget::class,
+                \App\Filament\SubAdmin\Widgets\SubAdminStatsOverview::class,
+                \App\Filament\SubAdmin\Widgets\SubAdminRecentActivity::class,
             ])
             ->middleware([
                 EncryptCookies::class,

@@ -12,7 +12,7 @@ body {
 }
 
 .fi-main-ctn {
-    @apply bg-primary-100 dark:bg-gray-900;
+    @apply bg-primary-100 dark:!bg-gray-800;
 }
 
 .fi-topbar {
@@ -68,7 +68,7 @@ body {
 }
 
 .fi-sidebar-nav{
-    @apply !bg-primary-100 dark:!bg-gray-900;
+    @apply !bg-primary-100 dark:!bg-gray-800;
 }
 
 .fi-sidebar-item-active a {
@@ -89,4 +89,10 @@ body {
 
 .fi-sidebar-item:not(.fi-sidebar-item-active):hover a svg {
     @apply dark:text-white;
+}
+
+.fi-ta-header{
+   border-top-left-radius: var(--radius-3xl);
+   border-top-right-radius: var(--radius-3xl);
+   @apply bg-primary-400 dark:bg-primary-600;
 }
