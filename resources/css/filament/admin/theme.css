@@ -12,7 +12,7 @@ body {
 }
 
 .fi-main-ctn {
-    @apply bg-primary-100 dark:!bg-gray-800;
+    @apply bg-primary-100 dark:!bg-gray-800; /* Corner radius color */
 }
 
 .fi-topbar {
