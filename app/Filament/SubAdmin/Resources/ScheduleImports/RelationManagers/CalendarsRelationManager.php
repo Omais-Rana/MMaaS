@@ -4,15 +4,81 @@ namespace App\Filament\SubAdmin\Resources\ScheduleImports\RelationManagers;
 
 use App\Models\CalendarDate;
 use Filament\Actions\Action;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Forms\Components\Checkbox;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
 class CalendarsRelationManager extends RelationManager
 {
     protected static string $relationship = 'calendars';
+
+    public function isReadOnly(): bool
+    {
+        return false;
+    }
+
+    public function form(Schema $schema): Schema
+    {
+        return $schema
+            ->components([
+                TextInput::make('service_id')
+                    ->label(__('schedules.calendar_service'))
+                    ->required()
+                    ->maxLength(255)
+                    ->unique(ignoreRecord: true)
+                    ->columnSpanFull(),
+
+                Grid::make(2)
+                    ->schema([
+                        DatePicker::make('start_date')
+                            ->label('Start Date')
+                            ->required(),
+
+                        DatePicker::make('end_date')
+                            ->label('End Date')
+                            ->required(),
+                    ]),
+
+                Section::make('Operating Days')
+                    ->description('Select which days of the week this service operates')
+                    ->schema([
+                        Grid::make(4)
+                            ->schema([
+                                Checkbox::make('monday')
+                                    ->label(__('schedules.day_mon')),
+
+                                Checkbox::make('tuesday')
+                                    ->label(__('schedules.day_tue')),
+
+                                Checkbox::make('wednesday')
+                                    ->label(__('schedules.day_wed')),
+
+                                Checkbox::make('thursday')
+                                    ->label(__('schedules.day_thu')),
+
+                                Checkbox::make('friday')
+                                    ->label(__('schedules.day_fri')),
+
+                                Checkbox::make('saturday')
+                                    ->label(__('schedules.day_sat')),
+
+                                Checkbox::make('sunday')
+                                    ->label(__('schedules.day_sun')),
+                            ]),
+                    ])
+                    ->collapsible(),
+            ]);
+    }
 
     public function table(Table $table): Table
     {
@@ -93,6 +159,24 @@ class CalendarsRelationManager extends RelationManager
                     ->modalCancelActionLabel(__('schedules.close'))
                     ->infolist(fn ($record) => $this->getExceptionsInfolist($record))
                     ->visible(fn ($record) => $this->hasExceptions($record)),
+            ])
+            ->recordActions([
+                EditAction::make()
+                    ->icon('heroicon-s-pencil'),
+                DeleteAction::make()
+                    ->icon('heroicon-s-trash'),
+                Action::make('view_exceptions')
+                    ->label(__('schedules.view_schedule_details'))
+                    ->icon('heroicon-s-calendar-days')
+                    ->modalHeading(fn ($record) => __('schedules.schedule_details_for_service', ['service' => $record->service_id]))
+                    ->modalWidth('2xl')
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel(__('schedules.close'))
+                    ->infolist(fn ($record) => $this->getExceptionsInfolist($record))
+                    ->visible(fn ($record) => $this->hasExceptions($record)),
+            ])
+            ->bulkActions([
+                DeleteBulkAction::make(),
             ])
             ->description(fn () => $this->getSchedulePeriodDescription())
             ->defaultSort('service_id')

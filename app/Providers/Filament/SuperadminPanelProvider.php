@@ -40,7 +40,7 @@ class SuperadminPanelProvider extends PanelProvider
             ->databaseNotificationsPolling('10s')
             ->breadcrumbs(false)
             ->colors([
-                'primary' => Color::Amber,
+                'primary' => Color::Red,
             ])
             ->renderHook(
                 PanelsRenderHook::SIDEBAR_NAV_START,

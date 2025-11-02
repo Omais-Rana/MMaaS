@@ -2,11 +2,14 @@
 
 namespace App\Filament\SubAdmin\Resources\ScheduleImports\Tables;
 
+use App\Filament\SubAdmin\Resources\ScheduleImports\ScheduleImportResource;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
 class ScheduleImportsTable
@@ -17,24 +20,22 @@ class ScheduleImportsTable
             ->columns([
                 TextColumn::make('filename')
                     ->label(__('schedules.filename'))
-                    ->searchable()
-                    ->sortable(),
+                    ->searchable(),
                 TextColumn::make('status')
                     ->badge()
-                    ->formatStateUsing(fn (string $state): string => __("schedules.status_{$state}"))
-                    ->color(fn (string $state): string => match ($state) {
+                    ->formatStateUsing(fn(string $state): string => __("schedules.status_{$state}"))
+                    ->color(fn(string $state): string => match ($state) {
                         'completed' => 'success',
                         'processing' => 'warning',
                         'failed' => 'danger',
                         default => 'gray',
                     })
-                    ->icon(fn (string $state): Heroicon => match ($state) {
+                    ->icon(fn(string $state): Heroicon => match ($state) {
                         'completed' => Heroicon::CheckCircle,
                         'processing' => Heroicon::Clock,
                         'failed' => Heroicon::XCircle,
                         default => Heroicon::QuestionMarkCircle,
                     })
-                    ->searchable()
                     ->sortable(),
                 TextColumn::make('total_routes')
                     ->label(__('schedules.stats_routes'))
@@ -57,12 +58,30 @@ class ScheduleImportsTable
                     ->sortable()
                     ->since()
                     ->toggleable(),
+                TextColumn::make('updated_at')
+                    ->label(__('schedules.updated_at'))
+                    ->dateTime()
+                    ->sortable()
+                    ->since()
+                    ->toggleable(),
             ])
             ->filters([
-                //
+                SelectFilter::make('status')
+                    ->label(__('schedules.status'))
+                    ->options([
+                        'pending' => __('schedules.status_pending'),
+                        'processing' => __('schedules.status_processing'),
+                        'completed' => __('schedules.status_completed'),
+                        'failed' => __('schedules.status_failed'),
+                    ]),
             ])
             ->recordActions([
                 ViewAction::make(),
+                Action::make('update_file')
+                    ->label('Update File')
+                    ->icon('heroicon-s-arrow-up-tray')
+                    ->color('warning')
+                    ->url(fn($record) => ScheduleImportResource::getUrl('edit', ['record' => $record])),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

@@ -67,7 +67,7 @@ class ProcessScheduleImport implements ShouldQueue
     {
         Notification::make()
             ->title('Schedule Import Completed')
-            ->body("Successfully imported {$stats['routes']} routes, {$stats['stops']} stops, and {$stats['trips']} trips.")
+            ->body("Successfully processed {$stats['routes']} routes, {$stats['stops']} stops, and {$stats['trips']} trips. New records added and existing records updated.")
             ->success()
             ->sendToDatabase($this->scheduleImport->tenant);
     }

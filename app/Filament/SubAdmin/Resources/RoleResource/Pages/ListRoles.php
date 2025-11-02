@@ -15,6 +15,8 @@ class ListRoles extends ListRecords
     {
         return [
             Actions\CreateAction::make()
+                ->label('Add Role')
+                ->icon('heroicon-s-plus-circle')
                 ->createAnother(false),
         ];
     }

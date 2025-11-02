@@ -16,6 +16,7 @@ class ListEmployees extends ListRecords
         return [
             Actions\CreateAction::make()
                 ->label('Add Employee')
+                ->icon('heroicon-s-plus-circle')
                 ->createAnother(false),
         ];
     }

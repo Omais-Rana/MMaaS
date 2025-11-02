@@ -13,7 +13,10 @@ class ListScheduleImports extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            CreateAction::make(),
+            CreateAction::make()
+                ->label('Add Schedule')
+                ->icon('heroicon-s-plus-circle')
+                ->createAnother(false),
         ];
     }
 }

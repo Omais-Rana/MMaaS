@@ -21,7 +21,8 @@ return [
     'filename' => 'Filename',
     'status' => 'Status',
     'imported_at' => 'Imported At',
-    'created_at' => 'Uploaded At',
+    'created_at' => 'Uploaded',
+    'updated_at' => 'Updated',
 
     // Status Values
     'status_pending' => 'Pending',

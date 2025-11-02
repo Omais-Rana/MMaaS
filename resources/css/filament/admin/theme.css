@@ -91,8 +91,37 @@ body {
     @apply dark:text-white;
 }
 
-.fi-ta-header{
+.fi-ta-header, .fi-ta-header-ctn{
    border-top-left-radius: var(--radius-3xl);
    border-top-right-radius: var(--radius-3xl);
    @apply bg-primary-400 dark:bg-primary-600;
+}
+
+.fi-ta-header-ctn .fi-input-wrp{
+    @apply bg-white dark:bg-gray-700;
+}
+
+/* Language Switcher */
+.language-switcher-btn {
+    @apply bg-white dark:bg-gray-900 hover:bg-primary-50 dark:hover:bg-primary-900/20 
+           border border-gray-200 dark:border-gray-700 
+           rounded-lg shadow-sm hover:shadow
+           transition-all duration-200
+           !px-3 !py-2;
+}
+
+.language-switcher-btn svg {
+    @apply text-gray-500 dark:text-gray-400 transition-colors;
+}
+
+.language-switcher-btn:hover svg {
+    @apply text-primary-600 dark:text-primary-400;
+}
+
+.language-switcher-btn span {
+    @apply text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors;
+}
+
+.language-switcher-btn:hover span {
+    @apply text-primary-600 dark:text-primary-400;
 }

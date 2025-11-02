@@ -2,7 +2,14 @@
 
 namespace App\Filament\SubAdmin\Resources\ScheduleImports\RelationManagers;
 
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Forms\Components\ColorPicker;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\ColorColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -10,6 +17,11 @@ use Filament\Tables\Table;
 class RoutesRelationManager extends RelationManager
 {
     protected static string $relationship = 'routes';
+
+    public function isReadOnly(): bool
+    {
+        return false;
+    }
 
     protected function getRouteTypeDescription(): ?string
     {
@@ -45,6 +57,65 @@ class RoutesRelationManager extends RelationManager
         $owner = $this->getOwnerRecord();
 
         return $owner->routes()->distinct('route_type')->count() > 1;
+    }
+
+    public function form(Schema $schema): Schema
+    {
+        return $schema
+            ->components([
+                TextInput::make('route_id')
+                    ->label(__('schedules.route_id'))
+                    ->required()
+                    ->maxLength(255)
+                    ->unique(ignoreRecord: true)
+                    ->columnSpanFull(),
+
+                TextInput::make('route_short_name')
+                    ->label(__('schedules.route_line'))
+                    ->required()
+                    ->maxLength(255),
+
+                TextInput::make('route_long_name')
+                    ->label(__('schedules.route_destination'))
+                    ->maxLength(255)
+                    ->columnSpanFull(),
+
+                Select::make('route_type')
+                    ->label(__('schedules.route_type'))
+                    ->required()
+                    ->options([
+                        0 => __('schedules.type_tram'),
+                        1 => __('schedules.type_subway'),
+                        2 => __('schedules.type_rail'),
+                        3 => __('schedules.type_bus'),
+                        4 => __('schedules.type_ferry'),
+                        5 => __('schedules.type_cable_tram'),
+                        6 => __('schedules.type_aerial_lift'),
+                        7 => __('schedules.type_funicular'),
+                    ])
+                    ->native(false),
+
+                ColorPicker::make('route_color')
+                    ->label(__('schedules.route_color'))
+                    ->hex()
+                    ->helperText('Enter color without #'),
+
+                ColorPicker::make('route_text_color')
+                    ->label('Text Color')
+                    ->hex()
+                    ->helperText('Enter color without #'),
+
+                TextInput::make('route_desc')
+                    ->label('Description')
+                    ->maxLength(500)
+                    ->columnSpanFull(),
+
+                TextInput::make('route_url')
+                    ->label('Route URL')
+                    ->url()
+                    ->maxLength(255)
+                    ->columnSpanFull(),
+            ]);
     }
 
     public function table(Table $table): Table
@@ -110,6 +181,18 @@ class RoutesRelationManager extends RelationManager
             ])
             ->defaultSort('route_short_name')
             ->striped()
-            ->paginated([10, 25, 50]);
+            ->paginated([10, 25, 50])
+            ->headerActions([
+                // Create action removed - use "Add new record" button in header
+            ])
+            ->recordActions([
+                EditAction::make()
+                    ->icon('heroicon-s-pencil'),
+                DeleteAction::make()
+                    ->icon('heroicon-s-trash'),
+            ])
+            ->bulkActions([
+                DeleteBulkAction::make(),
+            ]);
     }
 }

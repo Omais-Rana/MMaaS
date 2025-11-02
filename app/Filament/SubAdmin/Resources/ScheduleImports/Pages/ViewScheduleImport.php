@@ -42,7 +42,7 @@ class ViewScheduleImport extends ViewRecord
                                 TextEntry::make('filename')
                                     ->label(__('schedules.import_filename'))
                                     ->limit(15)
-                                    ->tooltip(fn ($record) => $record->filename),
+                                    ->tooltip(fn($record) => $record->filename),
                                 TextEntry::make('created_at')
                                     ->label(__('schedules.import_uploaded_at'))
                                     ->dateTime(),
@@ -66,7 +66,7 @@ class ViewScheduleImport extends ViewRecord
                                     ->suffix(' trips'),
                             ]),
                     ])
-                    ->visible(fn ($record) => $record->status === 'completed'),
+                    ->visible(fn($record) => $record->status === 'completed'),
                 Section::make(__('schedules.section_error_details'))
                     ->schema([
                         TextEntry::make('error_message')
@@ -74,7 +74,7 @@ class ViewScheduleImport extends ViewRecord
                             ->columnSpanFull()
                             ->markdown(),
                     ])
-                    ->visible(fn ($record) => $record->status === 'failed' && $record->error_message),
+                    ->visible(fn($record) => $record->status === 'failed' && $record->error_message),
             ]);
     }
 }

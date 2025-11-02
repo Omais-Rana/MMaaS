@@ -37,7 +37,7 @@ class SubAdminPanelProvider extends PanelProvider
             ->databaseNotificationsPolling('10s')
             ->breadcrumbs(false)
             ->colors([
-                'primary' => Color::Blue,
+                'primary' => Color::Amber,
             ])
             ->renderHook(
                 PanelsRenderHook::SIDEBAR_NAV_START,

@@ -36,7 +36,7 @@ class CustomerPanelProvider extends PanelProvider
             ->brandName('Customer Portal')
             ->breadcrumbs(false)
             ->colors([
-                'primary' => Color::Green,
+                'primary' => Color::Red,
             ])
             ->renderHook(
                 PanelsRenderHook::USER_MENU_BEFORE,

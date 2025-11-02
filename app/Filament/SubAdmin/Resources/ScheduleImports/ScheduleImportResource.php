@@ -74,6 +74,7 @@ class ScheduleImportResource extends Resource
             RelationManagers\StopsRelationManager::class,
             RelationManagers\TripsRelationManager::class,
             RelationManagers\CalendarsRelationManager::class,
+            RelationManagers\StopTimesRelationManager::class,
         ];
     }
 
@@ -82,6 +83,7 @@ class ScheduleImportResource extends Resource
         return [
             'index' => ListScheduleImports::route('/'),
             'create' => CreateScheduleImport::route('/create'),
+            'edit' => Pages\EditScheduleImport::route('/{record}/edit'),
             'view' => Pages\ViewScheduleImport::route('/{record}'),
         ];
     }

@@ -30,7 +30,7 @@ class GtfsParserService
     public function __construct(ScheduleImport $import)
     {
         $this->import = $import;
-        $this->extractPath = storage_path('app/temp/gtfs-'.uniqid());
+        $this->extractPath = storage_path('app/temp/gtfs-' . uniqid());
     }
 
     public function parse(string $filePath): array
@@ -84,7 +84,7 @@ class GtfsParserService
 
     protected function parseRoutes(): void
     {
-        $file = $this->extractPath.'/routes.txt';
+        $file = $this->extractPath . '/routes.txt';
 
         if (! file_exists($file)) {
             Log::warning('routes.txt not found in GTFS archive');
@@ -100,17 +100,22 @@ class GtfsParserService
                 throw new Exception('Invalid GTFS data: route_id is required but missing in routes.txt');
             }
 
-            Route::create([
-                'tenant_id' => $this->import->tenant_id,
-                'schedule_import_id' => $this->import->id,
-                'route_id' => $row['route_id'],
-                'route_short_name' => ! empty($row['route_short_name']) ? $row['route_short_name'] : null,
-                'route_long_name' => $row['route_long_name'] ?? '',
-                'route_type' => $row['route_type'] ?? '',
-                'route_color' => ! empty($row['route_color']) ? $row['route_color'] : null,
-                'route_text_color' => ! empty($row['route_text_color']) ? $row['route_text_color'] : null,
-                'route_desc' => ! empty($row['route_desc']) ? $row['route_desc'] : null,
-            ]);
+            // Use updateOrCreate for smart merge
+            Route::updateOrCreate(
+                [
+                    'tenant_id' => $this->import->tenant_id,
+                    'schedule_import_id' => $this->import->id,
+                    'route_id' => $row['route_id'],
+                ],
+                [
+                    'route_short_name' => ! empty($row['route_short_name']) ? $row['route_short_name'] : null,
+                    'route_long_name' => $row['route_long_name'] ?? '',
+                    'route_type' => $row['route_type'] ?? '',
+                    'route_color' => ! empty($row['route_color']) ? $row['route_color'] : null,
+                    'route_text_color' => ! empty($row['route_text_color']) ? $row['route_text_color'] : null,
+                    'route_desc' => ! empty($row['route_desc']) ? $row['route_desc'] : null,
+                ]
+            );
 
             $this->stats['routes']++;
         }
@@ -118,7 +123,7 @@ class GtfsParserService
 
     protected function parseStops(): void
     {
-        $file = $this->extractPath.'/stops.txt';
+        $file = $this->extractPath . '/stops.txt';
 
         if (! file_exists($file)) {
             Log::warning('stops.txt not found in GTFS archive');
@@ -161,18 +166,23 @@ class GtfsParserService
                 throw new Exception("Invalid GTFS data: stop_id is required but missing in stops.txt at row {$rowNumber} for stop: {$stopName}. Check logs for details.");
             }
 
-            Stop::create([
-                'tenant_id' => $this->import->tenant_id,
-                'schedule_import_id' => $this->import->id,
-                'stop_id' => $stopId,
-                'stop_name' => $row['stop_name'] ?? '',
-                'stop_desc' => ! empty($row['stop_desc']) ? $row['stop_desc'] : null,
-                'stop_lat' => ! empty($row['stop_lat']) ? (float) $row['stop_lat'] : 0,
-                'stop_lon' => ! empty($row['stop_lon']) ? (float) $row['stop_lon'] : 0,
-                'zone_id' => ! empty($row['zone_id']) ? $row['zone_id'] : null,
-                'stop_code' => ! empty($row['stop_code']) ? $row['stop_code'] : null,
-                'wheelchair_boarding' => isset($row['wheelchair_boarding']) && $row['wheelchair_boarding'] !== '' ? (int) $row['wheelchair_boarding'] : 2,
-            ]);
+            // Use updateOrCreate for smart merge
+            Stop::updateOrCreate(
+                [
+                    'tenant_id' => $this->import->tenant_id,
+                    'schedule_import_id' => $this->import->id,
+                    'stop_id' => $stopId,
+                ],
+                [
+                    'stop_name' => $row['stop_name'] ?? '',
+                    'stop_desc' => ! empty($row['stop_desc']) ? $row['stop_desc'] : null,
+                    'stop_lat' => ! empty($row['stop_lat']) ? (float) $row['stop_lat'] : 0,
+                    'stop_lon' => ! empty($row['stop_lon']) ? (float) $row['stop_lon'] : 0,
+                    'zone_id' => ! empty($row['zone_id']) ? $row['zone_id'] : null,
+                    'stop_code' => ! empty($row['stop_code']) ? $row['stop_code'] : null,
+                    'wheelchair_boarding' => isset($row['wheelchair_boarding']) && $row['wheelchair_boarding'] !== '' ? (int) $row['wheelchair_boarding'] : 2,
+                ]
+            );
 
             $this->stats['stops']++;
         }
@@ -180,7 +190,7 @@ class GtfsParserService
 
     protected function parseTrips(): void
     {
-        $file = $this->extractPath.'/trips.txt';
+        $file = $this->extractPath . '/trips.txt';
 
         if (! file_exists($file)) {
             Log::warning('trips.txt not found in GTFS archive');
@@ -206,17 +216,22 @@ class GtfsParserService
                 continue;
             }
 
-            Trip::create([
-                'tenant_id' => $this->import->tenant_id,
-                'route_id' => $route->id,
-                'schedule_import_id' => $this->import->id,
-                'trip_id' => $row['trip_id'],
-                'service_id' => $row['service_id'] ?? '',
-                'trip_headsign' => ! empty($row['trip_headsign']) ? $row['trip_headsign'] : null,
-                'trip_short_name' => ! empty($row['trip_short_name']) ? $row['trip_short_name'] : null,
-                'direction_id' => ! empty($row['direction_id']) ? (int) $row['direction_id'] : 0,
-                'wheelchair_accessible' => isset($row['wheelchair_accessible']) && $row['wheelchair_accessible'] !== '' ? (int) $row['wheelchair_accessible'] : 2,
-            ]);
+            // Use updateOrCreate for smart merge
+            Trip::updateOrCreate(
+                [
+                    'tenant_id' => $this->import->tenant_id,
+                    'schedule_import_id' => $this->import->id,
+                    'trip_id' => $row['trip_id'],
+                ],
+                [
+                    'route_id' => $route->id,
+                    'service_id' => $row['service_id'] ?? '',
+                    'trip_headsign' => ! empty($row['trip_headsign']) ? $row['trip_headsign'] : null,
+                    'trip_short_name' => ! empty($row['trip_short_name']) ? $row['trip_short_name'] : null,
+                    'direction_id' => ! empty($row['direction_id']) ? (int) $row['direction_id'] : 0,
+                    'wheelchair_accessible' => isset($row['wheelchair_accessible']) && $row['wheelchair_accessible'] !== '' ? (int) $row['wheelchair_accessible'] : 2,
+                ]
+            );
 
             $this->stats['trips']++;
         }
@@ -224,7 +239,7 @@ class GtfsParserService
 
     protected function parseStopTimes(): void
     {
-        $file = $this->extractPath.'/stop_times.txt';
+        $file = $this->extractPath . '/stop_times.txt';
 
         if (! file_exists($file)) {
             Log::warning('stop_times.txt not found in GTFS archive');
@@ -243,9 +258,6 @@ class GtfsParserService
             ->get()
             ->keyBy('stop_id');
 
-        $batchData = [];
-        $batchSize = 500;
-
         foreach ($rows as $row) {
             $trip = $tripCache->get($row['trip_id'] ?? '');
             $stop = $stopCache->get($row['stop_id'] ?? '');
@@ -256,36 +268,29 @@ class GtfsParserService
                 continue;
             }
 
-            $batchData[] = [
-                'tenant_id' => $this->import->tenant_id,
-                'trip_id' => $trip->id,
-                'stop_id' => $stop->id,
-                'arrival_time' => $this->normalizeTime($row['arrival_time'] ?? '00:00:00'),
-                'departure_time' => $this->normalizeTime($row['departure_time'] ?? '00:00:00'),
-                'stop_sequence' => ! empty($row['stop_sequence']) ? (int) $row['stop_sequence'] : 0,
-                'stop_headsign' => ! empty($row['stop_headsign']) ? $row['stop_headsign'] : null,
-                'pickup_type' => ! empty($row['pickup_type']) ? (int) $row['pickup_type'] : 0,
-                'drop_off_type' => ! empty($row['drop_off_type']) ? (int) $row['drop_off_type'] : 0,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
-
-            // Insert in batches
-            if (count($batchData) >= $batchSize) {
-                StopTime::insert($batchData);
-                $batchData = [];
-            }
-        }
-
-        // Insert remaining records
-        if (! empty($batchData)) {
-            StopTime::insert($batchData);
+            // Use updateOrCreate for smart merge
+            // Stop times are unique by trip_id, stop_id, and stop_sequence
+            StopTime::updateOrCreate(
+                [
+                    'tenant_id' => $this->import->tenant_id,
+                    'trip_id' => $trip->id,
+                    'stop_id' => $stop->id,
+                    'stop_sequence' => ! empty($row['stop_sequence']) ? (int) $row['stop_sequence'] : 0,
+                ],
+                [
+                    'arrival_time' => $this->normalizeTime($row['arrival_time'] ?? '00:00:00'),
+                    'departure_time' => $this->normalizeTime($row['departure_time'] ?? '00:00:00'),
+                    'stop_headsign' => ! empty($row['stop_headsign']) ? $row['stop_headsign'] : null,
+                    'pickup_type' => ! empty($row['pickup_type']) ? (int) $row['pickup_type'] : 0,
+                    'drop_off_type' => ! empty($row['drop_off_type']) ? (int) $row['drop_off_type'] : 0,
+                ]
+            );
         }
     }
 
     protected function parseCalendar(): void
     {
-        $file = $this->extractPath.'/calendar.txt';
+        $file = $this->extractPath . '/calendar.txt';
 
         if (! file_exists($file)) {
             Log::warning('calendar.txt not found in GTFS archive');
@@ -296,26 +301,31 @@ class GtfsParserService
         $rows = $this->parseCsv($file);
 
         foreach ($rows as $row) {
-            Calendar::create([
-                'tenant_id' => $this->import->tenant_id,
-                'schedule_import_id' => $this->import->id,
-                'service_id' => $row['service_id'] ?? '',
-                'monday' => ($row['monday'] ?? '0') === '1',
-                'tuesday' => ($row['tuesday'] ?? '0') === '1',
-                'wednesday' => ($row['wednesday'] ?? '0') === '1',
-                'thursday' => ($row['thursday'] ?? '0') === '1',
-                'friday' => ($row['friday'] ?? '0') === '1',
-                'saturday' => ($row['saturday'] ?? '0') === '1',
-                'sunday' => ($row['sunday'] ?? '0') === '1',
-                'start_date' => $this->parseDate($row['start_date'] ?? ''),
-                'end_date' => $this->parseDate($row['end_date'] ?? ''),
-            ]);
+            // Use updateOrCreate for smart merge
+            Calendar::updateOrCreate(
+                [
+                    'tenant_id' => $this->import->tenant_id,
+                    'schedule_import_id' => $this->import->id,
+                    'service_id' => $row['service_id'] ?? '',
+                ],
+                [
+                    'monday' => ($row['monday'] ?? '0') === '1',
+                    'tuesday' => ($row['tuesday'] ?? '0') === '1',
+                    'wednesday' => ($row['wednesday'] ?? '0') === '1',
+                    'thursday' => ($row['thursday'] ?? '0') === '1',
+                    'friday' => ($row['friday'] ?? '0') === '1',
+                    'saturday' => ($row['saturday'] ?? '0') === '1',
+                    'sunday' => ($row['sunday'] ?? '0') === '1',
+                    'start_date' => $this->parseDate($row['start_date'] ?? ''),
+                    'end_date' => $this->parseDate($row['end_date'] ?? ''),
+                ]
+            );
         }
     }
 
     protected function parseCalendarDates(): void
     {
-        $file = $this->extractPath.'/calendar_dates.txt';
+        $file = $this->extractPath . '/calendar_dates.txt';
 
         if (! file_exists($file)) {
             Log::warning('calendar_dates.txt not found in GTFS archive');
@@ -326,13 +336,18 @@ class GtfsParserService
         $rows = $this->parseCsv($file);
 
         foreach ($rows as $row) {
-            CalendarDate::create([
-                'tenant_id' => $this->import->tenant_id,
-                'schedule_import_id' => $this->import->id,
-                'service_id' => $row['service_id'] ?? '',
-                'date' => $this->parseDate($row['date'] ?? ''),
-                'exception_type' => ! empty($row['exception_type']) ? (int) $row['exception_type'] : 1,
-            ]);
+            // Use updateOrCreate for smart merge
+            CalendarDate::updateOrCreate(
+                [
+                    'tenant_id' => $this->import->tenant_id,
+                    'schedule_import_id' => $this->import->id,
+                    'service_id' => $row['service_id'] ?? '',
+                    'date' => $this->parseDate($row['date'] ?? ''),
+                ],
+                [
+                    'exception_type' => ! empty($row['exception_type']) ? (int) $row['exception_type'] : 1,
+                ]
+            );
         }
     }
 
@@ -418,7 +433,7 @@ class GtfsParserService
     {
         // GTFS dates are in YYYYMMDD format
         if (preg_match('/^(\d{4})(\d{2})(\d{2})$/', $date, $matches)) {
-            return $matches[1].'-'.$matches[2].'-'.$matches[3];
+            return $matches[1] . '-' . $matches[2] . '-' . $matches[3];
         }
 
         return now()->format('Y-m-d');
@@ -446,7 +461,7 @@ class GtfsParserService
                 continue;
             }
 
-            if (! $this->deleteDirectory($dir.DIRECTORY_SEPARATOR.$item)) {
+            if (! $this->deleteDirectory($dir . DIRECTORY_SEPARATOR . $item)) {
                 return false;
             }
         }

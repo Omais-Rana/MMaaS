@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Support\Facades\Auth;
 
 class ScheduleImport extends Model
@@ -79,5 +80,10 @@ class ScheduleImport extends Model
     public function calendarDates(): HasMany
     {
         return $this->hasMany(CalendarDate::class);
+    }
+
+    public function stopTimes(): HasManyThrough
+    {
+        return $this->hasManyThrough(StopTime::class, Trip::class);
     }
 }
