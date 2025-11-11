@@ -22,7 +22,7 @@ class SubAdminResource extends Resource
 {
     protected static ?string $model = User::class;
 
-    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-user-group';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-wrench-screwdriver';
 
     protected static ?string $navigationLabel = 'Operators';
 
@@ -58,6 +58,7 @@ class SubAdminResource extends Resource
                     ->maxWidth('md')
                     ->schema([
                         Forms\Components\TextInput::make('name')
+                            ->label('Service Name')
                             ->required()
                             ->maxLength(255),
 
@@ -66,6 +67,82 @@ class SubAdminResource extends Resource
                             ->required()
                             ->unique(ignoreRecord: true)
                             ->maxLength(255),
+
+                        Forms\Components\Select::make('departments')
+                            ->label('Department(s)')
+                            ->multiple()
+                            ->relationship('departments', 'name')
+                            ->searchable()
+                            ->preload()
+                            ->live()
+                            ->helperText('Select one or more departments this operator serves')
+                            ->required()
+                            ->createOptionForm([
+                                Forms\Components\TextInput::make('name')
+                                    ->label('Department Name')
+                                    ->required()
+                                    ->unique()
+                                    ->maxLength(255),
+                            ])
+                            ->createOptionUsing(function (array $data) {
+                                return \App\Models\Department::create($data)->id;
+                            }),
+
+                        Forms\Components\Select::make('locations')
+                            ->label('Location(s)')
+                            ->multiple()
+                            ->required()
+                            ->options(function ($get) {
+                                $departments = $get('departments');
+                                if (! $departments) {
+                                    return [];
+                                }
+
+                                $options = [];
+
+                                // Add "All" option for each selected department
+                                foreach (\App\Models\Department::whereIn('id', $departments)->get() as $dept) {
+                                    $options["dept_{$dept->id}"] = "All of {$dept->name}";
+                                }
+
+                                // Add individual cities from selected departments
+                                $regions = \App\Models\Region::whereIn('department_id', $departments)->get();
+                                foreach ($regions as $region) {
+                                    $label = $region->postal_code
+                                        ? "{$region->name} - {$region->postal_code}"
+                                        : $region->name;
+                                    $options["region_{$region->id}"] = $label;
+                                }
+
+                                return $options;
+                            })
+                            ->searchable()
+                            ->preload()
+                            ->helperText('Select "All of [Department]" to serve entire department, or select specific cities')
+                            ->afterStateHydrated(function ($component, $state, $record) {
+                                if (! $record) {
+                                    return;
+                                }
+
+                                $values = [];
+
+                                // Add department selections (if serving entire department)
+                                foreach ($record->departments as $dept) {
+                                    // Check if user serves entire department (has no specific cities from this dept)
+                                    $hasSpecificCities = $record->regions()->where('department_id', $dept->id)->exists();
+                                    if (! $hasSpecificCities) {
+                                        $values[] = "dept_{$dept->id}";
+                                    }
+                                }
+
+                                // Add specific region selections
+                                foreach ($record->regions as $region) {
+                                    $values[] = "region_{$region->id}";
+                                }
+
+                                $component->state($values);
+                            }),
+                        // Note: Removed ->dehydrated(false) to allow form submission of location data
 
                         Forms\Components\TextInput::make('password')
                             ->password()
@@ -98,6 +175,43 @@ class SubAdminResource extends Resource
                 Tables\Columns\TextColumn::make('email')
                     ->searchable()
                     ->sortable(),
+
+                Tables\Columns\TextColumn::make('departments.name')
+                    ->label('Departments')
+                    ->badge()
+                    ->separator(',')
+                    ->searchable()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('service_area')
+                    ->label('Service Area')
+                    ->getStateUsing(function ($record) {
+                        $areas = [];
+
+                        // Load relationships
+                        $record->load(['departments', 'regions']);
+
+                        // Check each department
+                        foreach ($record->departments as $dept) {
+                            $specificCities = $record->regions->where('department_id', $dept->id);
+
+                            if ($specificCities->isEmpty()) {
+                                // Serving entire department
+                                $areas[] = "All of {$dept->name}";
+                            } else {
+                                // Serving specific cities
+                                foreach ($specificCities as $city) {
+                                    $areas[] = $city->postal_code
+                                        ? "{$city->name} - {$city->postal_code}"
+                                        : $city->name;
+                                }
+                            }
+                        }
+
+                        return ! empty($areas) ? implode(', ', $areas) : '—';
+                    })
+                    ->wrap()
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('employees_count')
                     ->counts('employees')
@@ -139,7 +253,9 @@ class SubAdminResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->where('role', 'subadmin');
+        return parent::getEloquentQuery()
+            ->where('role', 'subadmin')
+            ->with(['departments', 'regions']);
     }
 
     public static function getRelations(): array
