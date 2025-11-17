@@ -1,399 +1,483 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+﻿<!DOCTYPE html>
+<html lang="en">
 
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ config('app.name', 'GTFS Manager') }} - Public Transit Schedule Management</title>
-    <link rel="preconnect" href="https://fonts.bunny.net">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Transit Finder</title>
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700" rel="stylesheet" />
-
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <style>
+        .autocomplete-dropdown {
+            position: absolute;
+            z-index: 1000;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            max-height: 300px;
+            overflow-y: auto;
+            width: 100%;
+            margin-top: 0.25rem;
+        }
+
+        .autocomplete-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+        }
+
+        .autocomplete-item:hover {
+            background-color: #fee2e2;
+        }
+
+        .route-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .route-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .exact-match-badge {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.7;
+            }
+        }
+    </style>
 </head>
 
-<body class="bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
-    {{-- Header with Authentication --}}
-    <header class="fixed top-0 left-0 right-0 z-50 bg-white/98 backdrop-blur-md border-b border-gray-100 shadow-sm">
-        <div class="max-w-7xl mx-auto px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center">
-                        <svg class="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                            <path
-                                d="M4 16c0 .88.39 1.67 1 2.22V20c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h8v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1.78c.61-.55 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5 1c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm9 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm1.5-6H6V6h12v5z" />
-                        </svg>
-                    </div>
-                    <span class="text-xl font-bold text-gray-900">{{ config('app.name', 'GTFS Manager') }}</span>
+<body class="bg-gray-50">
+    <header class="fixed top-0 left-0 right-0 z-50 bg-white border-b shadow-sm">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center">
+                    <svg class="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                        <path
+                            d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                    </svg>
                 </div>
-
-                @if (Route::has('login'))
-                    <nav class="flex items-center gap-4">
-                        @auth
-                            <a href="{{ url('/dashboard') }}"
-                                class="inline-flex items-center px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
-                                Dashboard
-                            </a>
-                        @else
-                            <a href="{{ route('login') }}"
-                                class="inline-flex items-center px-6 py-2.5 text-gray-700 hover:text-red-600 text-sm font-medium transition-colors">
-                                Log in
-                            </a>
-
-                            @if (Route::has('register'))
-                                <a href="{{ route('register') }}"
-                                    class="inline-flex items-center px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
-                                    Sign Up
-                                </a>
-                            @endif
-                        @endauth
-                    </nav>
-                @endif
+                <span class="text-xl font-bold">Transit Finder</span>
             </div>
+            <nav class="flex gap-4">
+                @auth
+                    <a href="/dashboard" class="px-6 py-2.5 bg-red-600 text-white rounded-lg">Dashboard</a>
+                @else
+                    <a href="/login" class="px-6 py-2.5 text-gray-700">Log in</a>
+                    <a href="/register" class="px-6 py-2.5 bg-red-600 text-white rounded-lg">Sign Up</a>
+                @endauth
+            </nav>
         </div>
     </header>
 
-    {{-- Hero Section --}}
-    <section class="pt-32 pb-20 px-6 lg:px-8 bg-gradient-to-br from-gray-50 via-white to-gray-50">
+    <section class="pt-32 pb-12 px-6 bg-gradient-to-br from-red-50 via-white to-gray-50">
         <div class="max-w-7xl mx-auto">
-            <div class="grid lg:grid-cols-2 gap-12 items-center">
-                {{-- Left Content --}}
-                <div>
-                    <div
-                        class="inline-flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-200 rounded-full mb-6">
-                        <svg class="w-4 h-4 text-red-600" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z" />
-                        </svg>
-                        <span class="text-sm font-semibold text-red-600">Professional GTFS Management</span>
+            <div class="text-center mb-8">
+                <h1 class="text-5xl font-bold mb-4">Find Your <span class="text-red-600">Perfect Route</span></h1>
+                <p class="text-xl text-gray-600">Plan your journey with real-time transit information</p>
+            </div>
+            <div class="max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl p-8">
+                <form id="route-search-form" class="space-y-6">
+                    <div class="grid md:grid-cols-[1fr_auto_1fr] gap-4 items-end">
+                        <div class="relative">
+                            <label class="block text-sm font-semibold mb-2">Starting Point</label>
+                            <input type="text" id="origin" required
+                                class="w-full px-4 py-3 border-2 rounded-lg focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none"
+                                placeholder="Enter starting location" autocomplete="off">
+                            <div id="origin-autocomplete" class="autocomplete-dropdown hidden"></div>
+                        </div>
+                        <button type="button" id="swap-locations"
+                            class="flex-shrink-0 w-12 h-12 bg-gray-100 hover:bg-red-100 rounded-lg flex items-center justify-center transition-all hover:scale-110 active:scale-95 group"
+                            title="Swap locations">
+                            <svg class="w-6 h-6 text-gray-600 group-hover:text-red-600 transition-colors rotate-90"
+                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                            </svg>
+                        </button>
+                        <div class="relative">
+                            <label class="block text-sm font-semibold mb-2">Destination</label>
+                            <input type="text" id="destination" required
+                                class="w-full px-4 py-3 border-2 rounded-lg focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none"
+                                placeholder="Where are you going?" autocomplete="off">
+                            <div id="destination-autocomplete" class="autocomplete-dropdown hidden"></div>
+                        </div>
                     </div>
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-semibold mb-2">Date</label>
+                            <input type="date" id="date" required
+                                class="w-full px-4 py-3 border-2 rounded-lg focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none cursor-pointer"
+                                value="{{ date('Y-m-d') }}" onclick="this.showPicker()">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-2">Time</label>
+                            <input type="time" id="time" required
+                                class="w-full px-4 py-3 border-2 rounded-lg focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none cursor-pointer"
+                                value="{{ date('H:i') }}" onclick="this.showPicker()">
+                        </div>
+                    </div>
+                    <button type="submit"
+                        class="w-full px-8 py-4 bg-red-600 hover:bg-red-700 text-white rounded-lg text-lg font-semibold">Search
+                        Routes</button>
+                </form>
+            </div>
+        </div>
+    </section>
 
-                    <h1 class="text-5xl lg:text-6xl font-bold mb-6 text-gray-900 leading-tight">
-                        Manage Transit <span class="text-red-600">Schedules</span> with Confidence
-                    </h1>
+    <section id="results-section" class="py-12 px-6 hidden">
+        <div class="max-w-5xl mx-auto">
+            <h2 class="text-3xl font-bold mb-8">Available Routes</h2>
+            <div id="loading-state" class="hidden text-center py-12">
+                <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-red-600 mx-auto"></div>
+                <p class="mt-4 text-gray-600">Searching for routes...</p>
+            </div>
+            <div id="no-results" class="hidden text-center py-12 bg-white rounded-2xl shadow-xl p-12">
+                <svg class="h-16 w-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <h3 class="text-xl font-bold mb-2">No Routes Found</h3>
+                <p class="text-gray-600">Try adjusting your search criteria or selecting different times.</p>
+            </div>
+            <div id="routes-list" class="space-y-4"></div>
+        </div>
+    </section>
 
-                    <p class="text-xl text-gray-600 mb-8 leading-relaxed">
-                        Import, manage, and distribute GTFS schedule data for buses, trains, and public transit.
-                        Streamline operations with our comprehensive platform built for transit operators.
-                    </p>
+    <script>
+        async function setupAutocomplete(inputId, dropdownId) {
+            const input = document.getElementById(inputId),
+                dropdown = document.getElementById(dropdownId);
+            input.addEventListener('input', async function() {
+                const query = this.value.trim();
+                if (query.length < 2) {
+                    dropdown.classList.add('hidden');
+                    return;
+                }
+                const response = await fetch('/api/stops/search?q=' + encodeURIComponent(query));
+                const stops = await response.json();
+                if (stops.length === 0) {
+                    dropdown.classList.add('hidden');
+                    return;
+                }
+                dropdown.innerHTML = stops.map(s => '<div class="autocomplete-item" data-name="' + s
+                    .stop_name + '"><div class="font-semibold">' + s.stop_name +
+                    '</div></div>').join('');
+                dropdown.classList.remove('hidden');
+                dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
+                    item.addEventListener('click', function() {
+                        input.value = this.dataset.name;
+                        dropdown.classList.add('hidden');
+                    });
+                });
+            });
+            document.addEventListener('click', function(e) {
+                if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.classList.add('hidden');
+                }
+            });
+        }
 
-                    <div class="flex flex-col sm:flex-row gap-4">
-                        @if (Route::has('register'))
-                            <a href="{{ route('register') }}"
-                                class="inline-flex items-center justify-center px-8 py-4 bg-red-600 hover:bg-red-700 text-white rounded-lg text-lg font-semibold transition-all shadow-lg hover:shadow-xl">
-                                Get Started Free
-                                <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M13 7l5 5m0 0l-5 5m5-5H6" />
+        setupAutocomplete('origin', 'origin-autocomplete');
+        setupAutocomplete('destination', 'destination-autocomplete');
+
+        // Swap origin and destination
+        document.getElementById('swap-locations').addEventListener('click', function() {
+            const origin = document.getElementById('origin');
+            const destination = document.getElementById('destination');
+            const temp = origin.value;
+            origin.value = destination.value;
+            destination.value = temp;
+        });
+
+        function renderTransferRoute(route) {
+            const legsHtml = route.legs.map((leg, idx) => {
+                if (leg.type === 'walk') {
+                    return `
+                        <div class="flex items-center gap-4 py-3">
+                            <div class="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                <svg class="h-7 w-7 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7"/>
                                 </svg>
-                            </a>
-                        @endif
-                        <a href="#features"
-                            class="inline-flex items-center justify-center px-8 py-4 bg-white hover:bg-gray-50 text-gray-900 border-2 border-gray-300 rounded-lg text-lg font-semibold transition-all">
-                            Learn More
-                        </a>
-                    </div>
-
-                    <div class="flex items-center gap-6 mt-8 pt-8 border-t border-gray-200">
-                        <div>
-                            <div class="text-3xl font-bold text-gray-900">100+</div>
-                            <div class="text-sm text-gray-600">Transit Operators</div>
-                        </div>
-                        <div class="h-12 w-px bg-gray-300"></div>
-                        <div>
-                            <div class="text-3xl font-bold text-gray-900">50K+</div>
-                            <div class="text-sm text-gray-600">Routes Managed</div>
-                        </div>
-                        <div class="h-12 w-px bg-gray-300"></div>
-                        <div>
-                            <div class="text-3xl font-bold text-gray-900">99.9%</div>
-                            <div class="text-sm text-gray-600">Uptime</div>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- Right Visual --}}
-                <div class="hidden lg:block">
-                    <div class="relative">
-                        <div
-                            class="absolute -inset-4 bg-gradient-to-r from-red-100 to-red-50 rounded-3xl transform rotate-3">
-                        </div>
-                        <div class="relative bg-white rounded-2xl shadow-2xl p-8 border border-gray-200">
-                            <div class="space-y-4">
-                                <div class="flex items-center gap-3 p-4 bg-red-50 rounded-lg border border-red-200">
-                                    <div
-                                        class="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                                        <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                                            <path
-                                                d="M9 16.17L5.53 12.7c-.39-.39-1.02-.39-1.41 0-.39.39-.39 1.02 0 1.41l4.18 4.18c.39.39 1.02.39 1.41 0L20.29 7.71c.39-.39.39-1.02 0-1.41-.39-.39-1.02-.39-1.41 0L9 16.17z" />
-                                        </svg>
-                                    </div>
-                                    <div class="flex-1">
-                                        <div class="font-semibold text-gray-900">GTFS Import Complete</div>
-                                        <div class="text-sm text-gray-600">1,247 routes • 3,891 stops</div>
-                                    </div>
-                                </div>
-
-                                <div class="flex items-center gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                                    <div
-                                        class="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
-                                        <svg class="w-6 h-6 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
-                                            <path
-                                                d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                                        </svg>
-                                    </div>
-                                    <div class="flex-1">
-                                        <div class="font-semibold text-gray-900">Route Validation</div>
-                                        <div class="text-sm text-gray-600">All routes verified</div>
-                                    </div>
-                                </div>
-
-                                <div class="flex items-center gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                                    <div
-                                        class="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0 animate-pulse">
-                                        <svg class="w-6 h-6 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
-                                            <path
-                                                d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
-                                        </svg>
-                                    </div>
-                                    <div class="flex-1">
-                                        <div class="font-semibold text-gray-900">Team Sync</div>
-                                        <div class="text-sm text-gray-600">Syncing changes...</div>
-                                    </div>
-                                </div>
+                            </div>
+                            <div class="flex-1">
+                                <div class="font-semibold text-blue-600">Walk ${leg.duration} min</div>
+                                <div class="text-sm text-gray-600">${leg.from} → ${leg.to}</div>
+                                ${leg.distance > 0 ? `<div class="text-xs text-gray-500">${leg.distance} km</div>` : ''}
+                            </div>
+                            <div class="flex flex-col items-end text-sm text-gray-600 gap-1">
+                                <div class="font-semibold text-blue-600">${leg.start_time}</div>
+                                <div class="text-xs text-gray-400">↓</div>
+                                <div class="font-semibold text-gray-700">${leg.end_time}</div>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
+                    `;
+                } else if (leg.type === 'transit') {
+                    const routeBadgeStyle = leg.route_color ?
+                        `background-color: #${leg.route_color}; color: ${leg.route_text_color ? '#' + leg.route_text_color : '#FFFFFF'};` :
+                        'background-color: #6B7280; color: #FFFFFF;';
 
-    {{-- Platform Features --}}
-    <section class="py-20 px-6 lg:px-8 bg-white">
-        <div class="max-w-7xl mx-auto">
-            <div class="text-center mb-16">
-                <h2 class="text-4xl font-bold mb-4 text-gray-900">
-                    Everything You Need to Manage Transit Schedules
-                </h2>
-                <p class="text-lg text-gray-600">
-                    Comprehensive GTFS schedule management for public transit operators
-                </p>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {{-- GTFS Import --}}
-                <div
-                    class="p-8 bg-white rounded-2xl border-2 border-red-100 hover:border-red-300 hover:shadow-xl transition-all">
-                    <div class="w-14 h-14 bg-red-600 rounded-xl flex items-center justify-center mb-6">
-                        <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
-                            <path
-                                d="M9 16.17L5.53 12.7c-.39-.39-1.02-.39-1.41 0-.39.39-.39 1.02 0 1.41l4.18 4.18c.39.39 1.02.39 1.41 0L20.29 7.71c.39-.39.39-1.02 0-1.41-.39-.39-1.02-.39-1.41 0L9 16.17z" />
+                    // For now default to bus icon, can be extended with leg.vehicle_type for trains/cars
+                    const vehicleIcon = `
+                        <svg class="h-6 w-6 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2c-4 0-8 .5-8 4v10c0 1.5 1.5 2 2 2v1c0 .5.5 1 1 1h1c.5 0 1-.5 1-1v-1h6v1c0 .5.5 1 1 1h1c.5 0 1-.5 1-1v-1c.5 0 2-.5 2-2V6c0-3.5-4-4-8-4zm0 2c3.5 0 5.5.5 6 2H6c.5-1.5 2.5-2 6-2zM7.5 9c.8 0 1.5.7 1.5 1.5S8.3 12 7.5 12 6 11.3 6 10.5 6.7 9 7.5 9zm9 0c.8 0 1.5.7 1.5 1.5s-.7 1.5-1.5 1.5-1.5-.7-1.5-1.5.7-1.5 1.5-1.5zM6 13.5h12V16H6v-2.5z"/>
                         </svg>
-                    </div>
-                    <h3 class="text-2xl font-bold mb-3 text-gray-900">GTFS Import</h3>
-                    <p class="text-gray-600">
-                        Import GTFS schedule files quickly and validate data automatically with comprehensive error
-                        checking.
-                    </p>
-                </div>
+                    `;
 
-                {{-- Route Management --}}
-                <div
-                    class="p-8 bg-white rounded-2xl border-2 border-red-100 hover:border-red-300 hover:shadow-xl transition-all">
-                    <div class="w-14 h-14 bg-red-600 rounded-xl flex items-center justify-center mb-6">
-                        <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
-                            <path
-                                d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                        </svg>
-                    </div>
-                    <h3 class="text-2xl font-bold mb-3 text-gray-900">Route Management</h3>
-                    <p class="text-gray-600">
-                        Manage bus routes, train lines, and stops with intuitive tools designed for transit operators.
-                    </p>
-                </div>
-
-                {{-- Schedule Editor --}}
-                <div
-                    class="p-8 bg-white rounded-2xl border-2 border-red-100 hover:border-red-300 hover:shadow-xl transition-all">
-                    <div class="w-14 h-14 bg-red-600 rounded-xl flex items-center justify-center mb-6">
-                        <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
-                            <path
-                                d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
-                        </svg>
-                    </div>
-                    <h3 class="text-2xl font-bold mb-3 text-gray-900">Schedule Editor</h3>
-                    <p class="text-gray-600">
-                        Edit timetables, manage service calendars, and update trip schedules with ease.
-                    </p>
-                </div>
-
-                {{-- Team Collaboration --}}
-                <div
-                    class="p-8 bg-white rounded-2xl border-2 border-red-100 hover:border-red-300 hover:shadow-xl transition-all">
-                    <div class="w-14 h-14 bg-red-600 rounded-xl flex items-center justify-center mb-6">
-                        <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
-                            <path
-                                d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
-                        </svg>
-                    </div>
-                    <h3 class="text-2xl font-bold mb-3 text-gray-900">Team Collaboration</h3>
-                    <p class="text-gray-600">
-                        Manage employee access, assign roles, and collaborate on schedule updates across your team.
-                    </p>
-                </div>
-
-                {{-- Real-time Updates --}}
-                <div
-                    class="p-8 bg-white rounded-2xl border-2 border-red-100 hover:border-red-300 hover:shadow-xl transition-all">
-                    <div class="w-14 h-14 bg-red-600 rounded-xl flex items-center justify-center mb-6">
-                        <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
-                            <path
-                                d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
-                        </svg>
-                    </div>
-                    <h3 class="text-2xl font-bold mb-3 text-gray-900">Activity Tracking</h3>
-                    <p class="text-gray-600">
-                        Monitor all schedule changes and updates with comprehensive activity logs and audit trails.
-                    </p>
-                </div>
-
-                {{-- Data Distribution --}}
-                <div
-                    class="p-8 bg-white rounded-2xl border-2 border-red-100 hover:border-red-300 hover:shadow-xl transition-all">
-                    <div class="w-14 h-14 bg-red-600 rounded-xl flex items-center justify-center mb-6">
-                        <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
-                            <path
-                                d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z" />
-                        </svg>
-                    </div>
-                    <h3 class="text-2xl font-bold mb-3 text-gray-900">Data Export</h3>
-                    <p class="text-gray-600">
-                        Export GTFS data for distribution to trip planners, apps, and other transit information systems.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    {{-- Subscription Plan --}}
-    <section class="py-20 px-6 lg:px-8 bg-gray-50">
-        <div class="max-w-7xl mx-auto">
-            <div class="text-center mb-16">
-                <h2 class="text-4xl font-bold mb-4 text-gray-900">
-                    Simple, Transparent Pricing
-                </h2>
-                <p class="text-lg text-gray-600">
-                    One subscription, unlimited access to all features
-                </p>
-            </div>
-
-            <div class="max-w-lg mx-auto">
-                {{-- Premium Plan --}}
-                <div class="p-10 bg-white rounded-3xl border-2 border-red-200 shadow-2xl">
-                    <div class="text-center mb-8">
-                        <div
-                            class="inline-block px-4 py-2 bg-red-100 text-red-700 rounded-full text-sm font-semibold mb-4">
-                            Most Popular
+                    return `
+                        <div class="flex items-start gap-4 py-3">
+                            <div class="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                                ${vehicleIcon}
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="inline-block px-3 py-1 text-sm font-bold rounded" style="${routeBadgeStyle}">
+                                        ${leg.route_name}
+                                    </span>
+                                    <span class="text-xs text-gray-500">${leg.operator_name}</span>
+                                </div>
+                                ${leg.trip_headsign ? `<div class="text-sm text-gray-600 mb-1">${leg.trip_headsign}</div>` : ''}
+                                <div class="text-sm font-medium text-gray-900">${leg.from} → ${leg.to}</div>
+                            </div>
+                            <div class="flex flex-col items-end text-sm text-gray-600 gap-1">
+                                <div class="font-semibold text-red-600">${leg.departure_time}</div>
+                                <div class="text-xs text-gray-400">↓</div>
+                                <div class="font-semibold text-gray-700">${leg.arrival_time}</div>
+                            </div>
                         </div>
-                        <h3 class="text-3xl font-bold mb-4 text-gray-900">Premium Plan</h3>
-                        <div class="mb-2">
-                            <span class="text-5xl font-bold text-gray-900">$29.99</span>
-                            <span class="text-xl text-gray-500">/month</span>
+                    `;
+                }
+                return '';
+            }).join('<div class="flex justify-center"><div class="w-px h-4 bg-gray-300"></div></div>');
+
+            return `
+                <div class="route-card bg-white rounded-xl shadow-lg p-6 border-2 border-orange-300">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex-1">
+                            <h3 class="text-xl font-bold text-gray-900 mb-2">
+                                Journey
+                            </h3>
                         </div>
-                        <p class="text-gray-600">Everything you need to manage transit schedules</p>
                     </div>
-
-                    <ul class="space-y-4 mb-8">
-                        <li class="flex items-start gap-3">
-                            <svg class="w-6 h-6 shrink-0 mt-0.5 text-red-600" fill="currentColor"
-                                viewBox="0 0 24 24">
-                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                    
+                    <div class="flex items-center gap-6 bg-gray-50 rounded-lg p-4 mb-4">
+                        <div class="flex-1">
+                            <div class="text-sm text-gray-600 mb-1">Leave at</div>
+                            <div class="text-2xl font-bold text-red-600">${route.leave_at || route.departure_time}</div>
+                            ${route.leave_at && route.leave_at !== route.departure_time ? `<div class="text-xs text-gray-500 mt-1">Bus departs: ${route.departure_time}</div>` : ''}
+                        </div>
+                        
+                        <div class="flex items-center gap-2 text-gray-400">
+                            <div class="h-px w-8 bg-gray-300"></div>
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
                             </svg>
-                            <span class="text-lg text-gray-700">Unlimited GTFS schedule imports</span>
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <svg class="w-6 h-6 shrink-0 mt-0.5 text-red-600" fill="currentColor"
-                                viewBox="0 0 24 24">
-                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                            <div class="h-px w-8 bg-gray-300"></div>
+                        </div>
+                        
+                        <div class="flex-1 text-center">
+                            <div class="text-sm text-gray-600 mb-1">Duration</div>
+                            <div class="text-lg font-semibold text-gray-900">${route.duration}</div>
+                        </div>
+                        
+                        <div class="flex items-center gap-2 text-gray-400">
+                            <div class="h-px w-8 bg-gray-300"></div>
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
                             </svg>
-                            <span class="text-lg text-gray-700">Unlimited routes, stops, and trips</span>
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <svg class="w-6 h-6 shrink-0 mt-0.5 text-red-600" fill="currentColor"
-                                viewBox="0 0 24 24">
-                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                            <div class="h-px w-8 bg-gray-300"></div>
+                        </div>
+                        
+                        <div class="flex-1 text-right">
+                            <div class="text-sm text-gray-600 mb-1">Arrival</div>
+                            <div class="text-2xl font-bold text-green-600">${route.arrival_time}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="border-t pt-4">
+                        <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                            <svg class="h-5 w-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
                             </svg>
-                            <span class="text-lg text-gray-700">Team collaboration & employee management</span>
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <svg class="w-6 h-6 shrink-0 mt-0.5 text-red-600" fill="currentColor"
-                                viewBox="0 0 24 24">
-                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-                            </svg>
-                            <span class="text-lg text-gray-700">Real-time activity tracking & audit logs</span>
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <svg class="w-6 h-6 shrink-0 mt-0.5 text-red-600" fill="currentColor"
-                                viewBox="0 0 24 24">
-                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-                            </svg>
-                            <span class="text-lg text-gray-700">Data validation & error checking</span>
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <svg class="w-6 h-6 shrink-0 mt-0.5 text-red-600" fill="currentColor"
-                                viewBox="0 0 24 24">
-                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-                            </svg>
-                            <span class="text-lg text-gray-700">GTFS export & data distribution</span>
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <svg class="w-6 h-6 shrink-0 mt-0.5 text-red-600" fill="currentColor"
-                                viewBox="0 0 24 24">
-                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-                            </svg>
-                            <span class="text-lg text-gray-700">Priority support & assistance</span>
-                        </li>
-                    </ul>
-
-                    @if (Route::has('register'))
-                        <a href="{{ route('register') }}"
-                            class="block text-center w-full px-8 py-4 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-lg transition-colors shadow-lg">
-                            Start Free Trial
-                        </a>
-                    @else
-                        <button
-                            class="w-full px-8 py-4 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-lg transition-colors shadow-lg">
-                            Contact Sales
-                        </button>
-                    @endif
-
-                    <p class="text-center text-gray-500 text-sm mt-4">14-day free trial • No credit card required</p>
+                            Journey Details
+                        </h4>
+                        <div class="space-y-1">
+                            ${legsHtml}
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-    </section>
+            `;
+        }
 
-    {{-- Footer --}}
-    <footer class="py-12 px-6 lg:px-8 bg-gray-900 dark:bg-black text-white">
-        <div class="max-w-7xl mx-auto text-center">
-            <div class="mb-6">
-                <div class="flex items-center justify-center gap-3 mb-4">
-                    <svg class="h-8 w-8 text-red-600 dark:text-red-500" fill="currentColor" viewBox="0 0 24 24">
-                        <path
-                            d="M4 16c0 .88.39 1.67 1 2.22V20c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h8v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1.78c.61-.55 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5 1c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm9 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm1.5-6H6V6h12v5z" />
-                    </svg>
-                    <span class="text-xl font-bold">{{ config('app.name', 'GTFS Manager') }}</span>
-                </div>
-                <p class="text-gray-400 text-sm">
-                    Professional GTFS schedule management for transit operators
-                </p>
-            </div>
-            <div class="border-t border-gray-800 pt-8">
-                <p class="text-gray-500 text-sm">
-                    &copy; {{ date('Y') }} {{ config('app.name', 'GTFS Manager') }}. All rights reserved.
-                </p>
-            </div>
-        </div>
-    </footer>
+        document.getElementById('route-search-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const origin = document.getElementById('origin');
+            const destination = document.getElementById('destination');
+            const routesList = document.getElementById('routes-list');
+            const loadingState = document.getElementById('loading-state');
+            const noResults = document.getElementById('no-results');
+
+            // Show results section and loading state
+            document.getElementById('results-section').classList.remove('hidden');
+            loadingState.classList.remove('hidden');
+            noResults.classList.add('hidden');
+            routesList.innerHTML = '';
+
+            try {
+                const response = await fetch('/api/routes/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({
+                        origin_name: origin.value,
+                        destination_name: destination.value,
+                        date: document.getElementById('date').value,
+                        time: document.getElementById('time').value
+                    })
+                });
+
+                const data = await response.json();
+                loadingState.classList.add('hidden');
+
+                if (!data.routes || data.routes.length === 0) {
+                    noResults.classList.remove('hidden');
+                    return;
+                }
+
+                // Show message if no direct routes
+                // Message removed - no need for transfer warning
+
+                // Display routes in linear format
+                routesList.innerHTML += data.routes.map((route, index) => {
+                    // Handle transfer routes with multiple legs
+                    if (route.connection_type === 'transfer' && route.legs) {
+                        return renderTransferRoute(route);
+                    }
+
+                    // Handle direct routes
+                    const exactMatchBadge = route.is_exact_match ?
+                        '<span class="exact-match-badge inline-block px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full ml-2">Exact Match</span>' :
+                        '';
+
+                    const connectionBadge = route.connection_type === 'from_origin' ?
+                        '<span class="inline-block px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full ml-2">From Origin</span>' :
+                        route.connection_type === 'to_destination' ?
+                        '<span class="inline-block px-3 py-1 bg-purple-100 text-purple-800 text-xs font-semibold rounded-full ml-2">To Destination</span>' :
+                        '';
+
+                    const note = route.note ?
+                        `<p class="text-sm text-gray-600 mt-2">${route.note}</p>` : '';
+
+                    // Create route badge with color if available
+                    const routeBadgeStyle = route.route_color ?
+                        `background-color: #${route.route_color}; color: ${route.route_text_color ? '#' + route.route_text_color : '#FFFFFF'};` :
+                        'background-color: #6B7280; color: #FFFFFF;';
+
+                    return `
+                        <div class="route-card bg-white rounded-xl shadow-lg p-6 border-2 ${route.is_exact_match ? 'border-green-500' : route.connection_type !== 'direct' ? 'border-gray-300' : 'border-transparent'}">
+                            <div class="flex items-start justify-between mb-4">
+                                <div class="flex-1">
+                                    <p class="text-sm font-semibold text-gray-700 mb-2">${route.agency_name}</p>
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <span class="inline-block px-4 py-2 text-lg font-bold rounded-lg" style="${routeBadgeStyle}">
+                                            ${route.route_name}
+                                        </span>
+                                        ${exactMatchBadge}
+                                        ${connectionBadge}
+                                    </div>
+                                    ${route.trip_headsign ? `<p class="text-gray-600 mt-2">${route.trip_headsign}</p>` : ''}
+                                    ${note}
+                                </div>
+                                ${route.stops_count !== '?' ? `<div class="flex items-center gap-2 text-sm text-gray-600">
+                                                                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                                                    </svg>
+                                                                                    <span>${route.stops_count} stops</span>
+                                                                                </div>` : ''}
+                            </div>
+                            
+                            <div class="flex items-center gap-6 bg-gray-50 rounded-lg p-4">
+                                ${route.departure_time !== '?' ? `<div class="flex-1">
+                                                                                    <div class="text-sm text-gray-600 mb-1">Leave at</div>
+                                                                                    <div class="text-2xl font-bold text-red-600">${route.leave_at || route.departure_time}</div>
+                                                                                    ${route.leave_at && route.leave_at !== route.departure_time ? `<div class="text-xs text-gray-500 mt-1">Bus departs: ${route.departure_time}</div>` : ''}
+                                                                                </div>` : ''}
+                                
+                                ${route.duration !== 'N/A' ? `<div class="flex items-center gap-2 text-gray-400">
+                                                                                    <div class="h-px w-8 bg-gray-300"></div>
+                                                                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                                                                                    </svg>
+                                                                                    <div class="h-px w-8 bg-gray-300"></div>
+                                                                                </div>
+                                                                                
+                                                                                <div class="flex-1 text-center">
+                                                                                    <div class="text-sm text-gray-600 mb-1">Duration</div>
+                                                                                    <div class="text-lg font-semibold text-gray-900">${route.duration}</div>
+                                                                                </div>
+                                                                                
+                                                                                <div class="flex items-center gap-2 text-gray-400">
+                                                                                    <div class="h-px w-8 bg-gray-300"></div>
+                                                                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                                                                                    </svg>
+                                                                                    <div class="h-px w-8 bg-gray-300"></div>
+                                                                                </div>` : ''}
+                                
+                                ${route.arrival_time !== '?' ? `<div class="flex-1 text-right">
+                                                                                    <div class="text-sm text-gray-600 mb-1">Arrival</div>
+                                                                                    <div class="text-2xl font-bold text-green-600">${route.arrival_time}</div>
+                                                                                </div>` : ''}
+                            </div>
+                            
+                            ${route.stops && route.stops.length > 0 ? `
+                                                                            <div class="mt-6 border-t pt-4">
+                                                                                <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                                                                    <svg class="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+                                                                                    </svg>
+                                                                                    All Stops on Route
+                                                                                </h4>
+                                                                                <div class="space-y-2 pl-7">
+                                                                                    ${route.stops.map((stop, idx) => `
+                                            <div class="flex items-center gap-3 text-sm">
+                                                <div class="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold text-xs">
+                                                    ${idx + 1}
+                                                </div>
+                                                <div class="flex-1 font-medium text-gray-900">${stop.name}</div>
+                                                <div class="text-gray-600">${stop.arrival}</div>
+                                            </div>
+                                        `).join('')}
+                                                                                </div>
+                                                                            </div>
+                                                                        ` : ''}
+                            
+                            ${route.description ? `<p class="mt-4 text-sm text-gray-600">${route.description}</p>` : ''}
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                loadingState.classList.add('hidden');
+                noResults.classList.remove('hidden');
+                console.error('Error searching routes:', error);
+            }
+        });
+    </script>
 </body>
 
 </html>
