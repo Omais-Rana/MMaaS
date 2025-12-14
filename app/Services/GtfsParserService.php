@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Jobs\PopulateStopCities;
 use App\Models\Calendar;
 use App\Models\CalendarDate;
 use App\Models\Route;
@@ -49,8 +50,9 @@ class GtfsParserService
 
             DB::commit();
 
-            // Populate city names for stops after successful import
-            $this->populateStopCities();
+            // Queue city population to run in background (non-blocking)
+            PopulateStopCities::dispatch($this->import);
+            Log::info('City population job queued for background processing');
 
             $this->cleanup();
 
@@ -60,32 +62,6 @@ class GtfsParserService
             $this->cleanup();
 
             throw $e;
-        }
-    }
-
-    protected function populateStopCities(): void
-    {
-        try {
-            Log::info('Starting city population for imported stops');
-
-            // Get stops without city information from this import
-            $stops = Stop::withoutGlobalScopes()
-                ->where('schedule_import_id', $this->import->id)
-                ->whereNull('city')
-                ->get();
-
-            if ($stops->isEmpty()) {
-                Log::info('No stops need city information');
-                return;
-            }
-
-            $populator = new StopCityPopulatorService();
-            $updated = $populator->populateCitiesForStops($stops);
-
-            Log::info("City population completed. Updated {$updated} stops");
-        } catch (Exception $e) {
-            // Log the error but don't fail the import
-            Log::error('City population failed: ' . $e->getMessage());
         }
     }
 
@@ -169,30 +145,14 @@ class GtfsParserService
             // Validate required field - trim and check
             $stopId = trim($row['stop_id'] ?? '');
 
-            // Log every stop_id to debug
-            if ($rowNumber <= 5 || empty($stopId)) {
-                Log::error('Stop row debug', [
-                    'row_number' => $rowNumber,
-                    'stop_id_raw' => var_export($row['stop_id'] ?? 'NOT_SET', true),
-                    'stop_id_trimmed' => var_export($stopId, true),
-                    'stop_id_empty' => empty($stopId),
-                    'stop_id_equals_empty_string' => $stopId === '',
-                    'stop_name' => $row['stop_name'] ?? 'NOT_SET',
-                ]);
-            }
-
             if ($stopId === '' || $stopId === null) {
-                Log::error('Empty stop_id detected', [
+                Log::warning('Skipping stop with empty stop_id', [
                     'row_number' => $rowNumber,
-                    'row_data' => $row,
-                    'stop_id_value' => $row['stop_id'] ?? 'KEY_NOT_EXISTS',
-                    'stop_id_trimmed' => $stopId,
-                    'stop_id_isset' => isset($row['stop_id']),
-                    'row_keys' => array_keys($row),
+                    'stop_name' => $row['stop_name'] ?? 'unknown',
                 ]);
-
-                $stopName = ! empty($row['stop_name']) ? $row['stop_name'] : 'unknown';
-                throw new Exception("Invalid GTFS data: stop_id is required but missing in stops.txt at row {$rowNumber} for stop: {$stopName}. Check logs for details.");
+                
+                // Skip this stop instead of failing the entire import
+                continue;
             }
 
             // Use updateOrCreate for smart merge

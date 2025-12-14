@@ -80,4 +80,19 @@ class ProcessScheduleImport implements ShouldQueue
             ->danger()
             ->sendToDatabase($this->scheduleImport->tenant);
     }
+
+    public function failed(Exception $exception): void
+    {
+        Log::error('Schedule import job failed permanently', [
+            'import_id' => $this->scheduleImport->id,
+            'error' => $exception->getMessage(),
+        ]);
+
+        $this->scheduleImport->update([
+            'status' => 'failed',
+            'error_message' => $exception->getMessage(),
+        ]);
+
+        $this->sendFailureNotification($exception->getMessage());
+    }
 }

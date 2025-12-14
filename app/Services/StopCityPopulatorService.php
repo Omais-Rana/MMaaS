@@ -4,11 +4,14 @@ namespace App\Services;
 
 use App\Models\Stop;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class StopCityPopulatorService
 {
+    private array $cityCache = [];
+
     public function populateCitiesForStops(Collection $stops): int
     {
         if ($stops->isEmpty()) {
@@ -17,12 +20,26 @@ class StopCityPopulatorService
 
         Log::info("Starting city population for {$stops->count()} stops");
 
-        // Group stops by proximity (within ~1km)
-        $groups = $this->groupStopsByProximity($stops);
+        // First, try to populate from existing stops with same coordinates
+        $updated = $this->populateFromExistingStops($stops);
+        
+        // Get remaining stops that still need city information
+        $remainingStops = Stop::withoutGlobalScopes()
+            ->whereIn('id', $stops->pluck('id'))
+            ->whereNull('city')
+            ->get();
+
+        if ($remainingStops->isEmpty()) {
+            Log::info("All stops populated from existing data. No API calls needed.");
+            return $updated;
+        }
+
+        Log::info("Need to geocode {$remainingStops->count()} stops via API");
+
+        // Group remaining stops by proximity (within ~1km)
+        $groups = $this->groupStopsByProximity($remainingStops);
 
         Log::info("Grouped into {$groups->count()} location clusters");
-
-        $updated = 0;
 
         foreach ($groups as $group) {
             // Use the first stop in the group as representative
@@ -50,6 +67,40 @@ class StopCityPopulatorService
         }
 
         Log::info("Successfully updated {$updated} stops with city information");
+
+        return $updated;
+    }
+
+    private function populateFromExistingStops(Collection $stops): int
+    {
+        $updated = 0;
+
+        foreach ($stops as $stop) {
+            // Look for stops within 100m with existing city data
+            $nearbyStopWithCity = Stop::withoutGlobalScopes()
+                ->whereNotNull('city')
+                ->where('id', '!=', $stop->id)
+                ->selectRaw('id, city, (6371 * acos(cos(radians(?)) * cos(radians(stop_lat)) * cos(radians(stop_lon) - radians(?)) + sin(radians(?)) * sin(radians(stop_lat)))) AS distance', [
+                    $stop->stop_lat,
+                    $stop->stop_lon,
+                    $stop->stop_lat,
+                ])
+                ->having('distance', '<', 0.1) // Within 100 meters
+                ->orderBy('distance')
+                ->first();
+
+            if ($nearbyStopWithCity) {
+                Stop::withoutGlobalScopes()
+                    ->where('id', $stop->id)
+                    ->update(['city' => $nearbyStopWithCity->city]);
+                
+                $updated++;
+            }
+        }
+
+        if ($updated > 0) {
+            Log::info("Populated {$updated} stops from existing nearby stops (no API calls)");
+        }
 
         return $updated;
     }
@@ -116,6 +167,22 @@ class StopCityPopulatorService
 
     private function getCityFromCoordinates($lat, $lon): ?string
     {
+        // Round coordinates to 3 decimal places (~100m precision) for caching
+        $cacheKey = 'geocode_' . round($lat, 3) . '_' . round($lon, 3);
+
+        // Check memory cache first (for this batch)
+        if (isset($this->cityCache[$cacheKey])) {
+            return $this->cityCache[$cacheKey];
+        }
+
+        // Check Laravel cache (persistent across jobs, 30 days)
+        $cachedCity = Cache::get($cacheKey);
+        if ($cachedCity !== null) {
+            $this->cityCache[$cacheKey] = $cachedCity;
+            Log::info("Using cached city: {$cachedCity} for coordinates ({$lat}, {$lon})");
+            return $cachedCity;
+        }
+
         try {
             // Using Nominatim (OpenStreetMap) for reverse geocoding
             $response = Http::timeout(10)
@@ -143,6 +210,9 @@ class StopCityPopulatorService
                     ?? null;
 
                 if ($city) {
+                    // Cache the result for 30 days
+                    Cache::put($cacheKey, $city, now()->addDays(30));
+                    $this->cityCache[$cacheKey] = $city;
                     Log::info("Geocoded city: {$city} for coordinates ({$lat}, {$lon})");
                 }
 
