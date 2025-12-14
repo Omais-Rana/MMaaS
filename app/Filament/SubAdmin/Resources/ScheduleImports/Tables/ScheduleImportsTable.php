@@ -28,13 +28,13 @@ class ScheduleImportsTable
                         'completed' => 'success',
                         'processing' => 'warning',
                         'failed' => 'danger',
-                        default => 'gray',
+                        default => 'secondary',
                     })
                     ->icon(fn(string $state): Heroicon => match ($state) {
                         'completed' => Heroicon::CheckCircle,
                         'processing' => Heroicon::Clock,
                         'failed' => Heroicon::XCircle,
-                        default => Heroicon::QuestionMarkCircle,
+                        default => Heroicon::Clock,
                     })
                     ->sortable(),
                 TextColumn::make('total_routes')

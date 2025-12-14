@@ -22,7 +22,7 @@ class StopCityPopulatorService
 
         // First, try to populate from existing stops with same coordinates
         $updated = $this->populateFromExistingStops($stops);
-        
+
         // Get remaining stops that still need city information
         $remainingStops = Stop::withoutGlobalScopes()
             ->whereIn('id', $stops->pluck('id'))
@@ -93,7 +93,7 @@ class StopCityPopulatorService
                 Stop::withoutGlobalScopes()
                     ->where('id', $stop->id)
                     ->update(['city' => $nearbyStopWithCity->city]);
-                
+
                 $updated++;
             }
         }

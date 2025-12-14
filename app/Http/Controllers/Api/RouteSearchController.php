@@ -190,6 +190,8 @@ class RouteSearchController extends Controller
                     ->orderBy('stop_times.stop_sequence')
                     ->select(
                         'stops.stop_name',
+                        'stops.stop_lat',
+                        'stops.stop_lon',
                         'stop_times.arrival_time',
                         'stop_times.departure_time',
                         'stop_times.stop_sequence'
@@ -198,6 +200,8 @@ class RouteSearchController extends Controller
                     ->map(function ($stop) {
                         return [
                             'name' => $stop->stop_name,
+                            'lat' => $stop->stop_lat,
+                            'lon' => $stop->stop_lon,
                             'arrival' => substr($stop->arrival_time, 0, 5),
                             'departure' => substr($stop->departure_time, 0, 5),
                         ];
@@ -362,10 +366,17 @@ class RouteSearchController extends Controller
                     continue;
                 }
 
+                $originCoords = ['lat' => $originStops[0]->stop_lat, 'lon' => $originStops[0]->stop_lon];
+                $destCoords = $this->getStopCoordsById($route->origin_stop_id);
+
                 $legs[] = [
                     'type' => 'walk',
                     'from' => $originName,
                     'to' => $this->getStopNameById($route->origin_stop_id),
+                    'from_lat' => $originCoords['lat'],
+                    'from_lon' => $originCoords['lon'],
+                    'to_lat' => $destCoords['lat'],
+                    'to_lon' => $destCoords['lon'],
                     'distance' => $originWalkDist,
                     'duration' => $walkDuration,
                     'start_time' => $walkStartTime,
@@ -385,16 +396,25 @@ class RouteSearchController extends Controller
                 'to' => $route->dest_stop_name,
                 'departure_time' => $busDepartureTime,
                 'arrival_time' => $busArrivalTime,
+                'stops' => [], // Populated for map display if needed
             ];
 
             // Only add destination walk if there's actual distance
             if ($destWalkDist > 0.05) {
                 $walkDuration = $this->calculateWalkingTimeById($route->dest_stop_id, $destStops[0]->id, $walkingSpeedKmh);
                 $walkStartTime = $busArrivalTime;
+                
+                $fromCoords = $this->getStopCoordsById($route->dest_stop_id);
+                $toCoords = ['lat' => $destStops[0]->stop_lat, 'lon' => $destStops[0]->stop_lon];
+                
                 $legs[] = [
                     'type' => 'walk',
                     'from' => $this->getStopNameById($route->dest_stop_id),
                     'to' => $destinationName,
+                    'from_lat' => $fromCoords['lat'],
+                    'from_lon' => $fromCoords['lon'],
+                    'to_lat' => $toCoords['lat'],
+                    'to_lon' => $toCoords['lon'],
                     'distance' => $destWalkDist,
                     'duration' => $walkDuration,
                     'start_time' => $walkStartTime,
@@ -853,6 +873,13 @@ class RouteSearchController extends Controller
         $stop = DB::table('stops')->where('id', $stopId)->first();
 
         return $stop ? $stop->stop_name : 'Unknown';
+    }
+
+    private function getStopCoordsById($stopId)
+    {
+        $stop = DB::table('stops')->where('id', $stopId)->select('stop_lat', 'stop_lon')->first();
+
+        return $stop ? ['lat' => $stop->stop_lat, 'lon' => $stop->stop_lon] : null;
     }
 
     private function getWalkingDistanceById($fromStopId, $toStopId)

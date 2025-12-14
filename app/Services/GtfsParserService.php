@@ -150,7 +150,7 @@ class GtfsParserService
                     'row_number' => $rowNumber,
                     'stop_name' => $row['stop_name'] ?? 'unknown',
                 ]);
-                
+
                 // Skip this stop instead of failing the entire import
                 continue;
             }
