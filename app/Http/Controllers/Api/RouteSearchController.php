@@ -403,10 +403,10 @@ class RouteSearchController extends Controller
             if ($destWalkDist > 0.05) {
                 $walkDuration = $this->calculateWalkingTimeById($route->dest_stop_id, $destStops[0]->id, $walkingSpeedKmh);
                 $walkStartTime = $busArrivalTime;
-                
+
                 $fromCoords = $this->getStopCoordsById($route->dest_stop_id);
                 $toCoords = ['lat' => $destStops[0]->stop_lat, 'lon' => $destStops[0]->stop_lon];
-                
+
                 $legs[] = [
                     'type' => 'walk',
                     'from' => $this->getStopNameById($route->dest_stop_id),

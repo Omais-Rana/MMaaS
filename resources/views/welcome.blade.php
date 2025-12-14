@@ -464,58 +464,58 @@
                                     ${note}
                                 </div>
                                 ${route.stops_count !== '?' ? `<div class="flex items-center gap-2 text-sm text-gray-600">
-                                                                                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                                                                            </svg>
-                                                                                            <span>${route.stops_count} stops</span>
-                                                                                        </div>` : ''}
+                                                                                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                                                                </svg>
+                                                                                                <span>${route.stops_count} stops</span>
+                                                                                            </div>` : ''}
                             </div>
                             
                             <div class="flex items-center gap-6 bg-gray-50 rounded-lg p-4">
                                 ${route.departure_time !== '?' ? `<div class="flex-1">
-                                                                                            <div class="text-sm text-gray-600 mb-1">Leave at</div>
-                                                                                            <div class="text-2xl font-bold text-red-600">${route.leave_at || route.departure_time}</div>
-                                                                                            ${route.leave_at && route.leave_at !== route.departure_time ? `<div class="text-xs text-gray-500 mt-1">Bus departs: ${route.departure_time}</div>` : ''}
-                                                                                        </div>` : ''}
+                                                                                                <div class="text-sm text-gray-600 mb-1">Leave at</div>
+                                                                                                <div class="text-2xl font-bold text-red-600">${route.leave_at || route.departure_time}</div>
+                                                                                                ${route.leave_at && route.leave_at !== route.departure_time ? `<div class="text-xs text-gray-500 mt-1">Bus departs: ${route.departure_time}</div>` : ''}
+                                                                                            </div>` : ''}
                                 
                                 ${route.duration !== 'N/A' ? `<div class="flex items-center gap-2 text-gray-400">
-                                                                                            <div class="h-px w-8 bg-gray-300"></div>
-                                                                                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
-                                                                                            </svg>
-                                                                                            <div class="h-px w-8 bg-gray-300"></div>
-                                                                                        </div>
-                                                                                        
-                                                                                        <div class="flex-1 text-center">
-                                                                                            <div class="text-sm text-gray-600 mb-1">Duration</div>
-                                                                                            <div class="text-lg font-semibold text-gray-900">${route.duration}</div>
-                                                                                        </div>
-                                                                                        
-                                                                                        <div class="flex items-center gap-2 text-gray-400">
-                                                                                            <div class="h-px w-8 bg-gray-300"></div>
-                                                                                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
-                                                                                            </svg>
-                                                                                            <div class="h-px w-8 bg-gray-300"></div>
-                                                                                        </div>` : ''}
+                                                                                                <div class="h-px w-8 bg-gray-300"></div>
+                                                                                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                                                                                                </svg>
+                                                                                                <div class="h-px w-8 bg-gray-300"></div>
+                                                                                            </div>
+                                                                                            
+                                                                                            <div class="flex-1 text-center">
+                                                                                                <div class="text-sm text-gray-600 mb-1">Duration</div>
+                                                                                                <div class="text-lg font-semibold text-gray-900">${route.duration}</div>
+                                                                                            </div>
+                                                                                            
+                                                                                            <div class="flex items-center gap-2 text-gray-400">
+                                                                                                <div class="h-px w-8 bg-gray-300"></div>
+                                                                                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                                                                                                </svg>
+                                                                                                <div class="h-px w-8 bg-gray-300"></div>
+                                                                                            </div>` : ''}
                                 
                                 ${route.arrival_time !== '?' ? `<div class="flex-1 text-right">
-                                                                                            <div class="text-sm text-gray-600 mb-1">Arrival</div>
-                                                                                            <div class="text-2xl font-bold text-green-600">${route.arrival_time}</div>
-                                                                                        </div>` : ''}
+                                                                                                <div class="text-sm text-gray-600 mb-1">Arrival</div>
+                                                                                                <div class="text-2xl font-bold text-green-600">${route.arrival_time}</div>
+                                                                                            </div>` : ''}
                             </div>
                             
                             ${route.stops && route.stops.length > 0 ? `
-                                                                                    <div class="mt-6 border-t pt-4">
-                                                                                        <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                                                                                            <svg class="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
-                                                                                            </svg>
-                                                                                            All Stops on Route
-                                                                                        </h4>
-                                                                                        <div class="space-y-2 pl-7">
-                                                                                            ${route.stops.map((stop, idx) => `
+                                                                                        <div class="mt-6 border-t pt-4">
+                                                                                            <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                                                                                <svg class="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+                                                                                                </svg>
+                                                                                                All Stops on Route
+                                                                                            </h4>
+                                                                                            <div class="space-y-2 pl-7">
+                                                                                                ${route.stops.map((stop, idx) => `
                                             <div class="flex items-center gap-3 text-sm">
                                                 <div class="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold text-xs">
                                                     ${idx + 1}
@@ -524,9 +524,9 @@
                                                 <div class="text-gray-600">${stop.arrival}</div>
                                             </div>
                                         `).join('')}
+                                                                                            </div>
                                                                                         </div>
-                                                                                    </div>
-                                                                                ` : ''}
+                                                                                    ` : ''}
                             
                             ${route.description ? `<p class="mt-4 text-sm text-gray-600">${route.description}</p>` : ''}
                             
