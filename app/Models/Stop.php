@@ -18,6 +18,7 @@ class Stop extends Model
         'stop_desc',
         'stop_lat',
         'stop_lon',
+        'city',
         'zone_id',
         'stop_code',
         'wheelchair_boarding',

@@ -49,6 +49,9 @@ class GtfsParserService
 
             DB::commit();
 
+            // Populate city names for stops after successful import
+            $this->populateStopCities();
+
             $this->cleanup();
 
             return $this->stats;
@@ -57,6 +60,32 @@ class GtfsParserService
             $this->cleanup();
 
             throw $e;
+        }
+    }
+
+    protected function populateStopCities(): void
+    {
+        try {
+            Log::info('Starting city population for imported stops');
+
+            // Get stops without city information from this import
+            $stops = Stop::withoutGlobalScopes()
+                ->where('schedule_import_id', $this->import->id)
+                ->whereNull('city')
+                ->get();
+
+            if ($stops->isEmpty()) {
+                Log::info('No stops need city information');
+                return;
+            }
+
+            $populator = new StopCityPopulatorService();
+            $updated = $populator->populateCitiesForStops($stops);
+
+            Log::info("City population completed. Updated {$updated} stops");
+        } catch (Exception $e) {
+            // Log the error but don't fail the import
+            Log::error('City population failed: ' . $e->getMessage());
         }
     }
 

@@ -41,6 +41,7 @@ class RouteSearchController extends Controller
                 DB::raw('GROUP_CONCAT(DISTINCT stop_id) as stop_ids'),
                 DB::raw('MAX(stop_desc) as stop_desc'),
                 DB::raw('MAX(stop_code) as stop_code'),
+                DB::raw('MAX(city) as city'),
                 DB::raw("CASE 
                     WHEN LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(stop_name, 'é', 'e'), 'è', 'e'), 'ê', 'e'), 'à', 'a'), 'ô', 'o'), 'ù', 'u'), 'ç', 'c')) LIKE '" . $normalizedQuery . "%' THEN 1 
                     ELSE 2 
