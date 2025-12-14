@@ -113,6 +113,32 @@
                 <p class="text-xl text-gray-600">Plan your journey with real-time transit information</p>
             </div>
             <div class="max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl p-8">
+                <div class="mb-4 flex justify-end">
+                    <button type="button" id="toggle-map-selector"
+                        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                        </svg>
+                        Select on Map
+                    </button>
+                </div>
+
+                <div id="map-selector-container" class="hidden mb-6">
+                    <div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 mb-4">
+                        <p class="text-sm font-semibold text-blue-900 mb-2" id="map-instruction">
+                            Click on the map to select your starting point
+                        </p>
+                        <div class="flex gap-2">
+                            <span class="px-3 py-1 bg-green-100 text-green-800 text-sm font-semibold rounded-full"
+                                id="origin-status">Origin: Not selected</span>
+                            <span class="px-3 py-1 bg-orange-100 text-orange-800 text-sm font-semibold rounded-full"
+                                id="dest-status">Destination: Not selected</span>
+                        </div>
+                    </div>
+                    <div id="selection-map" style="height: 400px; border-radius: 0.5rem;"></div>
+                </div>
+
                 <form id="route-search-form" class="space-y-6">
                     <div class="grid md:grid-cols-[1fr_auto_1fr] gap-4 items-end">
                         <div class="relative">
@@ -184,6 +210,18 @@
                 </div>
             </div>
             <div id="map-container" class="mb-8 hidden">
+                <div class="bg-white rounded-lg p-4 mb-4 shadow-md flex items-center gap-6 text-sm">
+                    <div class="font-semibold text-gray-700">Map Legend:</div>
+                    <div class="flex items-center gap-2">
+                        <div style="width: 40px; height: 3px; background: #DC2626;"></div>
+                        <span class="text-gray-600">🚌 Transit (Bus/Train)</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div style="width: 40px; height: 3px; background: #3B82F6; border-top: 3px dashed #3B82F6;">
+                        </div>
+                        <span class="text-gray-600">🚶 Walking</span>
+                    </div>
+                </div>
                 <div id="map"></div>
             </div>
             <div id="loading-state" class="hidden text-center py-12">
@@ -464,58 +502,58 @@
                                     ${note}
                                 </div>
                                 ${route.stops_count !== '?' ? `<div class="flex items-center gap-2 text-sm text-gray-600">
-                                                                                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                                                                                </svg>
-                                                                                                <span>${route.stops_count} stops</span>
-                                                                                            </div>` : ''}
+                                                                                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                                                                    </svg>
+                                                                                                    <span>${route.stops_count} stops</span>
+                                                                                                </div>` : ''}
                             </div>
                             
                             <div class="flex items-center gap-6 bg-gray-50 rounded-lg p-4">
                                 ${route.departure_time !== '?' ? `<div class="flex-1">
-                                                                                                <div class="text-sm text-gray-600 mb-1">Leave at</div>
-                                                                                                <div class="text-2xl font-bold text-red-600">${route.leave_at || route.departure_time}</div>
-                                                                                                ${route.leave_at && route.leave_at !== route.departure_time ? `<div class="text-xs text-gray-500 mt-1">Bus departs: ${route.departure_time}</div>` : ''}
-                                                                                            </div>` : ''}
+                                                                                                    <div class="text-sm text-gray-600 mb-1">Leave at</div>
+                                                                                                    <div class="text-2xl font-bold text-red-600">${route.leave_at || route.departure_time}</div>
+                                                                                                    ${route.leave_at && route.leave_at !== route.departure_time ? `<div class="text-xs text-gray-500 mt-1">Bus departs: ${route.departure_time}</div>` : ''}
+                                                                                                </div>` : ''}
                                 
                                 ${route.duration !== 'N/A' ? `<div class="flex items-center gap-2 text-gray-400">
-                                                                                                <div class="h-px w-8 bg-gray-300"></div>
-                                                                                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
-                                                                                                </svg>
-                                                                                                <div class="h-px w-8 bg-gray-300"></div>
-                                                                                            </div>
-                                                                                            
-                                                                                            <div class="flex-1 text-center">
-                                                                                                <div class="text-sm text-gray-600 mb-1">Duration</div>
-                                                                                                <div class="text-lg font-semibold text-gray-900">${route.duration}</div>
-                                                                                            </div>
-                                                                                            
-                                                                                            <div class="flex items-center gap-2 text-gray-400">
-                                                                                                <div class="h-px w-8 bg-gray-300"></div>
-                                                                                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
-                                                                                                </svg>
-                                                                                                <div class="h-px w-8 bg-gray-300"></div>
-                                                                                            </div>` : ''}
+                                                                                                    <div class="h-px w-8 bg-gray-300"></div>
+                                                                                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                                                                                                    </svg>
+                                                                                                    <div class="h-px w-8 bg-gray-300"></div>
+                                                                                                </div>
+                                                                                                
+                                                                                                <div class="flex-1 text-center">
+                                                                                                    <div class="text-sm text-gray-600 mb-1">Duration</div>
+                                                                                                    <div class="text-lg font-semibold text-gray-900">${route.duration}</div>
+                                                                                                </div>
+                                                                                                
+                                                                                                <div class="flex items-center gap-2 text-gray-400">
+                                                                                                    <div class="h-px w-8 bg-gray-300"></div>
+                                                                                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                                                                                                    </svg>
+                                                                                                    <div class="h-px w-8 bg-gray-300"></div>
+                                                                                                </div>` : ''}
                                 
                                 ${route.arrival_time !== '?' ? `<div class="flex-1 text-right">
-                                                                                                <div class="text-sm text-gray-600 mb-1">Arrival</div>
-                                                                                                <div class="text-2xl font-bold text-green-600">${route.arrival_time}</div>
-                                                                                            </div>` : ''}
+                                                                                                    <div class="text-sm text-gray-600 mb-1">Arrival</div>
+                                                                                                    <div class="text-2xl font-bold text-green-600">${route.arrival_time}</div>
+                                                                                                </div>` : ''}
                             </div>
                             
                             ${route.stops && route.stops.length > 0 ? `
-                                                                                        <div class="mt-6 border-t pt-4">
-                                                                                            <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                                                                                                <svg class="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
-                                                                                                </svg>
-                                                                                                All Stops on Route
-                                                                                            </h4>
-                                                                                            <div class="space-y-2 pl-7">
-                                                                                                ${route.stops.map((stop, idx) => `
+                                                                                            <div class="mt-6 border-t pt-4">
+                                                                                                <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                                                                                    <svg class="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+                                                                                                    </svg>
+                                                                                                    All Stops on Route
+                                                                                                </h4>
+                                                                                                <div class="space-y-2 pl-7">
+                                                                                                    ${route.stops.map((stop, idx) => `
                                             <div class="flex items-center gap-3 text-sm">
                                                 <div class="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold text-xs">
                                                     ${idx + 1}
@@ -524,9 +562,9 @@
                                                 <div class="text-gray-600">${stop.arrival}</div>
                                             </div>
                                         `).join('')}
+                                                                                                </div>
                                                                                             </div>
-                                                                                        </div>
-                                                                                    ` : ''}
+                                                                                        ` : ''}
                             
                             ${route.description ? `<p class="mt-4 text-sm text-gray-600">${route.description}</p>` : ''}
                             
@@ -548,7 +586,12 @@
 
         // Map functionality
         let map = null;
+        let selectionMap = null;
         let currentRouteData = null;
+        let selectedOrigin = null;
+        let selectedDestination = null;
+        let originMarker = null;
+        let destMarker = null;
 
         function initMap() {
             if (!map) {
@@ -562,6 +605,127 @@
                 }).addTo(map);
             }
         }
+
+        // Initialize selection map
+        document.getElementById('toggle-map-selector').addEventListener('click', function() {
+            const container = document.getElementById('map-selector-container');
+            const isHidden = container.classList.contains('hidden');
+
+            if (isHidden) {
+                container.classList.remove('hidden');
+                this.textContent = 'Hide Map';
+
+                setTimeout(() => {
+                    if (!selectionMap) {
+                        selectionMap = L.map('selection-map').setView([47.5, 6.8], 10);
+
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            attribution: '© OpenStreetMap contributors',
+                            maxZoom: 19
+                        }).addTo(selectionMap);
+
+                        // Click handler to select stops
+                        selectionMap.on('click', async function(e) {
+                            const lat = e.latlng.lat;
+                            const lon = e.latlng.lng;
+
+                            // Find nearest stop
+                            try {
+                                const response = await fetch(
+                                    `/api/stops/nearest?lat=${lat}&lon=${lon}`);
+                                const stop = await response.json();
+
+                                if (!selectedOrigin) {
+                                    selectedOrigin = stop;
+                                    document.getElementById('origin').value = stop.stop_name;
+                                    document.getElementById('origin-status').textContent =
+                                        `Origin: ${stop.stop_name}`;
+                                    document.getElementById('origin-status').classList.remove(
+                                        'bg-green-100', 'text-green-800');
+                                    document.getElementById('origin-status').classList.add(
+                                        'bg-green-500', 'text-white');
+                                    document.getElementById('map-instruction').textContent =
+                                        'Now click to select your destination';
+
+                                    if (originMarker) selectionMap.removeLayer(originMarker);
+                                    originMarker = L.marker([stop.stop_lat, stop.stop_lon], {
+                                        icon: L.divIcon({
+                                            className: 'custom-div-icon',
+                                            html: '<div style="background-color: #22c55e; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>',
+                                            iconSize: [24, 24],
+                                            iconAnchor: [12, 12]
+                                        })
+                                    }).addTo(selectionMap).bindPopup(
+                                        `<b>Origin:</b> ${stop.stop_name}`).openPopup();
+                                } else if (!selectedDestination) {
+                                    selectedDestination = stop;
+                                    document.getElementById('destination').value = stop
+                                        .stop_name;
+                                    document.getElementById('dest-status').textContent =
+                                        `Destination: ${stop.stop_name}`;
+                                    document.getElementById('dest-status').classList.remove(
+                                        'bg-orange-100', 'text-orange-800');
+                                    document.getElementById('dest-status').classList.add(
+                                        'bg-orange-500', 'text-white');
+                                    document.getElementById('map-instruction').textContent =
+                                        'Both points selected! You can now search for routes.';
+
+                                    if (destMarker) selectionMap.removeLayer(destMarker);
+                                    destMarker = L.marker([stop.stop_lat, stop.stop_lon], {
+                                        icon: L.divIcon({
+                                            className: 'custom-div-icon',
+                                            html: '<div style="background-color: #f97316; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>',
+                                            iconSize: [24, 24],
+                                            iconAnchor: [12, 12]
+                                        })
+                                    }).addTo(selectionMap).bindPopup(
+                                        `<b>Destination:</b> ${stop.stop_name}`).openPopup();
+                                } else {
+                                    // Reset and start over
+                                    selectedOrigin = stop;
+                                    selectedDestination = null;
+                                    document.getElementById('origin').value = stop.stop_name;
+                                    document.getElementById('destination').value = '';
+                                    document.getElementById('origin-status').textContent =
+                                        `Origin: ${stop.stop_name}`;
+                                    document.getElementById('dest-status').textContent =
+                                        'Destination: Not selected';
+                                    document.getElementById('dest-status').classList.remove(
+                                        'bg-orange-500', 'text-white');
+                                    document.getElementById('dest-status').classList.add(
+                                        'bg-orange-100', 'text-orange-800');
+                                    document.getElementById('map-instruction').textContent =
+                                        'Now click to select your destination';
+
+                                    if (originMarker) selectionMap.removeLayer(originMarker);
+                                    if (destMarker) selectionMap.removeLayer(destMarker);
+
+                                    originMarker = L.marker([stop.stop_lat, stop.stop_lon], {
+                                        icon: L.divIcon({
+                                            className: 'custom-div-icon',
+                                            html: '<div style="background-color: #22c55e; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>',
+                                            iconSize: [24, 24],
+                                            iconAnchor: [12, 12]
+                                        })
+                                    }).addTo(selectionMap).bindPopup(
+                                        `<b>Origin:</b> ${stop.stop_name}`).openPopup();
+                                }
+                            } catch (error) {
+                                console.error('Error finding nearest stop:', error);
+                                alert(
+                                    'Could not find a nearby stop. Please try clicking closer to a transit stop.');
+                            }
+                        });
+                    } else {
+                        selectionMap.invalidateSize();
+                    }
+                }, 100);
+            } else {
+                container.classList.add('hidden');
+                this.innerHTML =
+                    '<svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>Select on Map';
+            }
+        });
 
         async function displayRouteOnMap(route) {
             if (!map) initMap();
