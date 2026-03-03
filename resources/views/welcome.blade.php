@@ -298,9 +298,12 @@
                     allRoutesShapes = {};
                     data.routes.forEach(r => {
                         if (r.shape_pts && r.shape_pts.length > 1) {
-                            // Cache shape by route name for fallback use in search results
+                            // Cache ALL shapes per route (each direction has its own shape)
                             const rName = r.route_short_name || r.route_name;
-                            if (rName) allRoutesShapes[rName] = r.shape_pts;
+                            if (rName) {
+                                if (!allRoutesShapes[rName]) allRoutesShapes[rName] = [];
+                                allRoutesShapes[rName].push(r.shape_pts);
+                            }
                             let color = r.route_color ? '#' + r.route_color : '#9CA3AF';
                             let polyline = L.polyline(r.shape_pts, {
                                 color: color,
@@ -534,22 +537,22 @@
                             
                             <div class="flex items-center gap-4 bg-gray-50/80 rounded-lg p-3">
                                 ${route.departure_time !== '?' ? `
-                                                <div class="flex-1">
-                                                    <div class="text-xs text-gray-500 uppercase tracking-wider">Departs</div>
-                                                    <div class="text-xl font-bold text-red-600">${route.leave_at || route.departure_time}</div>
-                                                </div>` : ''}
+                                                    <div class="flex-1">
+                                                        <div class="text-xs text-gray-500 uppercase tracking-wider">Departs</div>
+                                                        <div class="text-xl font-bold text-red-600">${route.leave_at || route.departure_time}</div>
+                                                    </div>` : ''}
                                 
                                 ${route.duration !== 'N/A' ? `
-                                                <div class="flex-1 text-center border-l border-r border-gray-200 px-2">
-                                                    <div class="text-xs text-gray-500 uppercase tracking-wider">Duration</div>
-                                                    <div class="text-sm font-semibold text-gray-800">${route.duration}</div>
-                                                </div>` : ''}
+                                                    <div class="flex-1 text-center border-l border-r border-gray-200 px-2">
+                                                        <div class="text-xs text-gray-500 uppercase tracking-wider">Duration</div>
+                                                        <div class="text-sm font-semibold text-gray-800">${route.duration}</div>
+                                                    </div>` : ''}
                                 
                                 ${route.arrival_time !== '?' ? `
-                                                <div class="flex-1 text-right">
-                                                    <div class="text-xs text-gray-500 uppercase tracking-wider">Arrives</div>
-                                                    <div class="text-xl font-bold text-green-600">${route.arrival_time}</div>
-                                                </div>` : ''}
+                                                    <div class="flex-1 text-right">
+                                                        <div class="text-xs text-gray-500 uppercase tracking-wider">Arrives</div>
+                                                        <div class="text-xl font-bold text-green-600">${route.arrival_time}</div>
+                                                    </div>` : ''}
                             </div>
                             ${directMidStopsHtml}
                         </div>
@@ -569,8 +572,8 @@
             }
         });
 
-        // Clip a cached full shape to the nearest points for a from/to coord pair
-        function clipCachedShape(shapePts, fromLat, fromLon, toLat, toLon) {
+        // Clip a single shape array to the nearest points for a from/to coord pair
+        function clipOneShape(shapePts, fromLat, fromLon, toLat, toLon) {
             if (!shapePts || shapePts.length < 2) return null;
             let originIdx = 0,
                 destIdx = shapePts.length - 1;
@@ -591,7 +594,26 @@
             }
             if (originIdx > destIdx)[originIdx, destIdx] = [destIdx, originIdx];
             const clipped = shapePts.slice(originIdx, destIdx + 1);
-            return clipped.length > 1 ? clipped : null;
+            return clipped.length > 1 ? {
+                pts: clipped,
+                dist: minO + minD
+            } : null;
+        }
+
+        // Try all cached shapes for a route and return the best-matching clip
+        function clipCachedShape(shapesOrPts, fromLat, fromLon, toLat, toLon) {
+            if (!shapesOrPts) return null;
+            // Support both array-of-shapes (new) and single array (legacy)
+            const list = Array.isArray(shapesOrPts[0]) && !Array.isArray(shapesOrPts[0][0]) ?
+                [shapesOrPts] // single flat array of [lat,lon] pairs
+                :
+                shapesOrPts; // array of shape arrays
+            let best = null;
+            for (const shape of list) {
+                const result = clipOneShape(shape, fromLat, fromLon, toLat, toLon);
+                if (result && (!best || result.dist < best.dist)) best = result;
+            }
+            return best ? best.pts : null;
         }
 
         window.showRouteOnMap = function(routeIndex) {
@@ -705,7 +727,7 @@
                                 }).addTo(searchResultsLayer)
                                 .bindPopup(
                                     `<strong>${stop.name}</strong><br><span style="color:#666">${stop.arrival || ''}</span>`
-                                    );
+                                );
                         });
                     }
                 }

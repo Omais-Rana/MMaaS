@@ -29,8 +29,8 @@ class RouteSearchController extends Controller
         // Use withoutGlobalScopes() to show stops from ALL operators (not just logged-in user's)
         $stops = Stop::withoutGlobalScopes()->where(function ($q) use ($normalizedQuery) {
             // Use LOWER and accent-insensitive comparison
-            $q->whereRaw('LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(stop_name, "é", "e"), "è", "e"), "ê", "e"), "à", "a"), "ô", "o"), "ù", "u"), "ç", "c")) LIKE ?', [$normalizedQuery . '%'])
-                ->orWhereRaw('LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(stop_name, "é", "e"), "è", "e"), "ê", "e"), "à", "a"), "ô", "o"), "ù", "u"), "ç", "c")) LIKE ?', ['% ' . $normalizedQuery . '%']);
+            $q->whereRaw('LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(stop_name, "é", "e"), "è", "e"), "ê", "e"), "à", "a"), "ô", "o"), "ù", "u"), "ç", "c")) LIKE ?', [$normalizedQuery.'%'])
+                ->orWhereRaw('LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(stop_name, "é", "e"), "è", "e"), "ê", "e"), "à", "a"), "ô", "o"), "ù", "u"), "ç", "c")) LIKE ?', ['% '.$normalizedQuery.'%']);
         })
             ->whereNotNull('stop_lat')
             ->whereNotNull('stop_lon')
@@ -43,7 +43,7 @@ class RouteSearchController extends Controller
                 DB::raw('MAX(stop_code) as stop_code'),
                 DB::raw('MAX(city) as city'),
                 DB::raw("CASE 
-                    WHEN LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(stop_name, 'é', 'e'), 'è', 'e'), 'ê', 'e'), 'à', 'a'), 'ô', 'o'), 'ù', 'u'), 'ç', 'c')) LIKE '" . $normalizedQuery . "%' THEN 1 
+                    WHEN LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(stop_name, 'é', 'e'), 'è', 'e'), 'ê', 'e'), 'à', 'a'), 'ô', 'o'), 'ù', 'u'), 'ç', 'c')) LIKE '".$normalizedQuery."%' THEN 1 
                     ELSE 2 
                 END as priority")
             )
@@ -83,13 +83,13 @@ class RouteSearchController extends Controller
         // Get database IDs for origin stops using LIKE for fuzzy matching
         // stop_times.stop_id references stops.id, not stops.stop_id
         $originStopIds = Stop::withoutGlobalScopes()
-            ->where('stop_name', 'LIKE', '%' . $originName . '%')
+            ->where('stop_name', 'LIKE', '%'.$originName.'%')
             ->pluck('id')
             ->toArray();
 
         // Get database IDs for destination stops
         $destStopIds = Stop::withoutGlobalScopes()
-            ->where('stop_name', 'LIKE', '%' . $destinationName . '%')
+            ->where('stop_name', 'LIKE', '%'.$destinationName.'%')
             ->pluck('id')
             ->toArray();
 
@@ -101,11 +101,9 @@ class RouteSearchController extends Controller
         }
 
         // Build active service IDs for the given date.
-        // Start with ALL service IDs from trips as the base (handles GTFS feeds without a calendar table
-        // or where the search date falls outside the calendar date range).
-        $activeServiceIds = DB::table('trips')->distinct()->pluck('service_id')->toArray();
-
-        // Apply calendar-based filtering if the calendars table has data for this date
+        // Priority: (1) calendars table entries for this date/day
+        //           (2) calendar_dates exceptions (type=1 add, type=2 remove)
+        //           (3) if neither has data, fall back to all services (bare GTFS with no schedule)
         $calendarServices = DB::table('calendars')
             ->where('start_date', '<=', $date)
             ->where('end_date', '>=', $date)
@@ -113,25 +111,33 @@ class RouteSearchController extends Controller
             ->pluck('service_id')
             ->toArray();
 
+        $exceptions = DB::table('calendar_dates')->where('date', $date)->get();
+        $addedServices = $exceptions->where('exception_type', 1)->pluck('service_id')->toArray();
+
         if (! empty($calendarServices)) {
-            // Restrict to only the services scheduled for this day of week
+            // Standard GTFS: calendar drives the base, exceptions modify it
             $activeServiceIds = $calendarServices;
+        } elseif (! empty($addedServices)) {
+            // GTFS with calendar_dates-only schedule (no calendars table):
+            // only the explicitly added services run on this date
+            $activeServiceIds = $addedServices;
+        } else {
+            // No schedule data at all — fall back to all services
+            $activeServiceIds = DB::table('trips')->distinct()->pluck('service_id')->toArray();
         }
 
-        // Apply calendar_dates exceptions on top:
-        // exception_type=1 means service is added on this date
-        // exception_type=2 means service is removed on this date
-        $exceptions = DB::table('calendar_dates')->where('date', $date)->get();
-        foreach ($exceptions as $exception) {
-            if ($exception->exception_type == 1) {
-                if (! in_array($exception->service_id, $activeServiceIds)) {
-                    $activeServiceIds[] = $exception->service_id;
-                }
-            } elseif ($exception->exception_type == 2) {
-                $activeServiceIds = array_filter($activeServiceIds, fn($id) => $id !== $exception->service_id);
+        // Apply type=2 (removed) exceptions on top of whatever base we have
+        $removedServices = $exceptions->where('exception_type', 2)->pluck('service_id')->toArray();
+        if (! empty($removedServices)) {
+            $activeServiceIds = array_values(array_filter($activeServiceIds, fn ($id) => ! in_array($id, $removedServices)));
+        }
+
+        // Also add any type=1 services not yet in the list (e.g. when using calendar base)
+        foreach ($addedServices as $svcId) {
+            if (! in_array($svcId, $activeServiceIds)) {
+                $activeServiceIds[] = $svcId;
             }
         }
-        $activeServiceIds = array_values($activeServiceIds);
 
         // Find ALL routes that connect these stops (any combination)
         // NOTE: stop_times.trip_id references trips.id, and trips.route_id references routes.id
@@ -249,7 +255,7 @@ class RouteSearchController extends Controller
                     'agency_name' => $route->operator_name ?? 'Transit Service',
                     'departure_time' => $departureTime,
                     'arrival_time' => substr($route->arrival_time, 0, 5),
-                    'duration' => round($route->duration_minutes) . ' min',
+                    'duration' => round($route->duration_minutes).' min',
                     'stops_count' => $route->stops_count,
                     'stops' => $stopsOnRoute,
                     'shape_pts' => $shapePoints,
@@ -316,7 +322,7 @@ class RouteSearchController extends Controller
         $journeys = [];
 
         // Use the user's selected time for SQL queries - we'll filter out past routes later
-        $sqlMinTime = $time . ':00';
+        $sqlMinTime = $time.':00';
 
         // STRATEGY 1: Direct routes from EXACT stops (NO walking, NO transfers) - HIGHEST PRIORITY
         // For exact origin stops, no walking buffer needed - use minimum time directly
@@ -360,7 +366,7 @@ class RouteSearchController extends Controller
 
         // Group direct routes by route name
         foreach ($directRoutes as $route) {
-            $routeKey = $route->route_short_name . '_' . $route->operator_name;
+            $routeKey = $route->route_short_name.'_'.$route->operator_name;
 
             $originWalkDist = $this->getWalkingDistanceById($originStops[0]->id, $route->origin_stop_id);
             $destWalkDist = $this->getWalkingDistanceById($route->dest_stop_id, $destStops[0]->id);
@@ -535,8 +541,8 @@ class RouteSearchController extends Controller
             // Filter out journeys where leave_at time has already passed
             if ($minimumDepartureTime) {
                 // Compare times properly - add today's date for accurate comparison
-                $leaveAtDateTime = \Carbon\Carbon::parse($date . ' ' . $journey['leave_at']);
-                $minimumDateTime = \Carbon\Carbon::parse($date . ' ' . $minimumDepartureTime);
+                $leaveAtDateTime = \Carbon\Carbon::parse($date.' '.$journey['leave_at']);
+                $minimumDateTime = \Carbon\Carbon::parse($date.' '.$minimumDepartureTime);
 
                 if ($leaveAtDateTime->lt($minimumDateTime)) {
                     continue;
@@ -634,7 +640,7 @@ class RouteSearchController extends Controller
         // Process nearby routes same way - find best walking option per route
         $nearbyRouteOptions = [];
         foreach ($nearbyDirectRoutes as $route) {
-            $routeKey = $route->route_short_name . '_' . $route->operator_name;
+            $routeKey = $route->route_short_name.'_'.$route->operator_name;
 
             $originWalkDist = $this->getWalkingDistanceById($originStops[0]->id, $route->origin_stop_id);
             $destWalkDist = $this->getWalkingDistanceById($route->dest_stop_id, $destStops[0]->id);
@@ -800,8 +806,8 @@ class RouteSearchController extends Controller
             // Filter out journeys where leave_at time has already passed
             if ($minimumDepartureTime) {
                 // Compare times properly - add today's date for accurate comparison
-                $leaveAtDateTime = \Carbon\Carbon::parse($date . ' ' . $journey['leave_at']);
-                $minimumDateTime = \Carbon\Carbon::parse($date . ' ' . $minimumDepartureTime);
+                $leaveAtDateTime = \Carbon\Carbon::parse($date.' '.$journey['leave_at']);
+                $minimumDateTime = \Carbon\Carbon::parse($date.' '.$minimumDepartureTime);
                 if ($leaveAtDateTime->lt($minimumDateTime)) {
                     continue;
                 }
@@ -901,7 +907,7 @@ class RouteSearchController extends Controller
 
             if ($secondLeg) {
                 // Check if we already have this route combination
-                $transferRouteKey = $firstLeg->first_route . '_to_' . $secondLeg->second_route_name;
+                $transferRouteKey = $firstLeg->first_route.'_to_'.$secondLeg->second_route_name;
                 if (isset($seenRoutes[$transferRouteKey])) {
                     continue;
                 }
@@ -1362,8 +1368,8 @@ class RouteSearchController extends Controller
             'leave_at' => $leaveAt, // When user should leave their location
             'departure_time' => $departureTime, // When first bus departs
             'arrival_time' => $journeyEnd, // When journey actually ends (including final walk)
-            'duration' => round($duration) . ' min',
-            'transfers' => count(array_filter($legs, fn($l) => $l['type'] === 'transit')) - 1,
+            'duration' => round($duration).' min',
+            'transfers' => count(array_filter($legs, fn ($l) => $l['type'] === 'transit')) - 1,
             'legs' => $legs,
         ];
     }
@@ -1494,7 +1500,7 @@ class RouteSearchController extends Controller
             ->where('shape_id', $shapeId)
             ->orderBy('shape_pt_sequence')
             ->get(['shape_pt_lat', 'shape_pt_lon'])
-            ->map(fn($pt) => [(float) $pt->shape_pt_lat, (float) $pt->shape_pt_lon])
+            ->map(fn ($pt) => [(float) $pt->shape_pt_lat, (float) $pt->shape_pt_lon])
             ->toArray();
 
         return $this->clipShapeToStops($rawPoints, $originLat, $originLon, $destLat, $destLon);
