@@ -816,12 +816,14 @@ class RouteSearchController extends Controller
             $foundJourneys[] = $journey;
         }
 
-        // STRATEGY 2: One transfer routes - collect more options across different times
-        // Include nearby destination stops within 2km if needed
-        $expandedDestStopIds = $destStopIds;
+        // STRATEGY 2: One transfer routes - find bus-to-bus transfers
+        // Include nearby destination stops from the start so second leg can alight near (not just at) destination
+        $expandedDestStopIds = array_unique(array_merge($destStopIds, array_column($nearbyDestStops, 'id')));
 
-        // Add walking time buffer for potential origin walking
-        $sqlMinTimeWithBuffer = date('H:i:s', strtotime($sqlMinTime) + (18 * 60));
+        // Use the actual user time - no offset needed. Strategy 1/1.5 handles direct routes;
+        // Strategy 2 must search the same time window to find valid transfer connections.
+        $sqlMinTimeWithBuffer = $sqlMinTime;
+        $seenRoutes = [];
         $transferRoutes = DB::table('stop_times as st_origin')
             ->join('trips as t1', 'st_origin.trip_id', '=', 't1.id')
             ->join('routes as r1', 't1.route_id', '=', 'r1.id')
@@ -851,7 +853,7 @@ class RouteSearchController extends Controller
                 'u1.name as first_operator'
             )
             ->orderBy('st_origin.departure_time')
-            ->limit(20)
+            ->limit(100)
             ->get();
 
         foreach ($transferRoutes as $firstLeg) {
@@ -873,7 +875,7 @@ class RouteSearchController extends Controller
             $minDepartureTime = date('H:i:s', strtotime($firstLeg->transfer_arrival) + ($minTransferTime * 60));
             $maxDepartureTime = date('H:i:s', strtotime($firstLeg->transfer_arrival) + ($maxTransferWaitTime * 60));
 
-            $secondLeg = DB::table('stop_times as st2_start')
+            $secondLegOptions = DB::table('stop_times as st2_start')
                 ->join('trips as t2', 'st2_start.trip_id', '=', 't2.id')
                 ->join('routes as r2', 't2.route_id', '=', 'r2.id')
                 ->join('users as u2', 'r2.tenant_id', '=', 'u2.id')
@@ -903,11 +905,35 @@ class RouteSearchController extends Controller
                     'u2.name as second_operator_name'
                 )
                 ->orderBy('st2_start.departure_time')
-                ->first();
+                ->get();
+
+            // From all matching end stops, pick the one that minimises total arrival time at destination
+            // (bus arrival + walk to true destination). This ensures we pick ACROPOLE over LUDWIGSBURG
+            // even if LUDWIGSBURG appears earlier in the trip sequence.
+            // Ties in arrival time are broken by minimum transfer walk distance — so boarding the
+            // connecting bus at the stop closest to where the first leg alighted (e.g. CARRONS→CARRONS
+            // rather than CARRONS→RUE DE BELFORT) is always preferred.
+            $secondLeg = null;
+            $bestArrivalAtDest = PHP_INT_MAX;
+            $bestTransferWalk = PHP_INT_MAX;
+            foreach ($secondLegOptions as $option) {
+                $optWalkDist = $this->getWalkingDistanceById($option->final_stop_id, $destStops[0]->id);
+                $optWalkMin = (int) round($optWalkDist / $walkingSpeedKmh * 60);
+                $optArrival = strtotime($option->final_arrival) + ($optWalkMin * 60);
+                $optTransferWalk = $this->getWalkingDistanceById($firstLeg->transfer_stop_id, $option->second_origin_stop_id);
+                if ($optArrival < $bestArrivalAtDest ||
+                    ($optArrival === $bestArrivalAtDest && $optTransferWalk < $bestTransferWalk)) {
+                    $bestArrivalAtDest = $optArrival;
+                    $bestTransferWalk = $optTransferWalk;
+                    $secondLeg = $option;
+                }
+            }
 
             if ($secondLeg) {
-                // Check if we already have this route combination
-                $transferRouteKey = $firstLeg->first_route.'_to_'.$secondLeg->second_route_name;
+                // Deduplicate by (first_trip_id + transfer_stop + second_trip_id) so different
+                // transfer points on the same pair of trips are all evaluated independently.
+                // sortAndLimitJourneys will then pick the best-scoring one per departure hour.
+                $transferRouteKey = $firstLeg->trip_id.'_'.$firstLeg->transfer_stop_id.'_to_'.$secondLeg->second_trip_id;
                 if (isset($seenRoutes[$transferRouteKey])) {
                     continue;
                 }
@@ -1106,12 +1132,37 @@ class RouteSearchController extends Controller
                     'shape_pts' => $secondShapePoints,
                 ];
 
+                // Add final walk leg if the second leg alights at a nearby (non-exact) destination stop
+                $finalWalkDist = 0.0;
+                if (! in_array($secondLeg->final_stop_id, $destStopIds)) {
+                    $finalWalkDist = $this->getWalkingDistanceById($secondLeg->final_stop_id, $destStops[0]->id);
+                    if ($finalWalkDist > 0.05) {
+                        $finalWalkDuration = $this->calculateWalkingTimeById($secondLeg->final_stop_id, $destStops[0]->id, $walkingSpeedKmh);
+                        $finalWalkStart = substr($secondLeg->final_arrival, 0, 5);
+                        $finalWalkEnd = date('H:i', strtotime($finalWalkStart) + ($finalWalkDuration * 60));
+                        $finalFromCoords = $this->getStopCoordsById($secondLeg->final_stop_id);
+                        $legs[] = [
+                            'type' => 'walk',
+                            'from' => $this->getStopNameById($secondLeg->final_stop_id),
+                            'to' => $destinationName,
+                            'from_lat' => $finalFromCoords['lat'],
+                            'from_lon' => $finalFromCoords['lon'],
+                            'to_lat' => $destStops[0]->stop_lat,
+                            'to_lon' => $destStops[0]->stop_lon,
+                            'distance' => $finalWalkDist,
+                            'duration' => $finalWalkDuration,
+                            'start_time' => $finalWalkStart,
+                            'end_time' => $finalWalkEnd,
+                        ];
+                    }
+                }
+
                 $journey = $this->buildJourney($legs, $time);
 
                 // Google-style scoring: Prioritize FASTEST total journey time
                 $totalTimeMinutes = (strtotime($journey['arrival_time']) - strtotime($journey['leave_at'])) / 60;
                 $transferPenalty = $journey['transfers'] * 200;
-                $walkingPenalty = $transferWalkDist * 10;
+                $walkingPenalty = ($transferWalkDist + $finalWalkDist) * 10;
                 $journey['score'] = 10000 - ($totalTimeMinutes * 50) - $transferPenalty - $walkingPenalty;
 
                 // Filter out journeys where leave_at time has already passed
