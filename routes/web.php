@@ -55,4 +55,5 @@ Route::prefix('api')->group(function () {
     Route::get('/stops/search', [\App\Http\Controllers\Api\RouteSearchController::class, 'searchStops']);
     Route::post('/routes/search', [\App\Http\Controllers\Api\RouteSearchController::class, 'searchRoutes']);
     Route::get('/routes/all-shapes', [\App\Http\Controllers\Api\RouteSearchController::class, 'getAllRoutesWithShapes']);
+    Route::get('/routes/{routeName}/stops', [\App\Http\Controllers\Api\RouteSearchController::class, 'getRouteStops']);
 });

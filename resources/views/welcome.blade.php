@@ -48,6 +48,12 @@
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
         }
 
+        .route-card.is-selected {
+            outline: 2px solid #ef4444;
+            outline-offset: -2px;
+            border-color: transparent;
+        }
+
         .leaflet-popup-content-wrapper {
             border-radius: 0.5rem;
         }
@@ -131,14 +137,16 @@
                             class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Date</label>
                         <input type="date" id="date" required
                             class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none cursor-pointer text-sm"
-                            value="{{ date('Y-m-d') }}">
+                            value="{{ date('Y-m-d') }}" onclick="try{this.showPicker()}catch(e){}"
+                            onfocus="try{this.showPicker()}catch(e){}">
                     </div>
                     <div>
                         <label
                             class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Time</label>
                         <input type="time" id="time" required
                             class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none cursor-pointer text-sm"
-                            value="{{ date('H:i') }}">
+                            value="{{ date('H:i') }}" onclick="try{this.showPicker()}catch(e){}"
+                            onfocus="try{this.showPicker()}catch(e){}">
                     </div>
                 </div>
 
@@ -186,21 +194,7 @@
     <div class="flex-1 h-full relative z-0 bg-gray-200">
         <div id="map" class="absolute inset-0"></div>
 
-        <!-- Legend Overlay -->
-        <div
-            class="absolute bottom-6 right-6 z-[1000] bg-white/95 backdrop-blur rounded-lg p-4 shadow-xl text-sm border border-gray-100">
-            <div class="font-semibold text-gray-800 mb-2">Map Legend</div>
-            <div class="flex flex-col gap-2">
-                <div class="flex items-center gap-3">
-                    <div style="width: 24px; height: 3px; background: #DC2626;"></div>
-                    <span class="text-gray-600">Transit</span>
-                </div>
-                <div class="flex items-center gap-3">
-                    <div style="width: 24px; height: 3px; background: #3B82F6; border-top: 2px dashed #3B82F6;"></div>
-                    <span class="text-gray-600">Walking</span>
-                </div>
-            </div>
-        </div>
+
     </div>
 
     <script>
@@ -263,8 +257,11 @@
         let map = null;
         let allRoutesLayer = L.layerGroup();
         let searchResultsLayer = L.layerGroup();
+        let defaultRouteStopsLayer = L.layerGroup();
         let currentRouteData = null;
         let allRoutesShapes = {}; // Cache: route_short_name -> full shape_pts array
+        let routeStopsCache = {}; // Cache: routeName -> stops array
+        let selectedDefaultPolyline = null; // Currently pinned polyline in default view
 
         function initMap() {
             if (!map) {
@@ -285,7 +282,39 @@
 
                 allRoutesLayer.addTo(map);
                 searchResultsLayer.addTo(map);
+                defaultRouteStopsLayer.addTo(map);
             }
+        }
+
+        async function fetchRouteStops(routeName) {
+            if (routeStopsCache[routeName]) return routeStopsCache[routeName];
+            try {
+                const res = await fetch('/api/routes/' + encodeURIComponent(routeName) + '/stops');
+                const data = await res.json();
+                routeStopsCache[routeName] = data.stops || [];
+            } catch (e) {
+                routeStopsCache[routeName] = [];
+            }
+            return routeStopsCache[routeName];
+        }
+
+        function showDefaultRouteStops(stops, color) {
+            defaultRouteStopsLayer.clearLayers();
+            if (!stops || !stops.length) return;
+            stops.forEach((stop, i) => {
+                const isEndpoint = i === 0 || i === stops.length - 1;
+                L.circleMarker([stop.lat, stop.lon], {
+                        radius: isEndpoint ? 7 : 4,
+                        color: color,
+                        fillColor: isEndpoint ? color : '#fff',
+                        fillOpacity: 1,
+                        weight: 2
+                    }).bindTooltip(stop.name, {
+                        sticky: true,
+                        className: 'font-sans text-sm'
+                    })
+                    .addTo(defaultRouteStopsLayer);
+            });
         }
 
         async function loadAllShapes() {
@@ -308,7 +337,9 @@
                             let polyline = L.polyline(r.shape_pts, {
                                 color: color,
                                 weight: 2,
-                                opacity: 0.6
+                                opacity: 0.6,
+                                routeName: rName,
+                                routeColor: color
                             });
 
                             let routeTitle = r.route_name || r.route_short_name || 'Route';
@@ -320,18 +351,53 @@
                                 className: 'font-sans'
                             });
 
-                            polyline.on('mouseover', function() {
+                            polyline.on('mouseover', async function() {
                                 this.setStyle({
                                     weight: 5,
                                     opacity: 1
                                 });
                                 this.bringToFront();
+                                const stops = await fetchRouteStops(this.options.routeName);
+                                showDefaultRouteStops(stops, this.options.routeColor);
                             });
                             polyline.on('mouseout', function() {
-                                this.setStyle({
-                                    weight: 2,
-                                    opacity: 0.6
-                                });
+                                if (selectedDefaultPolyline !== this) {
+                                    this.setStyle({
+                                        weight: 2,
+                                        opacity: 0.6
+                                    });
+                                }
+                                if (selectedDefaultPolyline === null) {
+                                    defaultRouteStopsLayer.clearLayers();
+                                }
+                            });
+                            polyline.on('click', async function(e) {
+                                L.DomEvent.stopPropagation(e);
+                                if (selectedDefaultPolyline === this) {
+                                    // Deselect
+                                    selectedDefaultPolyline = null;
+                                    this.setStyle({
+                                        weight: 2,
+                                        opacity: 0.6
+                                    });
+                                    defaultRouteStopsLayer.clearLayers();
+                                } else {
+                                    // Select new
+                                    if (selectedDefaultPolyline) {
+                                        selectedDefaultPolyline.setStyle({
+                                            weight: 2,
+                                            opacity: 0.6
+                                        });
+                                    }
+                                    selectedDefaultPolyline = this;
+                                    this.setStyle({
+                                        weight: 5,
+                                        opacity: 1
+                                    });
+                                    this.bringToFront();
+                                    const stops = await fetchRouteStops(this.options.routeName);
+                                    showDefaultRouteStops(stops, this.options.routeColor);
+                                }
                             });
 
                             allRoutesLayer.addLayer(polyline);
@@ -367,6 +433,14 @@
             document.getElementById('no-results').classList.add('hidden');
 
             searchResultsLayer.clearLayers();
+            defaultRouteStopsLayer.clearLayers();
+            if (selectedDefaultPolyline) {
+                selectedDefaultPolyline.setStyle({
+                    weight: 2,
+                    opacity: 0.6
+                });
+                selectedDefaultPolyline = null;
+            }
             if (!map.hasLayer(allRoutesLayer)) {
                 map.addLayer(allRoutesLayer);
             }
@@ -537,22 +611,22 @@
                             
                             <div class="flex items-center gap-4 bg-gray-50/80 rounded-lg p-3">
                                 ${route.departure_time !== '?' ? `
-                                                    <div class="flex-1">
-                                                        <div class="text-xs text-gray-500 uppercase tracking-wider">Departs</div>
-                                                        <div class="text-xl font-bold text-red-600">${route.leave_at || route.departure_time}</div>
-                                                    </div>` : ''}
+                                                            <div class="flex-1">
+                                                                <div class="text-xs text-gray-500 uppercase tracking-wider">Departs</div>
+                                                                <div class="text-xl font-bold text-red-600">${route.leave_at || route.departure_time}</div>
+                                                            </div>` : ''}
                                 
                                 ${route.duration !== 'N/A' ? `
-                                                    <div class="flex-1 text-center border-l border-r border-gray-200 px-2">
-                                                        <div class="text-xs text-gray-500 uppercase tracking-wider">Duration</div>
-                                                        <div class="text-sm font-semibold text-gray-800">${route.duration}</div>
-                                                    </div>` : ''}
+                                                            <div class="flex-1 text-center border-l border-r border-gray-200 px-2">
+                                                                <div class="text-xs text-gray-500 uppercase tracking-wider">Duration</div>
+                                                                <div class="text-sm font-semibold text-gray-800">${route.duration}</div>
+                                                            </div>` : ''}
                                 
                                 ${route.arrival_time !== '?' ? `
-                                                    <div class="flex-1 text-right">
-                                                        <div class="text-xs text-gray-500 uppercase tracking-wider">Arrives</div>
-                                                        <div class="text-xl font-bold text-green-600">${route.arrival_time}</div>
-                                                    </div>` : ''}
+                                                            <div class="flex-1 text-right">
+                                                                <div class="text-xs text-gray-500 uppercase tracking-wider">Arrives</div>
+                                                                <div class="text-xl font-bold text-green-600">${route.arrival_time}</div>
+                                                            </div>` : ''}
                             </div>
                             ${directMidStopsHtml}
                         </div>
@@ -604,8 +678,9 @@
         function clipCachedShape(shapesOrPts, fromLat, fromLon, toLat, toLon) {
             if (!shapesOrPts) return null;
             // Support both array-of-shapes (new) and single array (legacy)
-            const list = Array.isArray(shapesOrPts[0]) && !Array.isArray(shapesOrPts[0][0]) ?
-                [shapesOrPts] // single flat array of [lat,lon] pairs
+            const list = Array.isArray(shapesOrPts[0]) && !Array.isArray(shapesOrPts[0][0]) ? [
+                    shapesOrPts
+                ] // single flat array of [lat,lon] pairs
                 :
                 shapesOrPts; // array of shape arrays
             let best = null;
@@ -624,9 +699,9 @@
 
             document.querySelectorAll('.route-card').forEach((card, idx) => {
                 if (idx === routeIndex) {
-                    card.classList.add('ring-2', 'ring-red-500', 'border-transparent');
+                    card.classList.add('is-selected');
                 } else {
-                    card.classList.remove('ring-2', 'ring-red-500', 'border-transparent');
+                    card.classList.remove('is-selected');
                 }
             });
 

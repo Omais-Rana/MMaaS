@@ -1559,6 +1559,34 @@ class RouteSearchController extends Controller
         return $this->clipShapeToStops($rawPoints, $originLat, $originLon, $destLat, $destLon);
     }
 
+    public function getRouteStops(Request $request, $routeShortName)
+    {
+        // Find the canonical trip for this route — the one with the most stops
+        $tripId = DB::table('stop_times')
+            ->select('trip_id', DB::raw('count(*) as cnt'))
+            ->whereIn('trip_id', function ($q) use ($routeShortName) {
+                $q->select('t.id')->from('trips as t')
+                    ->join('routes as r', 't.route_id', '=', 'r.id')
+                    ->where('r.route_short_name', $routeShortName);
+            })
+            ->groupBy('trip_id')
+            ->orderByDesc('cnt')
+            ->value('trip_id');
+
+        if (! $tripId) {
+            return response()->json(['stops' => []]);
+        }
+
+        $stops = DB::table('stop_times as st')
+            ->join('stops as s', 'st.stop_id', '=', 's.id')
+            ->where('st.trip_id', $tripId)
+            ->orderBy('st.stop_sequence')
+            ->select('s.stop_name as name', 's.stop_lat as lat', 's.stop_lon as lon')
+            ->get();
+
+        return response()->json(['stops' => $stops]);
+    }
+
     public function getAllRoutesWithShapes()
     {
         $routeShapes = \Illuminate\Support\Facades\DB::select('
