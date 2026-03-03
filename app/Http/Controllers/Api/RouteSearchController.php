@@ -80,14 +80,16 @@ class RouteSearchController extends Controller
         $dayOfWeek = date('w', strtotime($date));
         $dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
-        // Get database IDs for origin stops (NOT stop_id GTFS code, but the primary key 'id')
+        // Get database IDs for origin stops using LIKE for fuzzy matching
         // stop_times.stop_id references stops.id, not stops.stop_id
-        $originStopIds = Stop::withoutGlobalScopes()->where('stop_name', $originName)
+        $originStopIds = Stop::withoutGlobalScopes()
+            ->where('stop_name', 'LIKE', '%' . $originName . '%')
             ->pluck('id')
             ->toArray();
 
         // Get database IDs for destination stops
-        $destStopIds = Stop::withoutGlobalScopes()->where('stop_name', $destinationName)
+        $destStopIds = Stop::withoutGlobalScopes()
+            ->where('stop_name', 'LIKE', '%' . $destinationName . '%')
             ->pluck('id')
             ->toArray();
 
@@ -98,30 +100,38 @@ class RouteSearchController extends Controller
             ]);
         }
 
-        // Find service IDs that are active on the selected date
-        // Check calendar_dates for exceptions (type 1 = service added, type 2 = service removed)
-        $activeServiceIds = DB::table('calendar_dates')
-            ->where('date', $date)
-            ->where('exception_type', 1)
+        // Build active service IDs for the given date.
+        // Start with ALL service IDs from trips as the base (handles GTFS feeds without a calendar table
+        // or where the search date falls outside the calendar date range).
+        $activeServiceIds = DB::table('trips')->distinct()->pluck('service_id')->toArray();
+
+        // Apply calendar-based filtering if the calendars table has data for this date
+        $calendarServices = DB::table('calendars')
+            ->where('start_date', '<=', $date)
+            ->where('end_date', '>=', $date)
+            ->where($dayNames[$dayOfWeek], 1)
             ->pluck('service_id')
             ->toArray();
 
-        // If no services in calendar_dates, check regular calendar
-        if (empty($activeServiceIds)) {
-            $activeServiceIds = DB::table('calendars')
-                ->where('start_date', '<=', $date)
-                ->where('end_date', '>=', $date)
-                ->where($dayNames[$dayOfWeek], 1)
-                ->pluck('service_id')
-                ->toArray();
+        if (! empty($calendarServices)) {
+            // Restrict to only the services scheduled for this day of week
+            $activeServiceIds = $calendarServices;
         }
 
-        if (empty($activeServiceIds)) {
-            return response()->json([
-                'routes' => [],
-                'message' => 'No services available on the selected date.',
-            ]);
+        // Apply calendar_dates exceptions on top:
+        // exception_type=1 means service is added on this date
+        // exception_type=2 means service is removed on this date
+        $exceptions = DB::table('calendar_dates')->where('date', $date)->get();
+        foreach ($exceptions as $exception) {
+            if ($exception->exception_type == 1) {
+                if (! in_array($exception->service_id, $activeServiceIds)) {
+                    $activeServiceIds[] = $exception->service_id;
+                }
+            } elseif ($exception->exception_type == 2) {
+                $activeServiceIds = array_filter($activeServiceIds, fn($id) => $id !== $exception->service_id);
+            }
         }
+        $activeServiceIds = array_values($activeServiceIds);
 
         // Find ALL routes that connect these stops (any combination)
         // NOTE: stop_times.trip_id references trips.id, and trips.route_id references routes.id
@@ -145,6 +155,7 @@ class RouteSearchController extends Controller
                 'trips.trip_headsign',
                 'trips.service_id',
                 'trips.id as trip_id',
+                'trips.shape_id',
                 'users.name as operator_name',
                 'st1.departure_time',
                 'st2.arrival_time',
@@ -208,6 +219,18 @@ class RouteSearchController extends Controller
                     })
                     ->toArray();
 
+                $shapePoints = [];
+                if (!empty($route->shape_id)) {
+                    $shapePoints = DB::table('shapes')
+                        ->where('shape_id', $route->shape_id)
+                        ->orderBy('shape_pt_sequence')
+                        ->get(['shape_pt_lat', 'shape_pt_lon'])
+                        ->map(function ($pt) {
+                            return [$pt->shape_pt_lat, $pt->shape_pt_lon];
+                        })
+                        ->toArray();
+                }
+
                 return [
                     'route_name' => $route->route_short_name ?? $route->route_long_name ?? 'Route',
                     'route_long_name' => $route->route_long_name,
@@ -220,6 +243,7 @@ class RouteSearchController extends Controller
                     'duration' => round($route->duration_minutes) . ' min',
                     'stops_count' => $route->stops_count,
                     'stops' => $stopsOnRoute,
+                    'shape_pts' => $shapePoints,
                     'description' => $route->route_desc,
                     'is_exact_match' => $isExactMatch,
                     'connection_type' => 'direct',
@@ -312,6 +336,10 @@ class RouteSearchController extends Controller
                 'r.route_color',
                 'r.route_text_color',
                 't.trip_headsign',
+                't.id as trip_id',
+                't.shape_id',
+                'st_origin.stop_sequence as origin_sequence',
+                'st_dest.stop_sequence as dest_sequence',
                 'u.name as operator_name'
             )
             ->orderBy('st_origin.departure_time')
@@ -384,6 +412,41 @@ class RouteSearchController extends Controller
                 ];
             }
 
+            // Fetch stops for this transit leg
+            $transitStops = [];
+            try {
+                $transitStops = DB::table('stop_times')
+                    ->join('stops', 'stop_times.stop_id', '=', 'stops.id')
+                    ->where('stop_times.trip_id', $route->trip_id)
+                    ->where('stop_times.stop_sequence', '>=', $route->origin_sequence)
+                    ->where('stop_times.stop_sequence', '<=', $route->dest_sequence)
+                    ->orderBy('stop_times.stop_sequence')
+                    ->select(
+                        'stops.stop_name',
+                        'stops.stop_lat',
+                        'stops.stop_lon',
+                        'stop_times.arrival_time',
+                        'stop_times.departure_time'
+                    )
+                    ->get()
+                    ->map(function ($stop) {
+                        return [
+                            'name' => $stop->stop_name,
+                            'lat' => $stop->stop_lat,
+                            'lon' => $stop->stop_lon,
+                            'arrival' => substr($stop->arrival_time, 0, 5),
+                            'departure' => substr($stop->departure_time, 0, 5),
+                        ];
+                    })
+                    ->toArray();
+            } catch (\Exception $e) {
+                $transitStops = [];
+            }
+
+            // Get coordinates for transit leg endpoints
+            $fromCoords = $this->getStopCoordsById($route->origin_stop_id);
+            $toCoords = $this->getStopCoordsById($route->dest_stop_id);
+
             $legs[] = [
                 'type' => 'transit',
                 'route_name' => $route->route_short_name,
@@ -394,9 +457,14 @@ class RouteSearchController extends Controller
                 'trip_headsign' => $route->trip_headsign,
                 'from' => $this->getStopNameById($route->origin_stop_id),
                 'to' => $route->dest_stop_name,
+                'from_lat' => $fromCoords['lat'],
+                'from_lon' => $fromCoords['lon'],
+                'to_lat' => $toCoords['lat'],
+                'to_lon' => $toCoords['lon'],
                 'departure_time' => $busDepartureTime,
                 'arrival_time' => $busArrivalTime,
-                'stops' => [], // Populated for map display if needed
+                'duration' => round((strtotime($busArrivalTime) - strtotime($busDepartureTime)) / 60),
+                'stops' => $transitStops,
             ];
 
             // Only add destination walk if there's actual distance
@@ -484,6 +552,10 @@ class RouteSearchController extends Controller
                 'r.route_color',
                 'r.route_text_color',
                 't.trip_headsign',
+                't.id as trip_id',
+                't.shape_id',
+                'st_origin.stop_sequence as origin_sequence',
+                'st_dest.stop_sequence as dest_sequence',
                 'u.name as operator_name'
             )
             ->orderBy('st_origin.departure_time')
@@ -533,16 +605,58 @@ class RouteSearchController extends Controller
                     continue;
                 }
 
+                $originCoords = ['lat' => $originStops[0]->stop_lat, 'lon' => $originStops[0]->stop_lon];
+                $destCoords = $this->getStopCoordsById($route->origin_stop_id);
+
                 $legs[] = [
                     'type' => 'walk',
                     'from' => $originName,
                     'to' => $this->getStopNameById($route->origin_stop_id),
+                    'from_lat' => $originCoords['lat'],
+                    'from_lon' => $originCoords['lon'],
+                    'to_lat' => $destCoords['lat'],
+                    'to_lon' => $destCoords['lon'],
                     'distance' => $originWalkDist,
                     'duration' => $walkDuration,
                     'start_time' => $walkStartTime,
                     'end_time' => $walkEndTime,
                 ];
             }
+
+            // Fetch stops for this transit leg
+            $transitStops = [];
+            try {
+                $transitStops = DB::table('stop_times')
+                    ->join('stops', 'stop_times.stop_id', '=', 'stops.id')
+                    ->where('stop_times.trip_id', $route->trip_id)
+                    ->where('stop_times.stop_sequence', '>=', $route->origin_sequence)
+                    ->where('stop_times.stop_sequence', '<=', $route->dest_sequence)
+                    ->orderBy('stop_times.stop_sequence')
+                    ->select(
+                        'stops.stop_name',
+                        'stops.stop_lat',
+                        'stops.stop_lon',
+                        'stop_times.arrival_time',
+                        'stop_times.departure_time'
+                    )
+                    ->get()
+                    ->map(function ($stop) {
+                        return [
+                            'name' => $stop->stop_name,
+                            'lat' => $stop->stop_lat,
+                            'lon' => $stop->stop_lon,
+                            'arrival' => substr($stop->arrival_time, 0, 5),
+                            'departure' => substr($stop->departure_time, 0, 5),
+                        ];
+                    })
+                    ->toArray();
+            } catch (\Exception $e) {
+                $transitStops = [];
+            }
+
+            // Get coordinates for transit leg endpoints
+            $fromCoords = $this->getStopCoordsById($route->origin_stop_id);
+            $toCoords = $this->getStopCoordsById($route->dest_stop_id);
 
             $legs[] = [
                 'type' => 'transit',
@@ -554,17 +668,31 @@ class RouteSearchController extends Controller
                 'trip_headsign' => $route->trip_headsign,
                 'from' => $this->getStopNameById($route->origin_stop_id),
                 'to' => $route->dest_stop_name,
+                'from_lat' => $fromCoords['lat'],
+                'from_lon' => $fromCoords['lon'],
+                'to_lat' => $toCoords['lat'],
+                'to_lon' => $toCoords['lon'],
                 'departure_time' => $busDepartureTime,
                 'arrival_time' => $busArrivalTime,
+                'duration' => round((strtotime($busArrivalTime) - strtotime($busDepartureTime)) / 60),
+                'stops' => $transitStops,
             ];
 
             if ($destWalkDist > 0.05) {
                 $walkDuration = $this->calculateWalkingTimeById($route->dest_stop_id, $destStops[0]->id, $walkingSpeedKmh);
                 $walkStartTime = $busArrivalTime;
+
+                $fromCoords = $this->getStopCoordsById($route->dest_stop_id);
+                $toCoords = ['lat' => $destStops[0]->stop_lat, 'lon' => $destStops[0]->stop_lon];
+
                 $legs[] = [
                     'type' => 'walk',
                     'from' => $route->dest_stop_name,
                     'to' => $destinationName,
+                    'from_lat' => $fromCoords['lat'],
+                    'from_lon' => $fromCoords['lon'],
+                    'to_lat' => $toCoords['lat'],
+                    'to_lon' => $toCoords['lon'],
                     'distance' => $destWalkDist,
                     'duration' => $walkDuration,
                     'start_time' => $walkStartTime,
@@ -660,9 +788,12 @@ class RouteSearchController extends Controller
                 ->where('st2_start.departure_time', '>=', $minDepartureTime)
                 ->where('st2_start.departure_time', '<=', $maxDepartureTime) // Max 15 min wait
                 ->select(
+                    't2.id as second_trip_id',
                     'st2_start.stop_id as second_origin_stop_id',
+                    'st2_start.stop_sequence as second_origin_sequence',
                     'st2_start.departure_time as second_departure',
                     'st2_end.stop_id as final_stop_id',
+                    'st2_end.stop_sequence as final_stop_sequence',
                     'st2_end.arrival_time as final_arrival',
                     'r2.route_short_name as second_route_name',
                     'r2.route_long_name as second_route_long_name',
@@ -692,6 +823,41 @@ class RouteSearchController extends Controller
 
                 $transferWalkDist = $this->getWalkingDistanceById($firstLeg->transfer_stop_id, $secondLeg->second_origin_stop_id);
 
+                // Fetch stops for first transit leg
+                $firstLegStops = [];
+                try {
+                    $firstLegStops = DB::table('stop_times')
+                        ->join('stops', 'stop_times.stop_id', '=', 'stops.id')
+                        ->where('stop_times.trip_id', $firstLeg->trip_id)
+                        ->where('stop_times.stop_sequence', '>=', $firstLeg->origin_sequence)
+                        ->where('stop_times.stop_sequence', '<=', $firstLeg->transfer_sequence)
+                        ->orderBy('stop_times.stop_sequence')
+                        ->select(
+                            'stops.stop_name',
+                            'stops.stop_lat',
+                            'stops.stop_lon',
+                            'stop_times.arrival_time',
+                            'stop_times.departure_time'
+                        )
+                        ->get()
+                        ->map(function ($stop) {
+                            return [
+                                'name' => $stop->stop_name,
+                                'lat' => $stop->stop_lat,
+                                'lon' => $stop->stop_lon,
+                                'arrival' => substr($stop->arrival_time, 0, 5),
+                                'departure' => substr($stop->departure_time, 0, 5),
+                            ];
+                        })
+                        ->toArray();
+                } catch (\Exception $e) {
+                    $firstLegStops = [];
+                }
+
+                // Get coordinates for first transit leg endpoints
+                $firstFromCoords = $this->getStopCoordsById($firstLeg->origin_stop_id);
+                $firstToCoords = $this->getStopCoordsById($firstLeg->transfer_stop_id);
+
                 $legs = [
                     [
                         'type' => 'transit',
@@ -703,8 +869,14 @@ class RouteSearchController extends Controller
                         'trip_headsign' => $firstLeg->first_headsign,
                         'from' => $this->getStopNameById($firstLeg->origin_stop_id),
                         'to' => $this->getStopNameById($firstLeg->transfer_stop_id),
+                        'from_lat' => $firstFromCoords['lat'],
+                        'from_lon' => $firstFromCoords['lon'],
+                        'to_lat' => $firstToCoords['lat'],
+                        'to_lon' => $firstToCoords['lon'],
                         'departure_time' => substr($firstLeg->departure_time, 0, 5),
                         'arrival_time' => substr($firstLeg->transfer_arrival, 0, 5),
+                        'duration' => round((strtotime($firstLeg->transfer_arrival) - strtotime($firstLeg->departure_time)) / 60),
+                        'stops' => $firstLegStops,
                     ],
                 ];
 
@@ -721,16 +893,58 @@ class RouteSearchController extends Controller
                         continue;
                     }
 
+                    $fromCoords = $this->getStopCoordsById($firstLeg->transfer_stop_id);
+                    $toCoords = $this->getStopCoordsById($secondLeg->second_origin_stop_id);
+
                     $legs[] = [
                         'type' => 'walk',
                         'from' => $this->getStopNameById($firstLeg->transfer_stop_id),
                         'to' => $this->getStopNameById($secondLeg->second_origin_stop_id),
+                        'from_lat' => $fromCoords['lat'],
+                        'from_lon' => $fromCoords['lon'],
+                        'to_lat' => $toCoords['lat'],
+                        'to_lon' => $toCoords['lon'],
                         'distance' => $transferWalkDist,
                         'duration' => $walkDuration,
                         'start_time' => $walkStartTime,
                         'end_time' => $walkEndTime,
                     ];
                 }
+
+                // Fetch stops for second transit leg
+                $secondLegStops = [];
+                try {
+                    $secondLegStops = DB::table('stop_times')
+                        ->join('stops', 'stop_times.stop_id', '=', 'stops.id')
+                        ->where('stop_times.trip_id', $secondLeg->second_trip_id)
+                        ->where('stop_times.stop_sequence', '>=', $secondLeg->second_origin_sequence)
+                        ->where('stop_times.stop_sequence', '<=', $secondLeg->final_stop_sequence)
+                        ->orderBy('stop_times.stop_sequence')
+                        ->select(
+                            'stops.stop_name',
+                            'stops.stop_lat',
+                            'stops.stop_lon',
+                            'stop_times.arrival_time',
+                            'stop_times.departure_time'
+                        )
+                        ->get()
+                        ->map(function ($stop) {
+                            return [
+                                'name' => $stop->stop_name,
+                                'lat' => $stop->stop_lat,
+                                'lon' => $stop->stop_lon,
+                                'arrival' => substr($stop->arrival_time, 0, 5),
+                                'departure' => substr($stop->departure_time, 0, 5),
+                            ];
+                        })
+                        ->toArray();
+                } catch (\Exception $e) {
+                    $secondLegStops = [];
+                }
+
+                // Get coordinates for second transit leg endpoints
+                $secondFromCoords = $this->getStopCoordsById($secondLeg->second_origin_stop_id);
+                $secondToCoords = $this->getStopCoordsById($secondLeg->final_stop_id);
 
                 $legs[] = [
                     'type' => 'transit',
@@ -742,8 +956,14 @@ class RouteSearchController extends Controller
                     'trip_headsign' => $secondLeg->second_trip_headsign,
                     'from' => $this->getStopNameById($secondLeg->second_origin_stop_id),
                     'to' => $this->getStopNameById($secondLeg->final_stop_id),
+                    'from_lat' => $secondFromCoords['lat'],
+                    'from_lon' => $secondFromCoords['lon'],
+                    'to_lat' => $secondToCoords['lat'],
+                    'to_lon' => $secondToCoords['lon'],
                     'departure_time' => substr($secondLeg->second_departure, 0, 5),
                     'arrival_time' => substr($secondLeg->final_arrival, 0, 5),
+                    'duration' => round((strtotime($secondLeg->final_arrival) - strtotime($secondLeg->second_departure)) / 60),
+                    'stops' => $secondLegStops,
                 ];
 
                 $journey = $this->buildJourney($legs, $time);

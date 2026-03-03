@@ -1,0 +1,1 @@
+﻿<?php $j = json_decode(file_get_contents("testFile/81944.20251224.140724.009328.zip.geojson"), true); foreach($j["features"] as $f) { if($f["geometry"]["type"] == "LineString") { print_r($f["properties"]); } }

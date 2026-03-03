@@ -502,58 +502,58 @@
                                     ${note}
                                 </div>
                                 ${route.stops_count !== '?' ? `<div class="flex items-center gap-2 text-sm text-gray-600">
-                                                                                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                                                                                    </svg>
-                                                                                                    <span>${route.stops_count} stops</span>
-                                                                                                </div>` : ''}
+                                                                                                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                                                                            </svg>
+                                                                                                            <span>${route.stops_count} stops</span>
+                                                                                                        </div>` : ''}
                             </div>
                             
                             <div class="flex items-center gap-6 bg-gray-50 rounded-lg p-4">
                                 ${route.departure_time !== '?' ? `<div class="flex-1">
-                                                                                                    <div class="text-sm text-gray-600 mb-1">Leave at</div>
-                                                                                                    <div class="text-2xl font-bold text-red-600">${route.leave_at || route.departure_time}</div>
-                                                                                                    ${route.leave_at && route.leave_at !== route.departure_time ? `<div class="text-xs text-gray-500 mt-1">Bus departs: ${route.departure_time}</div>` : ''}
-                                                                                                </div>` : ''}
+                                                                                                            <div class="text-sm text-gray-600 mb-1">Leave at</div>
+                                                                                                            <div class="text-2xl font-bold text-red-600">${route.leave_at || route.departure_time}</div>
+                                                                                                            ${route.leave_at && route.leave_at !== route.departure_time ? `<div class="text-xs text-gray-500 mt-1">Bus departs: ${route.departure_time}</div>` : ''}
+                                                                                                        </div>` : ''}
                                 
                                 ${route.duration !== 'N/A' ? `<div class="flex items-center gap-2 text-gray-400">
-                                                                                                    <div class="h-px w-8 bg-gray-300"></div>
-                                                                                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
-                                                                                                    </svg>
-                                                                                                    <div class="h-px w-8 bg-gray-300"></div>
-                                                                                                </div>
-                                                                                                
-                                                                                                <div class="flex-1 text-center">
-                                                                                                    <div class="text-sm text-gray-600 mb-1">Duration</div>
-                                                                                                    <div class="text-lg font-semibold text-gray-900">${route.duration}</div>
-                                                                                                </div>
-                                                                                                
-                                                                                                <div class="flex items-center gap-2 text-gray-400">
-                                                                                                    <div class="h-px w-8 bg-gray-300"></div>
-                                                                                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
-                                                                                                    </svg>
-                                                                                                    <div class="h-px w-8 bg-gray-300"></div>
-                                                                                                </div>` : ''}
+                                                                                                            <div class="h-px w-8 bg-gray-300"></div>
+                                                                                                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                                                                                                            </svg>
+                                                                                                            <div class="h-px w-8 bg-gray-300"></div>
+                                                                                                        </div>
+                                                                                                        
+                                                                                                        <div class="flex-1 text-center">
+                                                                                                            <div class="text-sm text-gray-600 mb-1">Duration</div>
+                                                                                                            <div class="text-lg font-semibold text-gray-900">${route.duration}</div>
+                                                                                                        </div>
+                                                                                                        
+                                                                                                        <div class="flex items-center gap-2 text-gray-400">
+                                                                                                            <div class="h-px w-8 bg-gray-300"></div>
+                                                                                                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                                                                                                            </svg>
+                                                                                                            <div class="h-px w-8 bg-gray-300"></div>
+                                                                                                        </div>` : ''}
                                 
                                 ${route.arrival_time !== '?' ? `<div class="flex-1 text-right">
-                                                                                                    <div class="text-sm text-gray-600 mb-1">Arrival</div>
-                                                                                                    <div class="text-2xl font-bold text-green-600">${route.arrival_time}</div>
-                                                                                                </div>` : ''}
+                                                                                                            <div class="text-sm text-gray-600 mb-1">Arrival</div>
+                                                                                                            <div class="text-2xl font-bold text-green-600">${route.arrival_time}</div>
+                                                                                                        </div>` : ''}
                             </div>
                             
                             ${route.stops && route.stops.length > 0 ? `
-                                                                                            <div class="mt-6 border-t pt-4">
-                                                                                                <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                                                                                                    <svg class="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
-                                                                                                    </svg>
-                                                                                                    All Stops on Route
-                                                                                                </h4>
-                                                                                                <div class="space-y-2 pl-7">
-                                                                                                    ${route.stops.map((stop, idx) => `
+                                                                                                    <div class="mt-6 border-t pt-4">
+                                                                                                        <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                                                                                            <svg class="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+                                                                                                            </svg>
+                                                                                                            All Stops on Route
+                                                                                                        </h4>
+                                                                                                        <div class="space-y-2 pl-7">
+                                                                                                            ${route.stops.map((stop, idx) => `
                                             <div class="flex items-center gap-3 text-sm">
                                                 <div class="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold text-xs">
                                                     ${idx + 1}
@@ -562,9 +562,9 @@
                                                 <div class="text-gray-600">${stop.arrival}</div>
                                             </div>
                                         `).join('')}
-                                                                                                </div>
-                                                                                            </div>
-                                                                                        ` : ''}
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                ` : ''}
                             
                             ${route.description ? `<p class="mt-4 text-sm text-gray-600">${route.description}</p>` : ''}
                             
@@ -588,6 +588,7 @@
         let map = null;
         let selectionMap = null;
         let currentRouteData = null;
+        let geojsonData = null;
         let selectedOrigin = null;
         let selectedDestination = null;
         let originMarker = null;
@@ -713,7 +714,8 @@
                             } catch (error) {
                                 console.error('Error finding nearest stop:', error);
                                 alert(
-                                    'Could not find a nearby stop. Please try clicking closer to a transit stop.');
+                                    'Could not find a nearby stop. Please try clicking closer to a transit stop.'
+                                );
                             }
                         });
                     } else {
@@ -727,8 +729,23 @@
             }
         });
 
+        async function fetchGeoJsonData() {
+            if (!geojsonData) {
+                try {
+                    const response = await fetch('/evolity_routes.geojson');
+                    geojsonData = await response.json();
+                } catch (e) {
+                    console.error('Failed to load GeoJSON map data', e);
+                    geojsonData = null;
+                }
+            }
+            return geojsonData;
+        }
+
         async function displayRouteOnMap(route) {
             if (!map) initMap();
+
+            await fetchGeoJsonData();
 
             // Clear existing layers
             map.eachLayer(layer => {
@@ -771,7 +788,49 @@
                         }
                     } else if (leg.type === 'transit') {
                         // Transit segment - solid line
-                        if (leg.stops && leg.stops.length > 1) {
+                        console.log('Transit leg:', leg.route_name, 'stops:', leg.stops ? leg.stops.length : 0);
+
+                        // Primary source: Exact shape coordinates from GTFS shapes table if available
+                        if (leg.shape_pts && leg.shape_pts.length > 1) {
+                            console.log('Using shape coordinates for leg', leg.route_name);
+                            const coords = leg.shape_pts;
+                            const transitLine = L.polyline(coords, {
+                                color: leg.route_color ? '#' + leg.route_color : colors.transit,
+                                weight: 5,
+                                opacity: 0.8
+                            }).addTo(map);
+
+                            transitLine.bindPopup(`
+                                <strong>🚌 ${leg.route_name}</strong><br>
+                                ${leg.operator_name || ''}<br>
+                                ${leg.from} → ${leg.to}<br>
+                                Duration: ${leg.duration} min
+                            `);
+
+                            bounds.push(...coords);
+
+                            // Only add markers for first and last stop to keep map clean when using shapes
+                            if (leg.stops && leg.stops.length > 1) {
+                                [0, leg.stops.length - 1].forEach(stopIdx => {
+                                    const stop = leg.stops[stopIdx];
+                                    if (stop.lat && stop.lon) {
+                                        const marker = L.circleMarker([stop.lat, stop.lon], {
+                                            radius: 8,
+                                            fillColor: '#DC2626',
+                                            color: '#DC2626',
+                                            weight: 2,
+                                            opacity: 1,
+                                            fillOpacity: 0.8
+                                        }).addTo(map);
+
+                                        marker.bindPopup(`
+                                            <strong>${stop.name}</strong><br>
+                                            ${stop.arrival ? 'Arrival: ' + stop.arrival : ''}
+                                        `);
+                                    }
+                                });
+                            }
+                        } else if (leg.stops && leg.stops.length > 1) {
                             const coords = leg.stops
                                 .map(stop => stop.lat && stop.lon ? [stop.lat, stop.lon] : null)
                                 .filter(c => c !== null);
@@ -815,17 +874,57 @@
                                     }
                                 });
                             }
+                        } else if (leg.from_lat && leg.from_lon && leg.to_lat && leg.to_lon) {
+                            // Fallback: Use from/to coordinates if stops not available
+                            console.log('Transit leg using fallback coordinates:', leg.route_name);
+                            const transitLine = L.polyline(
+                                [
+                                    [leg.from_lat, leg.from_lon],
+                                    [leg.to_lat, leg.to_lon]
+                                ], {
+                                    color: leg.route_color ? '#' + leg.route_color : colors.transit,
+                                    weight: 5,
+                                    opacity: 0.8
+                                }
+                            ).addTo(map);
+
+                            transitLine.bindPopup(`
+                                <strong>🚌 ${leg.route_name}</strong><br>
+                                ${leg.operator_name || ''}<br>
+                                ${leg.from} → ${leg.to}<br>
+                                Duration: ${leg.duration} min
+                            `);
+
+                            bounds.push([leg.from_lat, leg.from_lon], [leg.to_lat, leg.to_lon]);
+
+                            // Add markers for start/end
+                            L.circleMarker([leg.from_lat, leg.from_lon], {
+                                radius: 8,
+                                fillColor: '#DC2626',
+                                color: '#DC2626',
+                                weight: 2,
+                                opacity: 1,
+                                fillOpacity: 0.8
+                            }).addTo(map).bindPopup(`<strong>${leg.from}</strong><br>${leg.departure_time}`);
+
+                            L.circleMarker([leg.to_lat, leg.to_lon], {
+                                radius: 8,
+                                fillColor: '#DC2626',
+                                color: '#DC2626',
+                                weight: 2,
+                                opacity: 1,
+                                fillOpacity: 0.8
+                            }).addTo(map).bindPopup(`<strong>${leg.to}</strong><br>${leg.arrival_time}`);
+                        } else {
+                            console.warn('Transit leg has no stops or coordinates:', leg.route_name);
                         }
                     }
                 }
             }
             // Handle direct routes (no legs)
             else if (route.stops && route.stops.length > 0) {
-                const coords = route.stops
-                    .map(stop => stop.lat && stop.lon ? [stop.lat, stop.lon] : null)
-                    .filter(c => c !== null);
-
-                if (coords.length > 1) {
+                if (route.shape_pts && route.shape_pts.length > 1) {
+                    const coords = route.shape_pts;
                     const routeLine = L.polyline(coords, {
                         color: route.route_color ? '#' + route.route_color : colors.transit,
                         weight: 5,
@@ -840,16 +939,13 @@
 
                     bounds.push(...coords);
 
-                    // Add markers for stops
-                    route.stops.forEach((stop, idx) => {
-                        if (stop.lat && stop.lon) {
-                            const coord = [stop.lat, stop.lon];
-                            const isFirst = idx === 0;
-                            const isLast = idx === route.stops.length - 1;
-
-                            const marker = L.circleMarker(coord, {
-                                radius: isFirst || isLast ? 8 : 5,
-                                fillColor: isFirst || isLast ? '#DC2626' : '#FFFFFF',
+                    // Add markers only for first and last
+                    [0, route.stops.length - 1].forEach(stopIdx => {
+                        const stop = route.stops[stopIdx];
+                        if (stop && stop.lat && stop.lon) {
+                            const marker = L.circleMarker([stop.lat, stop.lon], {
+                                radius: 8,
+                                fillColor: '#DC2626',
                                 color: '#DC2626',
                                 weight: 2,
                                 opacity: 1,
@@ -862,6 +958,49 @@
                             `);
                         }
                     });
+                } else {
+                    const coords = route.stops
+                        .map(stop => stop.lat && stop.lon ? [stop.lat, stop.lon] : null)
+                        .filter(c => c !== null);
+
+                    if (coords.length > 1) {
+                        const routeLine = L.polyline(coords, {
+                            color: route.route_color ? '#' + route.route_color : colors.transit,
+                            weight: 5,
+                            opacity: 0.8
+                        }).addTo(map);
+
+                        routeLine.bindPopup(`
+                            <strong>🚌 ${route.route_name}</strong><br>
+                            ${route.agency_name || ''}<br>
+                            Duration: ${route.duration || 'N/A'}
+                        `);
+
+                        bounds.push(...coords);
+
+                        // Add markers for stops
+                        route.stops.forEach((stop, idx) => {
+                            if (stop.lat && stop.lon) {
+                                const coord = [stop.lat, stop.lon];
+                                const isFirst = idx === 0;
+                                const isLast = idx === route.stops.length - 1;
+
+                                const marker = L.circleMarker(coord, {
+                                    radius: isFirst || isLast ? 8 : 5,
+                                    fillColor: isFirst || isLast ? '#DC2626' : '#FFFFFF',
+                                    color: '#DC2626',
+                                    weight: 2,
+                                    opacity: 1,
+                                    fillOpacity: 0.8
+                                }).addTo(map);
+
+                                marker.bindPopup(`
+                                    <strong>${stop.name}</strong><br>
+                                    ${stop.arrival ? 'Arrival: ' + stop.arrival : ''}
+                                `);
+                            }
+                        });
+                    }
                 }
             }
 

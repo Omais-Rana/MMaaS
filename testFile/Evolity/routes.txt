@@ -14,4 +14,3 @@ route_id,agency_id,route_short_name,route_long_name,route_desc,route_type,route_
 412,9,Z,MONTBELIARD Acropole - DAMBENOIS Tourtelots,,3,,58BCAC,
 413,9,T4,MONTBELIARD Acropole - AUDINCOURT Bazaine,,3,,FDB414,
 694,9,T5,MONTBELIARD Acropole - MANDEURE Le Clos,,3,,FFD602,
-710,9,ESTI,MONTBELIARD Acropole - BROGNARD Base Nautique,,3,,E2A8A9,

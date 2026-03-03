@@ -1,0 +1,1 @@
+<?php $j = json_decode(file_get_contents('public/evolity_routes.geojson'), true); foreach($j['features'] as $f) { if($f['geometry']['type'] == 'LineString' && isset($f['properties']['route_short_name'])) { echo $f['properties']['route_short_name'] . PHP_EOL; } }
