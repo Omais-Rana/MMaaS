@@ -42,6 +42,7 @@ class ProcessScheduleImport implements ShouldQueue
                 'total_routes' => $stats['routes'],
                 'total_stops' => $stats['stops'],
                 'total_trips' => $stats['trips'],
+                'total_shapes' => $stats['shapes'],
             ]);
 
             $this->sendSuccessNotification($stats);
@@ -67,7 +68,7 @@ class ProcessScheduleImport implements ShouldQueue
     {
         Notification::make()
             ->title('Schedule Import Completed')
-            ->body("Successfully processed {$stats['routes']} routes, {$stats['stops']} stops, and {$stats['trips']} trips. New records added and existing records updated.")
+            ->body("Successfully processed {$stats['routes']} routes, {$stats['stops']} stops, {$stats['trips']} trips, and {$stats['shapes']} shapes. New records added and existing records updated.")
             ->success()
             ->sendToDatabase($this->scheduleImport->tenant);
     }

@@ -19,6 +19,7 @@ class Trip extends Model
         'trip_headsign',
         'trip_short_name',
         'direction_id',
+        'shape_id',
         'wheelchair_accessible',
     ];
 

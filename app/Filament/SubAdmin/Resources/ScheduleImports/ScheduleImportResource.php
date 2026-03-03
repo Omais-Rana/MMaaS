@@ -75,6 +75,7 @@ class ScheduleImportResource extends Resource
             RelationManagers\TripsRelationManager::class,
             RelationManagers\CalendarsRelationManager::class,
             RelationManagers\StopTimesRelationManager::class,
+            RelationManagers\ShapesRelationManager::class,
         ];
     }
 

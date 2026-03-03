@@ -52,6 +52,12 @@ class ScheduleImportsTable
                     ->numeric()
                     ->sortable()
                     ->alignCenter(),
+                TextColumn::make('total_shapes')
+                    ->label('Shapes')
+                    ->numeric()
+                    ->sortable()
+                    ->alignCenter()
+                    ->placeholder('—'),
                 TextColumn::make('created_at')
                     ->label(__('schedules.created_at'))
                     ->dateTime()

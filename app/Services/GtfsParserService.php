@@ -7,6 +7,7 @@ use App\Models\Calendar;
 use App\Models\CalendarDate;
 use App\Models\Route;
 use App\Models\ScheduleImport;
+use App\Models\Shape;
 use App\Models\Stop;
 use App\Models\StopTime;
 use App\Models\Trip;
@@ -26,6 +27,7 @@ class GtfsParserService
         'routes' => 0,
         'stops' => 0,
         'trips' => 0,
+        'shapes' => 0,
     ];
 
     public function __construct(ScheduleImport $import)
@@ -43,6 +45,7 @@ class GtfsParserService
 
             $this->parseRoutes();
             $this->parseStops();
+            $this->parseShapes();
             $this->parseTrips();
             $this->parseStopTimes();
             $this->parseCalendar();
@@ -177,6 +180,54 @@ class GtfsParserService
         }
     }
 
+    protected function parseShapes(): void
+    {
+        $file = $this->extractPath . '/shapes.txt';
+
+        if (! file_exists($file)) {
+            Log::warning('shapes.txt not found in GTFS archive');
+
+            return;
+        }
+
+        $rows = $this->parseCsv($file);
+
+        // Delete existing shape points for this import before reinserting
+        Shape::where('schedule_import_id', $this->import->id)->delete();
+
+        $batch = [];
+        $batchSize = 1000;
+        $uniqueShapeIds = [];
+
+        foreach ($rows as $row) {
+            if (empty($row['shape_id'])) {
+                continue;
+            }
+
+            $uniqueShapeIds[$row['shape_id']] = true;
+
+            $batch[] = [
+                'schedule_import_id' => $this->import->id,
+                'shape_id' => $row['shape_id'],
+                'shape_pt_lat' => ! empty($row['shape_pt_lat']) ? (float) $row['shape_pt_lat'] : 0,
+                'shape_pt_lon' => ! empty($row['shape_pt_lon']) ? (float) $row['shape_pt_lon'] : 0,
+                'shape_pt_sequence' => ! empty($row['shape_pt_sequence']) ? (int) $row['shape_pt_sequence'] : 0,
+                'shape_dist_traveled' => ! empty($row['shape_dist_traveled']) ? (float) $row['shape_dist_traveled'] : null,
+            ];
+
+            if (count($batch) >= $batchSize) {
+                Shape::insert($batch);
+                $batch = [];
+            }
+        }
+
+        if (! empty($batch)) {
+            Shape::insert($batch);
+        }
+
+        $this->stats['shapes'] = count($uniqueShapeIds);
+    }
+
     protected function parseTrips(): void
     {
         $file = $this->extractPath . '/trips.txt';
@@ -218,6 +269,7 @@ class GtfsParserService
                     'trip_headsign' => ! empty($row['trip_headsign']) ? $row['trip_headsign'] : null,
                     'trip_short_name' => ! empty($row['trip_short_name']) ? $row['trip_short_name'] : null,
                     'direction_id' => ! empty($row['direction_id']) ? (int) $row['direction_id'] : 0,
+                    'shape_id' => ! empty($row['shape_id']) ? $row['shape_id'] : null,
                     'wheelchair_accessible' => isset($row['wheelchair_accessible']) && $row['wheelchair_accessible'] !== '' ? (int) $row['wheelchair_accessible'] : 2,
                 ]
             );

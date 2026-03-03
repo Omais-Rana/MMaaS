@@ -22,6 +22,7 @@ class ScheduleImport extends Model
         'total_routes',
         'total_stops',
         'total_trips',
+        'total_shapes',
     ];
 
     protected function casts(): array
@@ -85,5 +86,10 @@ class ScheduleImport extends Model
     public function stopTimes(): HasManyThrough
     {
         return $this->hasManyThrough(StopTime::class, Trip::class);
+    }
+
+    public function shapes(): HasMany
+    {
+        return $this->hasMany(Shape::class);
     }
 }
