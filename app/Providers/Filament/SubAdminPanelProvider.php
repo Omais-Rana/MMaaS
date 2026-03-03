@@ -13,7 +13,6 @@ use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\View\PanelsRenderHook;
-use Filament\Widgets\AccountWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -41,7 +40,7 @@ class SubAdminPanelProvider extends PanelProvider
             ])
             ->renderHook(
                 PanelsRenderHook::SIDEBAR_NAV_START,
-                fn(): string => Blade::render('@livewire(\'language-switcher-action\')')
+                fn (): string => Blade::render('@livewire(\'language-switcher-action\')')
             )
             ->discoverResources(in: app_path('Filament/SubAdmin/Resources'), for: 'App\Filament\SubAdmin\Resources')
             ->discoverPages(in: app_path('Filament/SubAdmin/Pages'), for: 'App\Filament\SubAdmin\Pages')
@@ -51,6 +50,7 @@ class SubAdminPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/SubAdmin/Widgets'), for: 'App\Filament\SubAdmin\Widgets')
             ->widgets([
                 \App\Filament\SubAdmin\Widgets\SubAdminStatsOverview::class,
+                \App\Filament\SubAdmin\Widgets\MostSearchedRoutesWidget::class,
                 \App\Filament\SubAdmin\Widgets\SubAdminRecentActivity::class,
             ])
             ->middleware([

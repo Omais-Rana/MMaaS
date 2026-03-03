@@ -120,14 +120,59 @@
 
         <div class="p-6 bg-gradient-to-br from-red-50 to-white border-b">
             <div class="flex items-center gap-3 mb-6">
-                <div class="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center shadow-lg shadow-red-200">
+                <div
+                    class="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center shadow-lg shadow-red-200 shrink-0">
                     <svg class="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 24 24">
                         <path
                             d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
                     </svg>
                 </div>
-                <h1 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-red-600 to-red-900">
+                <h1
+                    class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-red-600 to-red-900 flex-1">
                     Transit Finder</h1>
+
+                @auth
+                    @php
+                        $dashboardUrl = match (auth()->user()->role) {
+                            'superadmin' => '/user',
+                            'subadmin', 'employee' => '/panel',
+                            default => '/portal',
+                        };
+                    @endphp
+                    <div class="flex items-center gap-2">
+                        <a href="{{ $dashboardUrl }}"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition-colors shadow-sm"
+                            title="Go to dashboard">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                            </svg>
+                            Dashboard
+                        </a>
+                        <form method="POST" action="{{ $dashboardUrl }}/logout" class="inline">
+                            @csrf
+                            <button type="submit"
+                                class="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 hover:border-red-300 hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
+                                title="Sign out">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                </svg>
+                            </button>
+                        </form>
+                    </div>
+                @else
+                    <div class="flex items-center gap-2">
+                        <a href="/portal/login"
+                            class="px-3 py-1.5 rounded-lg border border-gray-200 hover:border-red-300 hover:bg-red-50 text-gray-600 hover:text-red-600 text-xs font-semibold transition-colors">
+                            Sign In
+                        </a>
+                        <a href="/portal/register"
+                            class="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition-colors shadow-sm">
+                            Sign Up
+                        </a>
+                    </div>
+                @endauth
             </div>
 
             <form id="route-search-form" class="space-y-4">
@@ -233,6 +278,7 @@
             const input = document.getElementById(inputId),
                 dropdown = document.getElementById(dropdownId);
             input.addEventListener('input', async function() {
+                selectedCoords[inputId] = null; // User is typing manually — clear any stored coords
                 const query = this.value.trim();
                 if (query.length < 2) {
                     dropdown.classList.add('hidden');
@@ -249,7 +295,8 @@
                         const cityTag = s.city ? '<div class="text-[10px] text-gray-400 mt-0.5">' +
                             s.city + '</div>' : '';
                         return '<div class="autocomplete-item border-b border-gray-50 last:border-0" data-name="' +
-                            s.stop_name + '">' +
+                            s.stop_name + '" data-lat="' + (s.stop_lat || '') + '" data-lon="' + (s
+                                .stop_lon || '') + '">' +
                             '<div class="font-medium text-sm text-gray-800">' + s.stop_name +
                             '</div>' + cityTag +
                             '</div>';
@@ -258,6 +305,12 @@
                     dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
                         item.addEventListener('click', function() {
                             input.value = this.dataset.name;
+                            if (this.dataset.lat && this.dataset.lon) {
+                                selectedCoords[inputId] = {
+                                    lat: this.dataset.lat,
+                                    lon: this.dataset.lon
+                                };
+                            }
                             dropdown.classList.add('hidden');
                         });
                     });
@@ -272,6 +325,12 @@
             });
         }
 
+        // Stores {lat, lon} for each selected autocomplete stop (reset when user types manually)
+        let selectedCoords = {
+            origin: null,
+            destination: null
+        };
+
         setupAutocomplete('origin', 'origin-autocomplete');
         setupAutocomplete('destination', 'destination-autocomplete');
 
@@ -281,6 +340,9 @@
             const temp = origin.value;
             origin.value = destination.value;
             destination.value = temp;
+            const tempCoords = selectedCoords.origin;
+            selectedCoords.origin = selectedCoords.destination;
+            selectedCoords.destination = tempCoords;
         });
 
         // --- MAP LOGIC ---
@@ -737,7 +799,13 @@
                         origin_name: origin.value,
                         destination_name: destination.value,
                         date: document.getElementById('date').value,
-                        time: document.getElementById('time').value
+                        time: document.getElementById('time').value,
+                        origin_lat: selectedCoords.origin ? selectedCoords.origin.lat : null,
+                        origin_lon: selectedCoords.origin ? selectedCoords.origin.lon : null,
+                        dest_lat: selectedCoords.destination ? selectedCoords.destination.lat :
+                            null,
+                        dest_lon: selectedCoords.destination ? selectedCoords.destination.lon :
+                            null
                     })
                 });
 
@@ -793,22 +861,22 @@
                             
                             <div class="flex items-center gap-4 bg-gray-50/80 rounded-lg p-3">
                                 ${route.departure_time !== '?' ? `
-                                                                <div class="flex-1">
-                                                                    <div class="text-xs text-gray-500 uppercase tracking-wider">Departs</div>
-                                                                    <div class="text-xl font-bold text-red-600">${route.leave_at || route.departure_time}</div>
-                                                                </div>` : ''}
+                                                                    <div class="flex-1">
+                                                                        <div class="text-xs text-gray-500 uppercase tracking-wider">Departs</div>
+                                                                        <div class="text-xl font-bold text-red-600">${route.leave_at || route.departure_time}</div>
+                                                                    </div>` : ''}
                                 
                                 ${route.duration !== 'N/A' ? `
-                                                                <div class="flex-1 text-center border-l border-r border-gray-200 px-2">
-                                                                    <div class="text-xs text-gray-500 uppercase tracking-wider">Duration</div>
-                                                                    <div class="text-sm font-semibold text-gray-800">${route.duration}</div>
-                                                                </div>` : ''}
+                                                                    <div class="flex-1 text-center border-l border-r border-gray-200 px-2">
+                                                                        <div class="text-xs text-gray-500 uppercase tracking-wider">Duration</div>
+                                                                        <div class="text-sm font-semibold text-gray-800">${route.duration}</div>
+                                                                    </div>` : ''}
                                 
                                 ${route.arrival_time !== '?' ? `
-                                                                <div class="flex-1 text-right">
-                                                                    <div class="text-xs text-gray-500 uppercase tracking-wider">Arrives</div>
-                                                                    <div class="text-xl font-bold text-green-600">${route.arrival_time}</div>
-                                                                </div>` : ''}
+                                                                    <div class="flex-1 text-right">
+                                                                        <div class="text-xs text-gray-500 uppercase tracking-wider">Arrives</div>
+                                                                        <div class="text-xl font-bold text-green-600">${route.arrival_time}</div>
+                                                                    </div>` : ''}
                             </div>
                             ${directMidStopsHtml}
                         </div>

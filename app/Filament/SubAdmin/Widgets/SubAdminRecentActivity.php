@@ -13,7 +13,7 @@ class SubAdminRecentActivity extends TableWidget
 {
     protected static ?int $sort = 1;
 
-    protected int|string|array $columnSpan = 'full';
+    protected int|string|array $columnSpan = 1;
 
     protected function hasColumnToggle(): bool
     {
@@ -37,7 +37,7 @@ class SubAdminRecentActivity extends TableWidget
             ->columns([
                 IconColumn::make('type')
                     ->label('')
-                    ->icon(fn(string $state): string => match ($state) {
+                    ->icon(fn (string $state): string => match ($state) {
                         'scheduleimport_created' => 'heroicon-o-calendar-days',
                         'scheduleimport_updated' => 'heroicon-o-arrow-path',
                         'scheduleimport_deleted' => 'heroicon-o-trash',
@@ -49,7 +49,7 @@ class SubAdminRecentActivity extends TableWidget
                         'data_edited' => 'heroicon-o-pencil',
                         default => 'heroicon-o-bell',
                     })
-                    ->color(fn(string $state): string => match ($state) {
+                    ->color(fn (string $state): string => match ($state) {
                         'scheduleimport_created' => 'success',
                         'scheduleimport_updated' => 'info',
                         'scheduleimport_deleted' => 'danger',
