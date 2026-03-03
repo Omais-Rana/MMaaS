@@ -208,27 +208,36 @@ class RouteSearchController extends Controller
                         'stop_times.stop_sequence'
                     )
                     ->get()
-                    ->map(function ($stop) {
+                    ->values()
+                    ->map(function ($stop, $index) use (&$stopsTotal) {
                         return [
                             'name' => $stop->stop_name,
                             'lat' => $stop->stop_lat,
                             'lon' => $stop->stop_lon,
                             'arrival' => substr($stop->arrival_time, 0, 5),
                             'departure' => substr($stop->departure_time, 0, 5),
+                            'is_intermediate' => false, // will be set below
                         ];
                     })
                     ->toArray();
 
+                // Mark intermediate stops
+                foreach ($stopsOnRoute as $i => &$stop) {
+                    $stop['is_intermediate'] = ($i > 0 && $i < count($stopsOnRoute) - 1);
+                }
+                unset($stop);
+
                 $shapePoints = [];
-                if (!empty($route->shape_id)) {
-                    $shapePoints = DB::table('shapes')
-                        ->where('shape_id', $route->shape_id)
-                        ->orderBy('shape_pt_sequence')
-                        ->get(['shape_pt_lat', 'shape_pt_lon'])
-                        ->map(function ($pt) {
-                            return [$pt->shape_pt_lat, $pt->shape_pt_lon];
-                        })
-                        ->toArray();
+                if (! empty($route->shape_id) && ! empty($stopsOnRoute)) {
+                    $first = $stopsOnRoute[0];
+                    $last = $stopsOnRoute[count($stopsOnRoute) - 1];
+                    $shapePoints = $this->getClippedShapePoints(
+                        $route->shape_id,
+                        (float) $first['lat'],
+                        (float) $first['lon'],
+                        (float) $last['lat'],
+                        (float) $last['lon']
+                    );
                 }
 
                 return [
@@ -429,18 +438,37 @@ class RouteSearchController extends Controller
                         'stop_times.departure_time'
                     )
                     ->get()
-                    ->map(function ($stop) {
+                    ->values()
+                    ->map(function ($stop, $index) {
                         return [
                             'name' => $stop->stop_name,
                             'lat' => $stop->stop_lat,
                             'lon' => $stop->stop_lon,
                             'arrival' => substr($stop->arrival_time, 0, 5),
                             'departure' => substr($stop->departure_time, 0, 5),
+                            'is_intermediate' => false,
                         ];
                     })
                     ->toArray();
+                foreach ($transitStops as $i => &$s) {
+                    $s['is_intermediate'] = ($i > 0 && $i < count($transitStops) - 1);
+                }
+                unset($s);
             } catch (\Exception $e) {
                 $transitStops = [];
+            }
+
+            $transitShapePoints = [];
+            if (! empty($route->shape_id) && ! empty($transitStops)) {
+                $tFirst = $transitStops[0];
+                $tLast = $transitStops[count($transitStops) - 1];
+                $transitShapePoints = $this->getClippedShapePoints(
+                    $route->shape_id,
+                    (float) $tFirst['lat'],
+                    (float) $tFirst['lon'],
+                    (float) $tLast['lat'],
+                    (float) $tLast['lon']
+                );
             }
 
             // Get coordinates for transit leg endpoints
@@ -465,6 +493,7 @@ class RouteSearchController extends Controller
                 'arrival_time' => $busArrivalTime,
                 'duration' => round((strtotime($busArrivalTime) - strtotime($busDepartureTime)) / 60),
                 'stops' => $transitStops,
+                'shape_pts' => $transitShapePoints,
             ];
 
             // Only add destination walk if there's actual distance
@@ -525,9 +554,9 @@ class RouteSearchController extends Controller
         $allOriginStopIds = array_unique(array_merge($originStopIds, array_column($nearbyOriginStops, 'id')));
         $allDestStopIds = array_unique(array_merge($destStopIds, array_column($nearbyDestStops, 'id')));
 
-        // Don't use buffer in SQL - we'll filter by actual walking time after fetching
-        // This allows routes from exact origin stops to show up without being filtered by buffer
-        $nearbyDirectRoutes = DB::table('stop_times as st_origin')
+        // PRIORITY QUERY: exact origin stops → nearby dest stops
+        // This runs first so exact-origin results are never pushed out by limit.
+        $exactOriginNearbyDestRoutes = DB::table('stop_times as st_origin')
             ->join('trips as t', 'st_origin.trip_id', '=', 't.id')
             ->join('routes as r', 't.route_id', '=', 'r.id')
             ->join('users as u', 'r.tenant_id', '=', 'u.id')
@@ -537,7 +566,7 @@ class RouteSearchController extends Controller
                     ->whereRaw('st_dest.stop_sequence > st_origin.stop_sequence');
             })
             ->join('stops as dest_stop', 'st_dest.stop_id', '=', 'dest_stop.id')
-            ->whereIn('st_origin.stop_id', $allOriginStopIds)
+            ->whereIn('st_origin.stop_id', $originStopIds)  // EXACT origin only
             ->whereIn('t.service_id', $activeServiceIds)
             ->where('st_origin.departure_time', '>=', $sqlMinTime)
             ->where('st_origin.departure_time', '<=', date('H:i:s', strtotime($sqlMinTime) + 10800))
@@ -559,8 +588,48 @@ class RouteSearchController extends Controller
                 'u.name as operator_name'
             )
             ->orderBy('st_origin.departure_time')
-            ->limit(30)
+            ->limit(100)
             ->get();
+
+        // SECONDARY QUERY: nearby origin stops → nearby dest stops (deprioritised)
+        $nearbyDirectRoutes = DB::table('stop_times as st_origin')
+            ->join('trips as t', 'st_origin.trip_id', '=', 't.id')
+            ->join('routes as r', 't.route_id', '=', 'r.id')
+            ->join('users as u', 'r.tenant_id', '=', 'u.id')
+            ->join('stop_times as st_dest', function ($join) use ($allDestStopIds) {
+                $join->on('st_origin.trip_id', '=', 'st_dest.trip_id')
+                    ->whereIn('st_dest.stop_id', $allDestStopIds)
+                    ->whereRaw('st_dest.stop_sequence > st_origin.stop_sequence');
+            })
+            ->join('stops as dest_stop', 'st_dest.stop_id', '=', 'dest_stop.id')
+            ->whereIn('st_origin.stop_id', $allOriginStopIds)
+            ->whereNotIn('st_origin.stop_id', $originStopIds)  // exclude exact (already handled)
+            ->whereIn('t.service_id', $activeServiceIds)
+            ->where('st_origin.departure_time', '>=', $sqlMinTime)
+            ->where('st_origin.departure_time', '<=', date('H:i:s', strtotime($sqlMinTime) + 10800))
+            ->select(
+                'st_origin.stop_id as origin_stop_id',
+                'st_origin.departure_time',
+                'st_dest.stop_id as dest_stop_id',
+                'st_dest.arrival_time',
+                'dest_stop.stop_name as dest_stop_name',
+                'r.route_short_name',
+                'r.route_long_name',
+                'r.route_color',
+                'r.route_text_color',
+                't.trip_headsign',
+                't.id as trip_id',
+                't.shape_id',
+                'st_origin.stop_sequence as origin_sequence',
+                'st_dest.stop_sequence as dest_sequence',
+                'u.name as operator_name'
+            )
+            ->orderBy('st_origin.departure_time')
+            ->limit(100)
+            ->get();
+
+        // Merge: exact-origin results take priority (processed first)
+        $nearbyDirectRoutes = $exactOriginNearbyDestRoutes->merge($nearbyDirectRoutes);
 
         // Process nearby routes same way - find best walking option per route
         $nearbyRouteOptions = [];
@@ -640,18 +709,37 @@ class RouteSearchController extends Controller
                         'stop_times.departure_time'
                     )
                     ->get()
-                    ->map(function ($stop) {
+                    ->values()
+                    ->map(function ($stop, $index) {
                         return [
                             'name' => $stop->stop_name,
                             'lat' => $stop->stop_lat,
                             'lon' => $stop->stop_lon,
                             'arrival' => substr($stop->arrival_time, 0, 5),
                             'departure' => substr($stop->departure_time, 0, 5),
+                            'is_intermediate' => false,
                         ];
                     })
                     ->toArray();
+                foreach ($transitStops as $i => &$s) {
+                    $s['is_intermediate'] = ($i > 0 && $i < count($transitStops) - 1);
+                }
+                unset($s);
             } catch (\Exception $e) {
                 $transitStops = [];
+            }
+
+            $transitShapePoints = [];
+            if (! empty($route->shape_id) && ! empty($transitStops)) {
+                $tFirst = $transitStops[0];
+                $tLast = $transitStops[count($transitStops) - 1];
+                $transitShapePoints = $this->getClippedShapePoints(
+                    $route->shape_id,
+                    (float) $tFirst['lat'],
+                    (float) $tFirst['lon'],
+                    (float) $tLast['lat'],
+                    (float) $tLast['lon']
+                );
             }
 
             // Get coordinates for transit leg endpoints
@@ -676,6 +764,7 @@ class RouteSearchController extends Controller
                 'arrival_time' => $busArrivalTime,
                 'duration' => round((strtotime($busArrivalTime) - strtotime($busDepartureTime)) / 60),
                 'stops' => $transitStops,
+                'shape_pts' => $transitShapePoints,
             ];
 
             if ($destWalkDist > 0.05) {
@@ -749,6 +838,10 @@ class RouteSearchController extends Controller
                 'r1.route_color as first_color',
                 'r1.route_text_color as first_text_color',
                 't1.trip_headsign as first_headsign',
+                't1.id as trip_id',
+                't1.shape_id as first_shape_id',
+                'st_origin.stop_sequence as origin_sequence',
+                'st_transfer.stop_sequence as transfer_sequence',
                 'u1.name as first_operator'
             )
             ->orderBy('st_origin.departure_time')
@@ -800,6 +893,7 @@ class RouteSearchController extends Controller
                     'r2.route_color as second_route_color',
                     'r2.route_text_color as second_text_color',
                     't2.trip_headsign as second_trip_headsign',
+                    't2.shape_id as second_shape_id',
                     'u2.name as second_operator_name'
                 )
                 ->orderBy('st2_start.departure_time')
@@ -840,18 +934,37 @@ class RouteSearchController extends Controller
                             'stop_times.departure_time'
                         )
                         ->get()
-                        ->map(function ($stop) {
+                        ->values()
+                        ->map(function ($stop, $index) {
                             return [
                                 'name' => $stop->stop_name,
                                 'lat' => $stop->stop_lat,
                                 'lon' => $stop->stop_lon,
                                 'arrival' => substr($stop->arrival_time, 0, 5),
                                 'departure' => substr($stop->departure_time, 0, 5),
+                                'is_intermediate' => false,
                             ];
                         })
                         ->toArray();
+                    foreach ($firstLegStops as $i => &$s) {
+                        $s['is_intermediate'] = ($i > 0 && $i < count($firstLegStops) - 1);
+                    }
+                    unset($s);
                 } catch (\Exception $e) {
                     $firstLegStops = [];
+                }
+
+                $firstShapePoints = [];
+                if (! empty($firstLeg->first_shape_id) && ! empty($firstLegStops)) {
+                    $fFirst = $firstLegStops[0];
+                    $fLast = $firstLegStops[count($firstLegStops) - 1];
+                    $firstShapePoints = $this->getClippedShapePoints(
+                        $firstLeg->first_shape_id,
+                        (float) $fFirst['lat'],
+                        (float) $fFirst['lon'],
+                        (float) $fLast['lat'],
+                        (float) $fLast['lon']
+                    );
                 }
 
                 // Get coordinates for first transit leg endpoints
@@ -877,6 +990,7 @@ class RouteSearchController extends Controller
                         'arrival_time' => substr($firstLeg->transfer_arrival, 0, 5),
                         'duration' => round((strtotime($firstLeg->transfer_arrival) - strtotime($firstLeg->departure_time)) / 60),
                         'stops' => $firstLegStops,
+                        'shape_pts' => $firstShapePoints,
                     ],
                 ];
 
@@ -928,18 +1042,37 @@ class RouteSearchController extends Controller
                             'stop_times.departure_time'
                         )
                         ->get()
-                        ->map(function ($stop) {
+                        ->values()
+                        ->map(function ($stop, $index) {
                             return [
                                 'name' => $stop->stop_name,
                                 'lat' => $stop->stop_lat,
                                 'lon' => $stop->stop_lon,
                                 'arrival' => substr($stop->arrival_time, 0, 5),
                                 'departure' => substr($stop->departure_time, 0, 5),
+                                'is_intermediate' => false,
                             ];
                         })
                         ->toArray();
+                    foreach ($secondLegStops as $i => &$s) {
+                        $s['is_intermediate'] = ($i > 0 && $i < count($secondLegStops) - 1);
+                    }
+                    unset($s);
                 } catch (\Exception $e) {
                     $secondLegStops = [];
+                }
+
+                $secondShapePoints = [];
+                if (! empty($secondLeg->second_shape_id) && ! empty($secondLegStops)) {
+                    $sFirst = $secondLegStops[0];
+                    $sLast = $secondLegStops[count($secondLegStops) - 1];
+                    $secondShapePoints = $this->getClippedShapePoints(
+                        $secondLeg->second_shape_id,
+                        (float) $sFirst['lat'],
+                        (float) $sFirst['lon'],
+                        (float) $sLast['lat'],
+                        (float) $sLast['lon']
+                    );
                 }
 
                 // Get coordinates for second transit leg endpoints
@@ -964,6 +1097,7 @@ class RouteSearchController extends Controller
                     'arrival_time' => substr($secondLeg->final_arrival, 0, 5),
                     'duration' => round((strtotime($secondLeg->final_arrival) - strtotime($secondLeg->second_departure)) / 60),
                     'stops' => $secondLegStops,
+                    'shape_pts' => $secondShapePoints,
                 ];
 
                 $journey = $this->buildJourney($legs, $time);
@@ -1007,7 +1141,59 @@ class RouteSearchController extends Controller
 
             // Retry transfer search with expanded destinations
             if ($expandedDestStopIds !== $destStopIds) {
-                return $this->findTransferRoutes($originStopIds, $expandedDestStopIds, $originName, $destinationName, $time, $activeServiceIds, $minimumDepartureTime, $date);
+                $walkingSpeedKmh = 6.5;
+                $trueDestStop = DB::table('stops')->whereIn('id', $destStopIds)->first();
+
+                $expandedJourneys = $this->findTransferRoutes(
+                    $originStopIds,
+                    $expandedDestStopIds,
+                    $originName,
+                    $destinationName,
+                    $time,
+                    $activeServiceIds,
+                    $minimumDepartureTime,
+                    $date
+                );
+
+                // Post-process: if the last leg ends at an expanded (non-exact) dest stop,
+                // add a final walk leg from that stop to the actual destination.
+                if ($trueDestStop) {
+                    foreach ($expandedJourneys as &$journey) {
+                        $lastLeg = end($journey['legs']);
+                        if (! $lastLeg) {
+                            continue;
+                        }
+
+                        $latDiff = abs($lastLeg['to_lat'] - $trueDestStop->stop_lat);
+                        $lonDiff = abs($lastLeg['to_lon'] - $trueDestStop->stop_lon) * cos(deg2rad((float) $trueDestStop->stop_lat));
+                        $distKm = sqrt($latDiff * $latDiff + $lonDiff * $lonDiff) * 111.0;
+
+                        if ($distKm > 0.05) {
+                            $walkDuration = (int) round($distKm / $walkingSpeedKmh * 60);
+                            $walkStart = $lastLeg['arrival_time'] ?? $lastLeg['end_time'] ?? '00:00';
+                            $walkEnd = date('H:i', strtotime($walkStart) + ($walkDuration * 60));
+
+                            $journey['legs'][] = [
+                                'type' => 'walk',
+                                'from' => $lastLeg['to'],
+                                'to' => $destinationName,
+                                'from_lat' => $lastLeg['to_lat'],
+                                'from_lon' => $lastLeg['to_lon'],
+                                'to_lat' => (float) $trueDestStop->stop_lat,
+                                'to_lon' => (float) $trueDestStop->stop_lon,
+                                'distance' => round($distKm, 3),
+                                'duration' => $walkDuration,
+                                'start_time' => $walkStart,
+                                'end_time' => $walkEnd,
+                            ];
+
+                            $journey['arrival_time'] = $walkEnd;
+                        }
+                    }
+                    unset($journey);
+                }
+
+                return $expandedJourneys;
             }
         }
 
@@ -1244,38 +1430,108 @@ class RouteSearchController extends Controller
         return strtr($string, $accents);
     }
 
+    /**
+     * Clips a shape to only the portion between two stop coordinates.
+     * Finds the nearest shape point to each stop and returns only those points in between.
+     *
+     * @param  array<array{shape_pt_lat: float, shape_pt_lon: float, shape_pt_sequence: int}>  $shapePoints
+     * @return array<int, array{float, float}>
+     */
+    private function clipShapeToStops(array $shapePoints, float $originLat, float $originLon, float $destLat, float $destLon): array
+    {
+        if (empty($shapePoints)) {
+            return [];
+        }
+
+        $originIdx = 0;
+        $destIdx = count($shapePoints) - 1;
+        $minOriginDist = PHP_FLOAT_MAX;
+        $minDestDist = PHP_FLOAT_MAX;
+
+        foreach ($shapePoints as $i => $pt) {
+            $dOrigin = $this->haversineDistance($originLat, $originLon, $pt[0], $pt[1]);
+            $dDest = $this->haversineDistance($destLat, $destLon, $pt[0], $pt[1]);
+
+            if ($dOrigin < $minOriginDist) {
+                $minOriginDist = $dOrigin;
+                $originIdx = $i;
+            }
+            if ($dDest < $minDestDist) {
+                $minDestDist = $dDest;
+                $destIdx = $i;
+            }
+        }
+
+        // Ensure we always go forward along the shape
+        if ($originIdx > $destIdx) {
+            [$originIdx, $destIdx] = [$destIdx, $originIdx];
+        }
+
+        return array_slice($shapePoints, $originIdx, $destIdx - $originIdx + 1);
+    }
+
+    /**
+     * Haversine distance between two lat/lon pairs (in km).
+     */
+    private function haversineDistance(float $lat1, float $lon1, float $lat2, float $lon2): float
+    {
+        $r = 6371;
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLon = deg2rad($lon2 - $lon1);
+        $a = sin($dLat / 2) ** 2 + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLon / 2) ** 2;
+
+        return $r * 2 * atan2(sqrt($a), sqrt(1 - $a));
+    }
+
+    /**
+     * Loads all shape points for a shape_id and clips them to the stop segment.
+     *
+     * @return array<int, array{float, float}>
+     */
+    private function getClippedShapePoints(string $shapeId, float $originLat, float $originLon, float $destLat, float $destLon): array
+    {
+        $rawPoints = DB::table('shapes')
+            ->where('shape_id', $shapeId)
+            ->orderBy('shape_pt_sequence')
+            ->get(['shape_pt_lat', 'shape_pt_lon'])
+            ->map(fn($pt) => [(float) $pt->shape_pt_lat, (float) $pt->shape_pt_lon])
+            ->toArray();
+
+        return $this->clipShapeToStops($rawPoints, $originLat, $originLon, $destLat, $destLon);
+    }
+
     public function getAllRoutesWithShapes()
     {
-        $routeShapes = \Illuminate\Support\Facades\DB::select("
+        $routeShapes = \Illuminate\Support\Facades\DB::select('
             SELECT r.route_short_name, MAX(r.route_long_name) as route_long_name, MAX(r.route_color) as route_color, t.shape_id 
             FROM routes r 
             JOIN trips t ON r.id = t.route_id 
             WHERE t.shape_id IS NOT NULL 
             GROUP BY r.route_short_name, t.shape_id
-        ");
-        
+        ');
+
         $points = \Illuminate\Support\Facades\DB::table('shapes')
             ->orderBy('shape_id')
             ->orderBy('shape_pt_sequence')
             ->get(['shape_id', 'shape_pt_lat', 'shape_pt_lon']);
-            
+
         $shapePoints = [];
-        foreach($points as $pt) {
+        foreach ($points as $pt) {
             $shapePoints[$pt->shape_id][] = [$pt->shape_pt_lat, $pt->shape_pt_lon];
         }
-        
+
         $result = [];
-        foreach($routeShapes as $rs) {
+        foreach ($routeShapes as $rs) {
             if (isset($shapePoints[$rs->shape_id])) {
                 $result[] = [
                     'route_short_name' => $rs->route_short_name,
                     'route_long_name' => $rs->route_long_name,
                     'route_color' => $rs->route_color,
-                    'shape_pts' => $shapePoints[$rs->shape_id]
+                    'shape_pts' => $shapePoints[$rs->shape_id],
                 ];
             }
         }
-        
+
         return response()->json(['routes' => $result]);
     }
 }

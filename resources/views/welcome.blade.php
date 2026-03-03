@@ -264,6 +264,7 @@
         let allRoutesLayer = L.layerGroup();
         let searchResultsLayer = L.layerGroup();
         let currentRouteData = null;
+        let allRoutesShapes = {}; // Cache: route_short_name -> full shape_pts array
 
         function initMap() {
             if (!map) {
@@ -294,8 +295,12 @@
 
                 if (data && data.routes && Array.isArray(data.routes)) {
                     allRoutesLayer.clearLayers();
+                    allRoutesShapes = {};
                     data.routes.forEach(r => {
                         if (r.shape_pts && r.shape_pts.length > 1) {
+                            // Cache shape by route name for fallback use in search results
+                            const rName = r.route_short_name || r.route_name;
+                            if (rName) allRoutesShapes[rName] = r.shape_pts;
                             let color = r.route_color ? '#' + r.route_color : '#9CA3AF';
                             let polyline = L.polyline(r.shape_pts, {
                                 color: color,
@@ -386,6 +391,16 @@
                         `background-color: #${leg.route_color}; color: ${leg.route_text_color ? '#' + leg.route_text_color : '#FFFFFF'};` :
                         'background-color: #6B7280; color: #FFFFFF;';
 
+                    const midStops = leg.stops ? leg.stops.filter(s => s.is_intermediate) : [];
+                    const midStopsHtml = midStops.length > 0 ? `
+                        <details class="mt-1">
+                            <summary class="text-[10px] text-gray-400 cursor-pointer select-none hover:text-gray-600">${midStops.length} intermediate stop${midStops.length > 1 ? 's' : ''}</summary>
+                            <div class="mt-1 ml-2 space-y-0.5 border-l border-gray-200 pl-2">
+                                ${midStops.map(s => `<div class="flex justify-between text-[10px] text-gray-500"><span>${s.name}</span><span class="font-mono text-gray-400">${s.arrival}</span></div>`).join('')}
+                            </div>
+                        </details>
+                    ` : '';
+
                     return `
                         <div class="flex items-start gap-3 py-3 border-l-2 border-red-500 pl-3 ml-2 relative">
                             <div class="absolute w-2 h-2 rounded-full bg-white border-2 border-red-500 -left-[5px] top-4"></div>
@@ -397,6 +412,7 @@
                                     </span>
                                 </div>
                                 <div class="text-xs font-medium text-gray-900 truncate">${leg.from} → ${leg.to}</div>
+                                ${midStopsHtml}
                             </div>
                             <div class="flex flex-col items-end text-xs text-gray-600 gap-0.5 whitespace-nowrap">
                                 <div class="font-bold text-red-600">${leg.departure_time}</div>
@@ -495,6 +511,17 @@
                         `background-color: #${route.route_color}; color: ${route.route_text_color ? '#' + route.route_text_color : '#FFFFFF'};` :
                         'background-color: #6B7280; color: #FFFFFF;';
 
+                    const directMidStops = route.stops ? route.stops.filter(s => s.is_intermediate) :
+                [];
+                    const directMidStopsHtml = directMidStops.length > 0 ? `
+                        <details class="mt-2">
+                            <summary class="text-[10px] text-gray-400 cursor-pointer select-none hover:text-gray-600">${directMidStops.length} intermediate stop${directMidStops.length > 1 ? 's' : ''}</summary>
+                            <div class="mt-1 ml-2 space-y-0.5 border-l border-gray-200 pl-2">
+                                ${directMidStops.map(s => `<div class="flex justify-between text-[10px] text-gray-500"><span>${s.name}</span><span class="font-mono text-gray-400">${s.arrival}</span></div>`).join('')}
+                            </div>
+                        </details>
+                    ` : '';
+
                     return `
                         <div class="route-card bg-white rounded-xl shadow-sm border border-gray-100 p-4 transition-all" onclick="showRouteOnMap(${index})">
                             <div class="flex items-center gap-2 mb-3">
@@ -507,23 +534,24 @@
                             
                             <div class="flex items-center gap-4 bg-gray-50/80 rounded-lg p-3">
                                 ${route.departure_time !== '?' ? `
-                                        <div class="flex-1">
-                                            <div class="text-xs text-gray-500 uppercase tracking-wider">Departs</div>
-                                            <div class="text-xl font-bold text-red-600">${route.leave_at || route.departure_time}</div>
-                                        </div>` : ''}
+                                                <div class="flex-1">
+                                                    <div class="text-xs text-gray-500 uppercase tracking-wider">Departs</div>
+                                                    <div class="text-xl font-bold text-red-600">${route.leave_at || route.departure_time}</div>
+                                                </div>` : ''}
                                 
                                 ${route.duration !== 'N/A' ? `
-                                        <div class="flex-1 text-center border-l border-r border-gray-200 px-2">
-                                            <div class="text-xs text-gray-500 uppercase tracking-wider">Duration</div>
-                                            <div class="text-sm font-semibold text-gray-800">${route.duration}</div>
-                                        </div>` : ''}
+                                                <div class="flex-1 text-center border-l border-r border-gray-200 px-2">
+                                                    <div class="text-xs text-gray-500 uppercase tracking-wider">Duration</div>
+                                                    <div class="text-sm font-semibold text-gray-800">${route.duration}</div>
+                                                </div>` : ''}
                                 
                                 ${route.arrival_time !== '?' ? `
-                                        <div class="flex-1 text-right">
-                                            <div class="text-xs text-gray-500 uppercase tracking-wider">Arrives</div>
-                                            <div class="text-xl font-bold text-green-600">${route.arrival_time}</div>
-                                        </div>` : ''}
+                                                <div class="flex-1 text-right">
+                                                    <div class="text-xs text-gray-500 uppercase tracking-wider">Arrives</div>
+                                                    <div class="text-xl font-bold text-green-600">${route.arrival_time}</div>
+                                                </div>` : ''}
                             </div>
+                            ${directMidStopsHtml}
                         </div>
                     `;
                 }).join('');
@@ -540,6 +568,31 @@
                 console.error('Error searching routes:', error);
             }
         });
+
+        // Clip a cached full shape to the nearest points for a from/to coord pair
+        function clipCachedShape(shapePts, fromLat, fromLon, toLat, toLon) {
+            if (!shapePts || shapePts.length < 2) return null;
+            let originIdx = 0,
+                destIdx = shapePts.length - 1;
+            let minO = Infinity,
+                minD = Infinity;
+            for (let i = 0; i < shapePts.length; i++) {
+                const pt = shapePts[i];
+                const dO = Math.hypot(pt[0] - fromLat, pt[1] - fromLon);
+                const dD = Math.hypot(pt[0] - toLat, pt[1] - toLon);
+                if (dO < minO) {
+                    minO = dO;
+                    originIdx = i;
+                }
+                if (dD < minD) {
+                    minD = dD;
+                    destIdx = i;
+                }
+            }
+            if (originIdx > destIdx)[originIdx, destIdx] = [destIdx, originIdx];
+            const clipped = shapePts.slice(originIdx, destIdx + 1);
+            return clipped.length > 1 ? clipped : null;
+        }
 
         window.showRouteOnMap = function(routeIndex) {
             if (!currentRouteData || !currentRouteData[routeIndex]) return;
@@ -561,160 +614,146 @@
                 transit: '#DC2626'
             };
 
+            function addBounds(lat, lon) {
+                if (lat != null && lon != null) bounds.push([parseFloat(lat), parseFloat(lon)]);
+            }
+
+            function resolveTransitShape(leg) {
+                // 1. Use clipped shape from API if available and meaningful
+                if (leg.shape_pts && leg.shape_pts.length > 2) return leg.shape_pts;
+                // 2. Fall back to cached full shape, clipped to this leg's endpoints
+                const cached = allRoutesShapes[leg.route_name];
+                if (cached && leg.from_lat && leg.to_lat) {
+                    const clipped = clipCachedShape(cached, parseFloat(leg.from_lat), parseFloat(leg.from_lon),
+                        parseFloat(leg.to_lat), parseFloat(leg.to_lon));
+                    if (clipped) return clipped;
+                }
+                // 3. Fall back to stop coords polyline
+                if (leg.stops && leg.stops.length > 1) {
+                    return leg.stops.map(s => s.lat && s.lon ? [parseFloat(s.lat), parseFloat(s.lon)] : null).filter(
+                        Boolean);
+                }
+                // 4. Last resort: straight line
+                return leg.from_lat ? [
+                    [parseFloat(leg.from_lat), parseFloat(leg.from_lon)],
+                    [parseFloat(leg.to_lat), parseFloat(leg.to_lon)]
+                ] : null;
+            }
+
             if (route.legs && route.legs.length > 0) {
                 for (const leg of route.legs) {
                     if (leg.type === 'walk') {
                         if (leg.from_lat && leg.from_lon && leg.to_lat && leg.to_lon) {
-                            const walkLine = L.polyline(
-                                [
-                                    [leg.from_lat, leg.from_lon],
-                                    [leg.to_lat, leg.to_lon]
-                                ], {
-                                    color: colors.walk,
-                                    weight: 4,
-                                    opacity: 0.7,
-                                    dashArray: '8, 8'
-                                }
-                            ).addTo(searchResultsLayer);
-                            walkLine.bindPopup(
-                                `<strong>🚶 Walk ${leg.duration} min</strong><br>${leg.from} → ${leg.to}`);
-                            bounds.push([leg.from_lat, leg.from_lon], [leg.to_lat, leg.to_lon]);
+                            L.polyline(
+                                    [
+                                        [leg.from_lat, leg.from_lon],
+                                        [leg.to_lat, leg.to_lon]
+                                    ], {
+                                        color: colors.walk,
+                                        weight: 4,
+                                        opacity: 0.7,
+                                        dashArray: '6, 8'
+                                    }
+                                ).addTo(searchResultsLayer)
+                                .bindPopup(`<strong>🚶 Walk ${leg.duration} min</strong><br>${leg.from} → ${leg.to}`);
+                            addBounds(leg.from_lat, leg.from_lon);
+                            addBounds(leg.to_lat, leg.to_lon);
                         }
                     } else if (leg.type === 'transit') {
-                        let pathColor = leg.route_color ? '#' + leg.route_color : colors.transit;
-                        if (leg.shape_pts && leg.shape_pts.length > 1) {
-                            const transitLine = L.polyline(leg.shape_pts, {
-                                color: pathColor,
-                                weight: 6,
-                                opacity: 0.9
-                            }).addTo(searchResultsLayer);
+                        const pathColor = leg.route_color ? '#' + leg.route_color : colors.transit;
+                        addBounds(leg.from_lat, leg.from_lon);
+                        addBounds(leg.to_lat, leg.to_lon);
 
-                            transitLine.bindPopup(`<strong>🚌 ${leg.route_name}</strong><br>${leg.from} → ${leg.to}`);
-                            bounds.push(...leg.shape_pts);
-
-                            if (leg.stops && leg.stops.length > 1) {
-                                [0, leg.stops.length - 1].forEach(stopIdx => {
-                                    const stop = leg.stops[stopIdx];
-                                    if (stop.lat && stop.lon) {
-                                        L.circleMarker([stop.lat, stop.lon], {
-                                            radius: 6,
-                                            fillColor: '#FFF',
-                                            color: pathColor,
-                                            weight: 3,
-                                            opacity: 1,
-                                            fillOpacity: 1
-                                        }).addTo(searchResultsLayer).bindPopup(
-                                            `<strong>${stop.name}</strong>`);
-                                    }
-                                });
-                            }
-                        } else if (leg.stops && leg.stops.length > 1) {
-                            const coords = leg.stops.map(s => s.lat && s.lon ? [s.lat, s.lon] : null).filter(c => c !==
-                                null);
-                            if (coords.length > 1) {
-                                const transitLine = L.polyline(coords, {
+                        const shapePts = resolveTransitShape(leg);
+                        if (shapePts && shapePts.length > 1) {
+                            L.polyline(shapePts, {
                                     color: pathColor,
                                     weight: 6,
                                     opacity: 0.9
-                                }).addTo(searchResultsLayer);
-                                bounds.push(...coords);
-
-                                leg.stops.forEach((stop, stopIdx) => {
-                                    if (stop.lat && stop.lon) {
-                                        const isFirst = stopIdx === 0;
-                                        const isLast = stopIdx === leg.stops.length - 1;
-                                        L.circleMarker([stop.lat, stop.lon], {
-                                            radius: isFirst || isLast ? 6 : 4,
-                                            fillColor: isFirst || isLast ? '#FFF' : pathColor,
-                                            color: pathColor,
-                                            weight: isFirst || isLast ? 3 : 1,
-                                            opacity: 1,
-                                            fillOpacity: 1
-                                        }).addTo(searchResultsLayer).bindPopup(
-                                            `<strong>${stop.name}</strong>`);
-                                    }
-                                });
-                            }
-                        } else if (leg.from_lat && leg.from_lon && leg.to_lat && leg.to_lon) {
-                            const transitLine = L.polyline(
-                                [
-                                    [leg.from_lat, leg.from_lon],
-                                    [leg.to_lat, leg.to_lon]
-                                ], {
-                                    color: pathColor,
-                                    weight: 6,
-                                    opacity: 0.9
-                                }
-                            ).addTo(searchResultsLayer);
-                            bounds.push([leg.from_lat, leg.from_lon], [leg.to_lat, leg.to_lon]);
-
-                            [
-                                [leg.from_lat, leg.from_lon],
-                                [leg.to_lat, leg.to_lon]
-                            ].forEach(coord => {
-                                L.circleMarker(coord, {
-                                    radius: 6,
-                                    fillColor: '#FFF',
-                                    color: pathColor,
-                                    weight: 3,
-                                    opacity: 1,
-                                    fillOpacity: 1
-                                }).addTo(searchResultsLayer);
-                            });
+                                })
+                                .addTo(searchResultsLayer)
+                                .bindPopup(`<strong>🚌 ${leg.route_name}</strong><br>${leg.from} → ${leg.to}`);
+                            shapePts.forEach(pt => bounds.push(pt));
                         }
-                    }
-                }
-            } else if (route.stops && route.stops.length > 0) {
-                let pathColor = route.route_color ? '#' + route.route_color : colors.transit;
 
-                if (route.shape_pts && route.shape_pts.length > 1) {
-                    L.polyline(route.shape_pts, {
-                        color: pathColor,
-                        weight: 6,
-                        opacity: 0.9
-                    }).addTo(searchResultsLayer).bindPopup(`<strong>🚌 ${route.route_name}</strong>`);
-                    bounds.push(...route.shape_pts);
-
-                    [0, route.stops.length - 1].forEach(stopIdx => {
-                        const stop = route.stops[stopIdx];
-                        if (stop && stop.lat && stop.lon) {
-                            L.circleMarker([stop.lat, stop.lon], {
-                                radius: 6,
-                                fillColor: '#FFF',
-                                color: pathColor,
-                                weight: 3,
-                                opacity: 1,
-                                fillOpacity: 1
-                            }).addTo(searchResultsLayer).bindPopup(`<strong>${stop.name}</strong>`);
-                        }
-                    });
-                } else {
-                    const coords = route.stops.map(stop => stop.lat && stop.lon ? [stop.lat, stop.lon] : null).filter(
-                        c => c !== null);
-                    if (coords.length > 1) {
-                        L.polyline(coords, {
-                            color: pathColor,
-                            weight: 6,
-                            opacity: 0.9
-                        }).addTo(searchResultsLayer).bindPopup(`<strong>🚌 ${route.route_name}</strong>`);
-                        bounds.push(...coords);
-
-                        route.stops.forEach((stop, idx) => {
-                            if (stop.lat && stop.lon) {
-                                const isFirst = idx === 0;
-                                const isLast = idx === route.stops.length - 1;
-                                L.circleMarker([stop.lat, stop.lon], {
-                                    radius: isFirst || isLast ? 6 : 4,
-                                    fillColor: isFirst || isLast ? '#FFF' : pathColor,
-                                    color: pathColor,
-                                    weight: isFirst || isLast ? 3 : 1,
-                                    opacity: 1,
-                                    fillOpacity: 1
-                                }).addTo(searchResultsLayer).bindPopup(`<strong>${stop.name}</strong>`);
+                        // Stop markers
+                        const stopsToRender = (leg.stops && leg.stops.length > 0) ? leg.stops : [{
+                                lat: leg.from_lat,
+                                lon: leg.from_lon,
+                                name: leg.from,
+                                arrival: leg.departure_time,
+                                is_intermediate: false
+                            },
+                            {
+                                lat: leg.to_lat,
+                                lon: leg.to_lon,
+                                name: leg.to,
+                                arrival: leg.arrival_time,
+                                is_intermediate: false
                             }
+                        ];
+                        stopsToRender.forEach(stop => {
+                            if (!stop.lat || !stop.lon) return;
+                            const isMid = stop.is_intermediate === true;
+                            L.circleMarker([parseFloat(stop.lat), parseFloat(stop.lon)], {
+                                    radius: isMid ? 4 : 7,
+                                    fillColor: isMid ? '#FFFFFF' : pathColor,
+                                    color: pathColor,
+                                    weight: isMid ? 2 : 3,
+                                    opacity: 1,
+                                    fillOpacity: isMid ? 0.85 : 1
+                                }).addTo(searchResultsLayer)
+                                .bindPopup(
+                                    `<strong>${stop.name}</strong><br><span style="color:#666">${stop.arrival || ''}</span>`
+                                    );
                         });
                     }
                 }
+
+            } else if (route.stops && route.stops.length > 0) {
+                const pathColor = route.route_color ? '#' + route.route_color : colors.transit;
+
+                // Resolve shape: API shape → cached full shape clipped → stop coords
+                let shapePts = (route.shape_pts && route.shape_pts.length > 2) ? route.shape_pts : null;
+                if (!shapePts) {
+                    const cached = allRoutesShapes[route.route_name];
+                    if (cached && route.stops.length >= 2) {
+                        const f = route.stops[0],
+                            l = route.stops[route.stops.length - 1];
+                        shapePts = clipCachedShape(cached, parseFloat(f.lat), parseFloat(f.lon), parseFloat(l.lat),
+                            parseFloat(l.lon));
+                    }
+                }
+                if (!shapePts) {
+                    shapePts = route.stops.map(s => s.lat && s.lon ? [parseFloat(s.lat), parseFloat(s.lon)] : null)
+                        .filter(Boolean);
+                }
+
+                if (shapePts && shapePts.length > 1) {
+                    L.polyline(shapePts, {
+                            color: pathColor,
+                            weight: 6,
+                            opacity: 0.9
+                        })
+                        .addTo(searchResultsLayer)
+                        .bindPopup(`<strong>🚌 ${route.route_name}</strong>`);
+                    shapePts.forEach(pt => bounds.push(pt));
+                }
+
+                route.stops.forEach(stop => {
+                    if (!stop || !stop.lat || !stop.lon) return;
+                    const isMid = stop.is_intermediate === true;
+                    L.circleMarker([parseFloat(stop.lat), parseFloat(stop.lon)], {
+                            radius: isMid ? 4 : 7,
+                            fillColor: isMid ? '#FFFFFF' : pathColor,
+                            color: pathColor,
+                            weight: isMid ? 2 : 3,
+                            opacity: 1,
+                            fillOpacity: isMid ? 0.85 : 1
+                        }).addTo(searchResultsLayer)
+                        .bindPopup(
+                            `<strong>${stop.name}</strong><br><span style="color:#666">${stop.arrival}</span>`);
+                });
             }
 
             if (bounds.length > 0) {
