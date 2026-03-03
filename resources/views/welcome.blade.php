@@ -77,6 +77,35 @@
         #loading-overlay.active {
             display: flex;
         }
+
+        /* Bus info cards */
+        .bus-card {
+            transition: background-color 0.15s, border-color 0.15s;
+        }
+
+        .bus-card:hover {
+            background-color: #f9fafb;
+        }
+
+        .bus-card.bus-card-selected {
+            border-color: #ef4444 !important;
+            background-color: #fff7f7;
+        }
+
+        .bus-card-chevron {
+            transition: transform 0.2s;
+        }
+
+        .bus-card.bus-card-selected .bus-card-chevron {
+            transform: rotate(180deg);
+        }
+
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
     </style>
 </head>
 
@@ -166,13 +195,14 @@
         </div>
 
         <div id="results-wrapper" class="flex-1 p-6 bg-gray-50">
-            <div id="initial-state" class="text-center py-12 text-gray-400">
-                <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                        d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7">
-                    </path>
-                </svg>
-                <p>Enter your origin and destination to find the best routes.</p>
+            <div id="initial-state">
+                <div class="mb-4">
+                    <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wider">Available Routes</h2>
+                    <p class="text-xs text-gray-400 mt-0.5">Click a route to highlight it on the map</p>
+                </div>
+                <div id="bus-cards-list" class="space-y-2 pb-10">
+                    <div class="text-center py-8 text-gray-400 text-sm">Loading routes&hellip;</div>
+                </div>
             </div>
 
             <div id="no-results"
@@ -262,6 +292,10 @@
         let allRoutesShapes = {}; // Cache: route_short_name -> full shape_pts array
         let routeStopsCache = {}; // Cache: routeName -> stops array
         let selectedDefaultPolyline = null; // Currently pinned polyline in default view
+        let allRoutesMetaData = {}; // Cache: routeName -> {color, longName}
+        let allRoutePolylines = {}; // Cache: routeName -> [polyline, ...]
+        let selectedBusCard = null; // Currently selected bus info card element
+        let selectedBusRouteName = null; // Route name of selected bus card
 
         function initMap() {
             if (!map) {
@@ -317,6 +351,124 @@
             });
         }
 
+        function renderBusInfoPanel() {
+            const container = document.getElementById('bus-cards-list');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const routeNames = Object.keys(allRoutesMetaData).sort((a, b) => {
+                // Sort: pure numbers first (numerically), then alphanumeric
+                const numA = parseInt(a, 10);
+                const numB = parseInt(b, 10);
+                if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+                if (!isNaN(numA)) return -1;
+                if (!isNaN(numB)) return 1;
+                return a.localeCompare(b);
+            });
+
+            if (routeNames.length === 0) {
+                container.innerHTML = '<div class="text-center py-8 text-gray-400 text-sm">No routes available.</div>';
+                return;
+            }
+
+            routeNames.forEach(routeName => {
+                const meta = allRoutesMetaData[routeName];
+                const card = document.createElement('div');
+                card.className = 'bus-card bg-white rounded-lg border border-gray-200 shadow-sm cursor-pointer';
+                card.dataset.route = routeName;
+
+                card.innerHTML = `
+                    <div class="bus-card-header flex items-center gap-3 p-3">
+                        <span class="inline-flex items-center justify-center min-w-[2.75rem] h-7 px-2 rounded text-white text-xs font-bold shrink-0" style="background:${meta.color}">${routeName}</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="text-xs font-medium text-gray-700 leading-tight line-clamp-2">${meta.longName}</div>
+                        </div>
+                        <svg class="bus-card-chevron w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </div>
+                    <div class="bus-card-stops hidden border-t border-gray-100 max-h-56 overflow-y-auto"></div>
+                `;
+
+                card.addEventListener('click', () => selectBusCard(routeName, card));
+                container.appendChild(card);
+            });
+        }
+
+        async function selectBusCard(routeName, cardEl) {
+            const isSameCard = selectedBusCard === cardEl;
+
+            // Deselect previously selected card
+            if (selectedBusCard) {
+                selectedBusCard.classList.remove('bus-card-selected');
+                const prevStops = selectedBusCard.querySelector('.bus-card-stops');
+                if (prevStops) prevStops.classList.add('hidden');
+                const prevRoute = selectedBusCard.dataset.route;
+                if (allRoutePolylines[prevRoute]) {
+                    allRoutePolylines[prevRoute].forEach(p => p.setStyle({
+                        weight: 2,
+                        opacity: 0.6
+                    }));
+                }
+                selectedBusCard = null;
+                selectedBusRouteName = null;
+                selectedDefaultPolyline = null;
+                defaultRouteStopsLayer.clearLayers();
+            }
+
+            // If same card was clicked again, just deselect (toggle off)
+            if (isSameCard) return;
+
+            // Select the new card
+            selectedBusCard = cardEl;
+            selectedBusRouteName = routeName;
+            cardEl.classList.add('bus-card-selected');
+
+            // Highlight all polylines for this route on the map
+            if (allRoutePolylines[routeName]) {
+                allRoutePolylines[routeName].forEach(p => {
+                    p.setStyle({
+                        weight: 5,
+                        opacity: 1
+                    });
+                    p.bringToFront();
+                });
+                const bounds = L.featureGroup(allRoutePolylines[routeName]).getBounds();
+                if (bounds.isValid()) {
+                    map.fitBounds(bounds, {
+                        padding: [40, 40]
+                    });
+                }
+            }
+
+            // Fetch and display stops in the card
+            const stopsEl = cardEl.querySelector('.bus-card-stops');
+            if (stopsEl) {
+                stopsEl.innerHTML = '<div class="px-3 py-2 text-xs text-gray-400">Loading stops&hellip;</div>';
+                stopsEl.classList.remove('hidden');
+
+                const stops = await fetchRouteStops(routeName);
+                const meta = allRoutesMetaData[routeName];
+
+                if (stops && stops.length > 0) {
+                    showDefaultRouteStops(stops, meta ? meta.color : '#9CA3AF');
+
+                    stopsEl.innerHTML = stops.map((s, i) => `
+                        <div class="flex items-start gap-2 px-3 py-1.5 ${i < stops.length - 1 ? 'border-b border-gray-50' : ''}">
+                            <div class="flex flex-col items-center shrink-0 mt-1">
+                                <div class="w-2 h-2 rounded-full border-2 ${i === 0 || i === stops.length - 1 ? 'border-red-400 bg-red-400' : 'border-gray-300 bg-white'}"></div>
+                                ${i < stops.length - 1 ? '<div class="w-px h-3 bg-gray-200 mt-0.5"></div>' : ''}
+                            </div>
+                            <span class="text-xs text-gray-600 leading-tight pb-1">${s.name}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    stopsEl.innerHTML =
+                        '<div class="px-3 py-2 text-xs text-gray-400">No stop information available.</div>';
+                }
+            }
+        }
+
         async function loadAllShapes() {
             try {
                 const res = await fetch('/api/routes/all-shapes');
@@ -334,6 +486,16 @@
                                 allRoutesShapes[rName].push(r.shape_pts);
                             }
                             let color = r.route_color ? '#' + r.route_color : '#9CA3AF';
+
+                            // Store route metadata (first occurrence wins)
+                            if (rName && !allRoutesMetaData[rName]) {
+                                allRoutesMetaData[rName] = {
+                                    color: color,
+                                    longName: r.route_long_name || r.route_name || rName
+                                };
+                                allRoutePolylines[rName] = [];
+                            }
+
                             let polyline = L.polyline(r.shape_pts, {
                                 color: color,
                                 weight: 2,
@@ -401,6 +563,10 @@
                             });
 
                             allRoutesLayer.addLayer(polyline);
+                            // Store polyline reference for bus card highlighting
+                            if (rName && allRoutePolylines[rName]) {
+                                allRoutePolylines[rName].push(polyline);
+                            }
                         }
                     });
 
@@ -412,6 +578,8 @@
                             });
                         }
                     }
+
+                    renderBusInfoPanel();
                 }
             } catch (e) {
                 console.error('Failed to load all shapes:', e);
@@ -441,6 +609,20 @@
                 });
                 selectedDefaultPolyline = null;
             }
+            // Reset bus card selection
+            if (selectedBusCard) {
+                selectedBusCard.classList.remove('bus-card-selected');
+                const stopsEl = selectedBusCard.querySelector('.bus-card-stops');
+                if (stopsEl) stopsEl.classList.add('hidden');
+            }
+            if (selectedBusRouteName && allRoutePolylines[selectedBusRouteName]) {
+                allRoutePolylines[selectedBusRouteName].forEach(p => p.setStyle({
+                    weight: 2,
+                    opacity: 0.6
+                }));
+            }
+            selectedBusCard = null;
+            selectedBusRouteName = null;
             if (!map.hasLayer(allRoutesLayer)) {
                 map.addLayer(allRoutesLayer);
             }
@@ -611,22 +793,22 @@
                             
                             <div class="flex items-center gap-4 bg-gray-50/80 rounded-lg p-3">
                                 ${route.departure_time !== '?' ? `
-                                                            <div class="flex-1">
-                                                                <div class="text-xs text-gray-500 uppercase tracking-wider">Departs</div>
-                                                                <div class="text-xl font-bold text-red-600">${route.leave_at || route.departure_time}</div>
-                                                            </div>` : ''}
+                                                                <div class="flex-1">
+                                                                    <div class="text-xs text-gray-500 uppercase tracking-wider">Departs</div>
+                                                                    <div class="text-xl font-bold text-red-600">${route.leave_at || route.departure_time}</div>
+                                                                </div>` : ''}
                                 
                                 ${route.duration !== 'N/A' ? `
-                                                            <div class="flex-1 text-center border-l border-r border-gray-200 px-2">
-                                                                <div class="text-xs text-gray-500 uppercase tracking-wider">Duration</div>
-                                                                <div class="text-sm font-semibold text-gray-800">${route.duration}</div>
-                                                            </div>` : ''}
+                                                                <div class="flex-1 text-center border-l border-r border-gray-200 px-2">
+                                                                    <div class="text-xs text-gray-500 uppercase tracking-wider">Duration</div>
+                                                                    <div class="text-sm font-semibold text-gray-800">${route.duration}</div>
+                                                                </div>` : ''}
                                 
                                 ${route.arrival_time !== '?' ? `
-                                                            <div class="flex-1 text-right">
-                                                                <div class="text-xs text-gray-500 uppercase tracking-wider">Arrives</div>
-                                                                <div class="text-xl font-bold text-green-600">${route.arrival_time}</div>
-                                                            </div>` : ''}
+                                                                <div class="flex-1 text-right">
+                                                                    <div class="text-xs text-gray-500 uppercase tracking-wider">Arrives</div>
+                                                                    <div class="text-xl font-bold text-green-600">${route.arrival_time}</div>
+                                                                </div>` : ''}
                             </div>
                             ${directMidStopsHtml}
                         </div>
