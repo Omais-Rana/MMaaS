@@ -570,7 +570,7 @@
                             let agName = r.agency_name ?
                                 `<br><span style="font-size:11px;color:#666;">${r.agency_name}</span>` : '';
 
-                            polyline.bindTooltip(`<b>${routeTitle}</b>${agName}`, {
+                            polyline.bindTooltip(`<b>${routeTitle}</b>${agName}<br><span style="font-size:10px;color:#16a34a">🌿 CNG · Natural Gas</span>`, {
                                 sticky: true,
                                 className: 'font-sans'
                             });
@@ -648,6 +648,58 @@
             }
         }
 
+        // ── EVOLITY CO2 HELPERS ──
+        // Haversine distance in km over an array of [lat, lon] points
+        function haversineKm(pts) {
+            if (!pts || pts.length < 2) return 0;
+            let total = 0;
+            for (let i = 1; i < pts.length; i++) {
+                const [lat1, lon1] = pts[i - 1];
+                const [lat2, lon2] = pts[i];
+                const R = 6371;
+                const dLat = (lat2 - lat1) * Math.PI / 180;
+                const dLon = (lon2 - lon1) * Math.PI / 180;
+                const a = Math.sin(dLat / 2) ** 2 +
+                    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                    Math.sin(dLon / 2) ** 2;
+                total += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            }
+            return total;
+        }
+
+        // Constants: Evolity GNV bus vs average car
+        const CO2_CAR_G_PER_KM = 120;   // g CO2/km (ADEME France baseline)
+        const CO2_BUS_G_PER_KM = 32;    // g CO2/km – Evolity CNG/GNV (Iveco Crealis)
+        const CO2_SAVED_G_PER_KM = CO2_CAR_G_PER_KM - CO2_BUS_G_PER_KM; // 88g/km
+
+        function co2Badge(distKm) {
+            if (!distKm || distKm <= 0) return '';
+            const savedG = distKm * CO2_SAVED_G_PER_KM;
+            const savedLabel = savedG >= 1000
+                ? (savedG / 1000).toFixed(2).replace(/\.?0+$/, '') + ' kg'
+                : Math.round(savedG) + ' g';
+            const busCo2G = distKm * CO2_BUS_G_PER_KM;
+            const busCo2Label = busCo2G >= 1000
+                ? (busCo2G / 1000).toFixed(2).replace(/\.?0+$/, '') + ' kg'
+                : Math.round(busCo2G) + ' g';
+            return `<div class="flex items-center gap-2 mt-2 px-3 py-2 bg-green-50 border border-green-100 rounded-lg">
+                <span class="text-green-600 text-xs">🌿</span>
+                <div class="flex-1 min-w-0">
+                    <span class="text-[11px] font-semibold text-green-700">Natural Gas Bus (CNG) · ${(distKm).toFixed(1)} km</span>
+                    <div class="text-[10px] text-green-600 mt-0.5">This trip emits <strong>${busCo2Label} CO₂</strong> · Saves <strong class="text-green-700">${savedLabel} CO₂</strong> vs car</div>
+                </div>
+            </div>`;
+        }
+
+        function co2PopupLine(distKm) {
+            if (!distKm || distKm <= 0) return '';
+            const savedG = Math.round(distKm * CO2_SAVED_G_PER_KM);
+            const savedLabel = savedG >= 1000
+                ? (savedG / 1000).toFixed(2).replace(/\.?0+$/, '') + ' kg'
+                : savedG + ' g';
+            return `<div style="margin-top:6px;padding:4px 6px;background:#f0fdf4;border-radius:6px;border:1px solid #bbf7d0;font-size:11px;color:#16a34a">🌿 <strong>Evolity CNG</strong> · ${(distKm).toFixed(1)} km · saves <strong>${savedLabel} CO₂</strong> vs car</div>`;
+        }
+
         // Initialize Map & Load shapes
         document.addEventListener('DOMContentLoaded', () => {
             initMap();
@@ -722,6 +774,10 @@
                         </details>
                     ` : '';
 
+                    const legShapePts = leg.shape_pts && leg.shape_pts.length > 1 ? leg.shape_pts
+                        : (leg.stops && leg.stops.length > 1 ? leg.stops.map(s => [parseFloat(s.lat), parseFloat(s.lon)]) : null);
+                    const legDistKm = haversineKm(legShapePts);
+
                     return `
                         <div class="flex items-start gap-3 py-3 border-l-2 border-red-500 pl-3 ml-2 relative">
                             <div class="absolute w-2 h-2 rounded-full bg-white border-2 border-red-500 -left-[5px] top-4"></div>
@@ -734,6 +790,7 @@
                                 </div>
                                 <div class="text-xs font-medium text-gray-900 truncate">${leg.from} → ${leg.to}</div>
                                 ${midStopsHtml}
+                                ${co2Badge(legDistKm)}
                             </div>
                             <div class="flex flex-col items-end text-xs text-gray-600 gap-0.5 whitespace-nowrap">
                                 <div class="font-bold text-red-600">${leg.departure_time}</div>
@@ -849,6 +906,10 @@
                         </details>
                     ` : '';
 
+                    const directShapePts = route.shape_pts && route.shape_pts.length > 1 ? route.shape_pts
+                        : (route.stops && route.stops.length > 1 ? route.stops.map(s => [parseFloat(s.lat), parseFloat(s.lon)]) : null);
+                    const directDistKm = haversineKm(directShapePts);
+
                     return `
                         <div class="route-card bg-white rounded-xl shadow-sm border border-gray-100 p-4 transition-all" onclick="showRouteOnMap(${index})">
                             <div class="flex items-center gap-2 mb-3">
@@ -879,6 +940,7 @@
                                                                     </div>` : ''}
                             </div>
                             ${directMidStopsHtml}
+                            ${co2Badge(directDistKm)}
                         </div>
                     `;
                 }).join('');
@@ -1013,13 +1075,14 @@
 
                         const shapePts = resolveTransitShape(leg);
                         if (shapePts && shapePts.length > 1) {
+                            const legMapDistKm = haversineKm(shapePts);
                             L.polyline(shapePts, {
                                     color: pathColor,
                                     weight: 6,
                                     opacity: 0.9
                                 })
                                 .addTo(searchResultsLayer)
-                                .bindPopup(`<strong>🚌 ${leg.route_name}</strong><br>${leg.from} → ${leg.to}`);
+                                .bindPopup(`<strong>🚌 ${leg.route_name}</strong><br>${leg.from} → ${leg.to}${co2PopupLine(legMapDistKm)}`);
                             shapePts.forEach(pt => bounds.push(pt));
                         }
 
@@ -1077,13 +1140,14 @@
                 }
 
                 if (shapePts && shapePts.length > 1) {
+                    const directMapDistKm = haversineKm(shapePts);
                     L.polyline(shapePts, {
                             color: pathColor,
                             weight: 6,
                             opacity: 0.9
                         })
                         .addTo(searchResultsLayer)
-                        .bindPopup(`<strong>🚌 ${route.route_name}</strong>`);
+                        .bindPopup(`<strong>🚌 ${route.route_name}</strong>${co2PopupLine(directMapDistKm)}`);
                     shapePts.forEach(pt => bounds.push(pt));
                 }
 
