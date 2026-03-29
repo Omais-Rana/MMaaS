@@ -1,0 +1,20 @@
+.fi-tabs {
+    @apply rounded-3xl p-1;
+}
+
+.fi-tabs-item {
+    @apply rounded-full;
+}
+
+.fi-tabs-item.fi-active {
+    @apply bg-primary-400 dark:bg-primary-600;
+}
+
+.fi-tabs-item.fi-active .fi-tabs-item-label,
+.fi-tabs-item.fi-active .fi-icon {
+    @apply text-gray-900/75 dark:text-white;
+}
+
+.fi-tabs-item.fi-active .fi-badge {
+    @apply bg-white text-gray-900 dark:bg-gray-900/75 dark:text-white;
+}

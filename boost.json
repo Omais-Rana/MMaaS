@@ -1,10 +1,13 @@
 {
     "agents": [
-        "copilot"
+        "claude_code"
     ],
-    "editors": [
-        "vscode"
+    "guidelines": true,
+    "packages": [
+        "filament/filament"
     ],
-    "guidelines": [],
-    "herd_mcp": true
+    "skills": [
+        "pest-testing",
+        "tailwindcss-development"
+    ]
 }
