@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -751,12 +751,20 @@
         function renderTransferRoute(route, routeIndex) {
             const legsHtml = route.legs.map((leg, idx) => {
                 if (leg.type === 'walk') {
+                    const distLabel = leg.distance ? `${(+leg.distance).toFixed(2)} km · ` : '';
                     return `
-                        <div class="flex items-center gap-3 py-2 border-l-2 border-blue-400 pl-3 ml-2 my-1">
+                        <div class="flex items-center gap-3 py-2 pl-3 ml-2 my-1 relative">
+                            <!-- dotted vertical connector (Google Maps style) -->
+                            <div class="absolute left-0 top-0 bottom-0 flex flex-col items-center" style="margin-left:-1px">
+                                <div class="flex-1 border-l-2 border-dashed border-blue-400 opacity-70"></div>
+                            </div>
+                            <!-- walk icon -->
+                            <div class="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 text-sm -ml-0.5">🚶</div>
                             <div class="flex-1">
                                 <div class="text-xs font-semibold text-blue-600 uppercase tracking-wide">Walk ${leg.duration} min</div>
-                                <div class="text-xs text-gray-600 truncate">${leg.from} → ${leg.to}</div>
+                                <div class="text-xs text-gray-500">${distLabel}${leg.from} → ${leg.to}</div>
                             </div>
+                            ${leg.start_time ? `<div class="text-xs font-mono text-gray-400 self-start">${leg.start_time}</div>` : ''}
                         </div>
                     `;
                 } else if (leg.type === 'transit') {
@@ -1019,12 +1027,69 @@
 
             const bounds = [];
             const colors = {
-                walk: '#3B82F6',
+                walk: '#4285F4',   // Google blue
                 transit: '#DC2626'
             };
 
             function addBounds(lat, lon) {
                 if (lat != null && lon != null) bounds.push([parseFloat(lat), parseFloat(lon)]);
+            }
+
+            /**
+             * Draw a Google Maps-style walking dotted line between two coordinates.
+             */
+            function drawWalkLeg(fromLat, fromLon, toLat, toLon, popupHtml) {
+                const latlngs = [
+                    [parseFloat(fromLat), parseFloat(fromLon)],
+                    [parseFloat(toLat),   parseFloat(toLon)]
+                ];
+
+                // Simplified robust dotted line logic
+                L.polyline(latlngs, {
+                    color: colors.walk,
+                    weight: 6,
+                    lineCap: 'square', // Better for dots
+                    dashArray: '4, 8', // 4px dot, 8px gap
+                    opacity: 0.8
+                }).addTo(searchResultsLayer).bindPopup(popupHtml);
+
+                L.polyline(latlngs, {
+                    color: colors.walk,
+                    weight: 12,
+                    opacity: 0.15, // Subtle halo
+                    lineCap: 'round'
+                }).addTo(searchResultsLayer).bindPopup(popupHtml);
+
+                // Endpoint markers
+                const endpointStyle = {
+                    radius: 5,
+                    fillColor: colors.walk,
+                    color: '#FFFFFF',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 1
+                };
+                L.circleMarker([parseFloat(fromLat), parseFloat(fromLon)], endpointStyle)
+                    .addTo(searchResultsLayer)
+                    .bindPopup(popupHtml);
+                L.circleMarker([parseFloat(toLat), parseFloat(toLon)], endpointStyle)
+                    .addTo(searchResultsLayer)
+                    .bindPopup(popupHtml);
+
+                // Walking figure icon at midpoint
+                const midLat = (parseFloat(fromLat) + parseFloat(toLat)) / 2;
+                const midLon = (parseFloat(fromLon) + parseFloat(toLon)) / 2;
+                const walkIcon = L.divIcon({
+                    className: '',
+                    html: `<div style="background:${colors.walk};color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.35);border:2px solid #fff">🚶</div>`,
+                    iconSize: [22, 22],
+                    iconAnchor: [11, 11]
+                });
+                L.marker([midLat, midLon], { icon: walkIcon, interactive: false })
+                    .addTo(searchResultsLayer);
+
+                addBounds(fromLat, fromLon);
+                addBounds(toLat, toLon);
             }
 
             function resolveTransitShape(leg) {
@@ -1053,20 +1118,12 @@
                 for (const leg of route.legs) {
                     if (leg.type === 'walk') {
                         if (leg.from_lat && leg.from_lon && leg.to_lat && leg.to_lon) {
-                            L.polyline(
-                                    [
-                                        [leg.from_lat, leg.from_lon],
-                                        [leg.to_lat, leg.to_lon]
-                                    ], {
-                                        color: colors.walk,
-                                        weight: 4,
-                                        opacity: 0.7,
-                                        dashArray: '6, 8'
-                                    }
-                                ).addTo(searchResultsLayer)
-                                .bindPopup(`<strong>🚶 Walk ${leg.duration} min</strong><br>${leg.from} → ${leg.to}`);
-                            addBounds(leg.from_lat, leg.from_lon);
-                            addBounds(leg.to_lat, leg.to_lon);
+                            const walkDist = leg.distance ? ` · ${(+leg.distance).toFixed(2)} km` : '';
+                            drawWalkLeg(
+                                leg.from_lat, leg.from_lon,
+                                leg.to_lat,   leg.to_lon,
+                                `<strong>🚶 Walk ${leg.duration} min</strong>${walkDist}<br>${leg.from} → ${leg.to}`
+                            );
                         }
                     } else if (leg.type === 'transit') {
                         const pathColor = leg.route_color ? '#' + leg.route_color : colors.transit;
@@ -1104,20 +1161,40 @@
                         ];
                         stopsToRender.forEach(stop => {
                             if (!stop.lat || !stop.lon) return;
-                            const isMid = stop.is_intermediate === true;
+                            const isTransfer = stop.is_intermediate === false;
+                            
                             L.circleMarker([parseFloat(stop.lat), parseFloat(stop.lon)], {
-                                    radius: isMid ? 4 : 7,
-                                    fillColor: isMid ? '#FFFFFF' : pathColor,
-                                    color: pathColor,
-                                    weight: isMid ? 2 : 3,
+                                    radius: isTransfer ? 5 : 3,
+                                    fillColor: isTransfer ? '#FFFFFF' : '#FFFFFF',
+                                    color: isTransfer ? '#000000' : pathColor,
+                                    weight: isTransfer ? 2 : 2,
                                     opacity: 1,
-                                    fillOpacity: isMid ? 0.85 : 1
+                                    fillOpacity: 1
                                 }).addTo(searchResultsLayer)
-                                .bindPopup(
-                                    `<strong>${stop.name}</strong><br><span style="color:#666">${stop.arrival || ''}</span>`
-                                );
+                                .bindPopup(`<strong>${stop.name}</strong><br>${stop.arrival || ''}`);
                         });
                     }
+                }
+                
+                // Draw bold explicitly marked Origin and Destination endpoints
+                const firstLeg = route.legs[0];
+                const lastLeg = route.legs[route.legs.length - 1];
+
+                if (firstLeg && firstLeg.from_lat && firstLeg.from_lon) {
+                    const startIcon = L.divIcon({
+                        html: '<div style="background:#16a34a;color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.3);">A</div>',
+                        className: '', iconSize: [24,24], iconAnchor: [12,12]
+                    });
+                    L.marker([parseFloat(firstLeg.from_lat), parseFloat(firstLeg.from_lon)], {icon: startIcon})
+                     .addTo(searchResultsLayer).bindPopup(`<strong>Origin</strong><br>${firstLeg.from}`);
+                }
+                if (lastLeg && lastLeg.to_lat && lastLeg.to_lon) {
+                    const endIcon = L.divIcon({
+                        html: '<div style="background:#dc2626;color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.3);">B</div>',
+                        className: '', iconSize: [24,24], iconAnchor: [12,12]
+                    });
+                    L.marker([parseFloat(lastLeg.to_lat), parseFloat(lastLeg.to_lon)], {icon: endIcon})
+                     .addTo(searchResultsLayer).bindPopup(`<strong>Destination</strong><br>${lastLeg.to}`);
                 }
 
             } else if (route.stops && route.stops.length > 0) {
@@ -1165,6 +1242,60 @@
                         .bindPopup(
                             `<strong>${stop.name}</strong><br><span style="color:#666">${stop.arrival}</span>`);
                 });
+
+                // Draw bold explicitly marked Origin and Destination endpoints for direct routes
+                const firstStop = route.stops[0];
+                const lastStop = route.stops[route.stops.length - 1];
+                
+                const uiOrigLat = selectedCoords.origin ? selectedCoords.origin.lat : null;
+                const uiOrigLon = selectedCoords.origin ? selectedCoords.origin.lon : null;
+                const uiDestLat = selectedCoords.destination ? selectedCoords.destination.lat : null;
+                const uiDestLon = selectedCoords.destination ? selectedCoords.destination.lon : null;
+
+                const actualOriginLat = uiOrigLat ? parseFloat(uiOrigLat) : parseFloat(firstStop.lat);
+                const actualOriginLon = uiOrigLon ? parseFloat(uiOrigLon) : parseFloat(firstStop.lon);
+                const actualDestLat = uiDestLat ? parseFloat(uiDestLat) : parseFloat(lastStop.lat);
+                const actualDestLon = uiDestLon ? parseFloat(uiDestLon) : parseFloat(lastStop.lon);
+
+                const uiOriginName = document.getElementById('origin').value.toLowerCase().trim();
+                const uiDestName = document.getElementById('destination').value.toLowerCase().trim();
+                const originMatch = firstStop.name.toLowerCase().includes(uiOriginName) || uiOriginName.includes(firstStop.name.toLowerCase());
+                const destMatch = lastStop.name.toLowerCase().includes(uiDestName) || uiDestName.includes(lastStop.name.toLowerCase());
+                
+                const distToOrigin = haversineKm([[actualOriginLat, actualOriginLon], [parseFloat(firstStop.lat), parseFloat(firstStop.lon)]]);
+                const distToDest = haversineKm([[parseFloat(lastStop.lat), parseFloat(lastStop.lon)], [actualDestLat, actualDestLon]]);
+
+                 // For direct routes, only show walk overlays when the selected point is clearly not the same stop.
+                 if (!originMatch && distToOrigin > 0.35) {
+                     drawWalkLeg(actualOriginLat, actualOriginLon, firstStop.lat, firstStop.lon, `<strong>🚶 Walk to ${firstStop.name}</strong>`);
+                }
+                
+                 if (!destMatch && distToDest > 0.35) {
+                     drawWalkLeg(lastStop.lat, lastStop.lon, actualDestLat, actualDestLon, `<strong>🚶 Walk from ${lastStop.name}</strong>`);
+                }
+
+                // Anchor A/B markers to the stop if they are very close (< 100m), otherwise use exact coords
+                const markerALat = distToOrigin < 0.1 ? parseFloat(firstStop.lat) : actualOriginLat;
+                const markerALon = distToOrigin < 0.1 ? parseFloat(firstStop.lon) : actualOriginLon;
+                const markerBLat = distToDest < 0.1 ? parseFloat(lastStop.lat) : actualDestLat;
+                const markerBLon = distToDest < 0.1 ? parseFloat(lastStop.lon) : actualDestLon;
+
+                if (markerALat && markerALon) {
+                    const startIcon = L.divIcon({
+                        html: '<div style="background:#16a34a;color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.3);">A</div>',
+                        className: '', iconSize: [24,24], iconAnchor: [12,12]
+                    });
+                    L.marker([markerALat, markerALon], {icon: startIcon})
+                     .addTo(searchResultsLayer).bindPopup(`<strong>Origin</strong>`);
+                }
+                if (markerBLat && markerBLon) {
+                    const endIcon = L.divIcon({
+                        html: '<div style="background:#dc2626;color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.3);">B</div>',
+                        className: '', iconSize: [24,24], iconAnchor: [12,12]
+                    });
+                    L.marker([markerBLat, markerBLon], {icon: endIcon})
+                     .addTo(searchResultsLayer).bindPopup(`<strong>Destination</strong>`);
+                }
             }
 
             if (bounds.length > 0) {
