@@ -358,6 +358,7 @@
         let allRoutePolylines = {}; // Cache: routeName -> [polyline, ...]
         let selectedBusCard = null; // Currently selected bus info card element
         let selectedBusRouteName = null; // Route name of selected bus card
+        let walkingRouteCache = new Map(); // Cache: coord pair -> routed lat/lon path
 
         function initMap() {
             if (!map) {
@@ -996,7 +997,7 @@
             return best ? best.pts : null;
         }
 
-        window.showRouteOnMap = function(routeIndex) {
+        window.showRouteOnMap = async function(routeIndex) {
             if (!currentRouteData || !currentRouteData[routeIndex]) return;
 
             const route = currentRouteData[routeIndex];
@@ -1020,14 +1021,124 @@
                 if (lat != null && lon != null) bounds.push([parseFloat(lat), parseFloat(lon)]);
             }
 
+            function buildWalkCacheKey(fromLat, fromLon, toLat, toLon) {
+                return [fromLat, fromLon, toLat, toLon]
+                    .map(value => Number.parseFloat(value).toFixed(5))
+                    .join(',');
+            }
+
+            async function fetchWalkCandidates(baseUrl, profilePath, fromLat, fromLon, toLat, toLon) {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 7000);
+
+                try {
+                    const url = `${baseUrl}/${profilePath}/${fromLon},${fromLat};${toLon},${toLat}?overview=full&geometries=geojson&steps=false&alternatives=true`;
+                    const response = await fetch(url, { signal: controller.signal });
+                    if (!response.ok) {
+                        return [];
+                    }
+
+                    const data = await response.json();
+                    if (!Array.isArray(data?.routes)) {
+                        return [];
+                    }
+
+                    return data.routes
+                        .map(route => {
+                            const coordinates = route?.geometry?.coordinates;
+                            if (!Array.isArray(coordinates) || coordinates.length < 2) {
+                                return null;
+                            }
+
+                            return {
+                                distanceKm: Number(route.distance || 0) / 1000,
+                                latLngs: coordinates.map(([lon, lat]) => [parseFloat(lat), parseFloat(lon)]),
+                            };
+                        })
+                        .filter(Boolean);
+                } catch (error) {
+                    return [];
+                } finally {
+                    clearTimeout(timeoutId);
+                }
+            }
+
+            async function fetchWalkingRouteLatLngs(fromLat, fromLon, toLat, toLon) {
+                const fromLatNum = parseFloat(fromLat);
+                const fromLonNum = parseFloat(fromLon);
+                const toLatNum = parseFloat(toLat);
+                const toLonNum = parseFloat(toLon);
+
+                const fallback = [
+                    [fromLatNum, fromLonNum],
+                    [toLatNum, toLonNum]
+                ];
+
+                const cacheKey = buildWalkCacheKey(fromLatNum, fromLonNum, toLatNum, toLonNum);
+                const reverseCacheKey = buildWalkCacheKey(toLatNum, toLonNum, fromLatNum, fromLonNum);
+
+                if (walkingRouteCache.has(cacheKey)) {
+                    return walkingRouteCache.get(cacheKey);
+                }
+
+                const providers = [
+                    // Dedicated OSM routing hosts often have better pedestrian graph coverage in EU cities.
+                    { baseUrl: 'https://routing.openstreetmap.de/routed-foot/route/v1', profilePath: 'driving', penalty: 0 },
+                    { baseUrl: 'https://routing.openstreetmap.de/routed-bike/route/v1', profilePath: 'driving', penalty: 0.04 },
+                    { baseUrl: 'https://router.project-osrm.org/route/v1', profilePath: 'foot', penalty: 0.06 },
+                    { baseUrl: 'https://router.project-osrm.org/route/v1', profilePath: 'bike', penalty: 0.08 },
+                    { baseUrl: 'https://router.project-osrm.org/route/v1', profilePath: 'driving', penalty: 0.12 },
+                ];
+
+                const settled = await Promise.allSettled(
+                    providers.map(provider => fetchWalkCandidates(
+                        provider.baseUrl,
+                        provider.profilePath,
+                        fromLatNum,
+                        fromLonNum,
+                        toLatNum,
+                        toLonNum
+                    ))
+                );
+
+                const candidates = [];
+                settled.forEach((result, idx) => {
+                    if (result.status !== 'fulfilled') {
+                        return;
+                    }
+
+                    const penalty = providers[idx].penalty;
+                    result.value.forEach(route => {
+                        if (route.distanceKm > 0 && route.latLngs.length > 1) {
+                            candidates.push({
+                                score: route.distanceKm * (1 + penalty),
+                                latLngs: route.latLngs,
+                            });
+                        }
+                    });
+                });
+
+                if (candidates.length === 0) {
+                    walkingRouteCache.set(cacheKey, fallback);
+                    walkingRouteCache.set(reverseCacheKey, [...fallback].reverse());
+
+                    return fallback;
+                }
+
+                candidates.sort((a, b) => a.score - b.score);
+                const best = candidates[0].latLngs;
+
+                walkingRouteCache.set(cacheKey, best);
+                walkingRouteCache.set(reverseCacheKey, [...best].reverse());
+
+                return best;
+            }
+
             /**
              * Draw a Google Maps-style walking dotted line between two coordinates.
              */
-            function drawWalkLeg(fromLat, fromLon, toLat, toLon, popupHtml) {
-                const latlngs = [
-                    [parseFloat(fromLat), parseFloat(fromLon)],
-                    [parseFloat(toLat), parseFloat(toLon)]
-                ];
+            async function drawWalkLeg(fromLat, fromLon, toLat, toLon, popupHtml) {
+                const latlngs = await fetchWalkingRouteLatLngs(fromLat, fromLon, toLat, toLon);
 
                 // Simplified robust dotted line logic
                 L.polyline(latlngs, {
@@ -1054,30 +1165,28 @@
                     opacity: 1,
                     fillOpacity: 1
                 };
-                L.circleMarker([parseFloat(fromLat), parseFloat(fromLon)], endpointStyle)
+                L.circleMarker(latlngs[0], endpointStyle)
                     .addTo(searchResultsLayer)
                     .bindPopup(popupHtml);
-                L.circleMarker([parseFloat(toLat), parseFloat(toLon)], endpointStyle)
+                L.circleMarker(latlngs[latlngs.length - 1], endpointStyle)
                     .addTo(searchResultsLayer)
                     .bindPopup(popupHtml);
 
                 // Walking figure icon at midpoint
-                const midLat = (parseFloat(fromLat) + parseFloat(toLat)) / 2;
-                const midLon = (parseFloat(fromLon) + parseFloat(toLon)) / 2;
+                const midPoint = latlngs[Math.floor(latlngs.length / 2)] || latlngs[0];
                 const walkIcon = L.divIcon({
                     className: '',
                     html: `<div style="background:${colors.walk};color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.35);border:2px solid #fff">🚶</div>`,
                     iconSize: [22, 22],
                     iconAnchor: [11, 11]
                 });
-                L.marker([midLat, midLon], {
+                L.marker(midPoint, {
                         icon: walkIcon,
                         interactive: false
                     })
                     .addTo(searchResultsLayer);
 
-                addBounds(fromLat, fromLon);
-                addBounds(toLat, toLon);
+                latlngs.forEach(([lat, lon]) => addBounds(lat, lon));
             }
 
             function resolveTransitShape(leg) {
@@ -1107,7 +1216,7 @@
                     if (leg.type === 'walk') {
                         if (leg.from_lat && leg.from_lon && leg.to_lat && leg.to_lon) {
                             const walkDist = leg.distance ? ` · ${(+leg.distance).toFixed(2)} km` : '';
-                            drawWalkLeg(
+                            await drawWalkLeg(
                                 leg.from_lat, leg.from_lon,
                                 leg.to_lat, leg.to_lon,
                                 `<strong>🚶 Walk ${leg.duration} min</strong>${walkDist}<br>${leg.from} → ${leg.to}`
@@ -1273,12 +1382,12 @@
 
                 // For direct routes, only show walk overlays when the selected point is clearly not the same stop.
                 if (!originMatch && distToOrigin > 0.35) {
-                    drawWalkLeg(actualOriginLat, actualOriginLon, firstStop.lat, firstStop.lon,
+                    await drawWalkLeg(actualOriginLat, actualOriginLon, firstStop.lat, firstStop.lon,
                         `<strong>🚶 Walk to ${firstStop.name}</strong>`);
                 }
 
                 if (!destMatch && distToDest > 0.35) {
-                    drawWalkLeg(lastStop.lat, lastStop.lon, actualDestLat, actualDestLon,
+                    await drawWalkLeg(lastStop.lat, lastStop.lon, actualDestLat, actualDestLon,
                         `<strong>🚶 Walk from ${lastStop.name}</strong>`);
                 }
 
