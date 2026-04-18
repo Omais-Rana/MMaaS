@@ -4,11 +4,11 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Traits\LogsActivity;
+use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -16,7 +16,7 @@ use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable implements FilamentUser
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    /** @use HasFactory<UserFactory> */
     use HasFactory, HasRoles, LogsActivity, Notifiable;
 
     /**
@@ -91,22 +91,6 @@ class User extends Authenticatable implements FilamentUser
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(User::class, 'tenant_id');
-    }
-
-    /**
-     * Relationship: User belongs to many departments
-     */
-    public function departments(): BelongsToMany
-    {
-        return $this->belongsToMany(Department::class);
-    }
-
-    /**
-     * Relationship: User serves many regions (cities/locations)
-     */
-    public function regions(): BelongsToMany
-    {
-        return $this->belongsToMany(Region::class);
     }
 
     /**

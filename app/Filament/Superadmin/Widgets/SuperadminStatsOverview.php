@@ -6,6 +6,7 @@ use App\Models\User;
 use Filament\Support\Enums\IconPosition;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
+use Illuminate\Support\Facades\Auth;
 
 class SuperadminStatsOverview extends BaseWidget
 {
@@ -13,7 +14,15 @@ class SuperadminStatsOverview extends BaseWidget
 
     protected function getStats(): array
     {
-        $totalOperators = User::where('role', 'subadmin')->count();
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        $totalOperatorsQuery = User::where('role', 'subadmin');
+        if ($user?->role === 'superadmin') {
+            $totalOperatorsQuery->where('tenant_id', $user->id);
+        }
+
+        $totalOperators = $totalOperatorsQuery->count();
         $totalCustomers = User::where('role', 'customer')->count();
         $subscribedCustomers = 0; // Will be updated when subscription system is implemented
         $customersThisMonth = User::where('role', 'customer')
@@ -41,7 +50,7 @@ class SuperadminStatsOverview extends BaseWidget
                 ->chart([2, 3, 4, 5, 6, 7, 6, 5]),
 
             Stat::make('New This Month', $customersThisMonth)
-                ->description('Customers joined in ' . now()->format('F'))
+                ->description('Customers joined in '.now()->format('F'))
                 ->descriptionIcon('heroicon-o-arrow-trending-up', IconPosition::Before)
                 ->color('info')
                 ->chart([1, 2, 3, 2, 4, 5, 6, 7]),

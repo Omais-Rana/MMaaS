@@ -1,154 +1,130 @@
-# Updated Multi-Tenancy Structure
+# Updated Platform Architecture
 
-## Corrected Architecture
+## 1) Current Multi-Tenant Model
 
 ### User Roles
 
-1. **Superadmin** - System administrator
+1. **Superadmin**
+    - Accesses the superadmin panel.
+    - Creates and manages operator accounts (sub-admins).
+    - Can manage global customers.
 
-    - Creates and manages sub-admins
-    - Full system access
-    - No tenant relationship
+2. **Sub-admin (Operator)**
+    - Business/operator tenant.
+    - Creates and manages employees.
+    - Manages roles and permissions for their tenant scope.
 
-2. **Sub-Admin** - Business owner/tenant
+3. **Employee**
+    - Belongs to a sub-admin tenant via `tenant_id`.
+    - Access is tenant-scoped through middleware and resource query scoping.
 
-    - Creates and manages employees
-    - Can create roles and permissions for employees
-    - Each sub-admin is a separate tenant
+4. **Customer**
+    - Independent end-user role for portal usage.
+    - Not tied to sub-admin tenancy by default.
 
-3. **Employee** - Staff member working for a sub-admin
+## 2) Ownership and Isolation Rules
 
-    - Belongs to a specific sub-admin (via `tenant_id`)
-    - Can be assigned roles and permissions by their sub-admin
-    - Access scoped to their tenant
+### Superadmin -> Sub-admin ownership
 
-4. **Customer** - Independent end-user
-    - NOT tied to any sub-admin
-    - Separate entity with own registration
-    - No `tenant_id` relationship
+- Sub-admin records are owned by the creating superadmin via `users.tenant_id = superadmin.id`.
+- Superadmin operator lists are scoped to only their owned sub-admins.
+- This prevents one superadmin from seeing another superadmin's operators.
 
-## Relationships
+### Sub-admin -> Employee ownership
 
-```
-Superadmin (no tenant)
-    └── Creates Sub-Admins
+- Employees use `tenant_id = subadmin.id`.
+- Sub-admin panel applies tenant scoping middleware to keep data isolated.
 
-Sub-Admin (tenant)
-    └── Creates Employees (tenant_id = sub-admin.id)
+### Role uniqueness (tenant-scoped)
 
-Customer (independent, no tenant)
-```
+- Role names are unique per tenant scope, not globally.
+- Different tenants can both have role names like `Manager`.
 
-## Database Structure
+## 3) Current Panel Paths and Access
 
-### Users Table
+1. **Superadmin panel**: `/user`
+    - Panel id: `admin`
+    - Access: superadmin only (enforced by redirect middleware)
 
--   `role`: enum('superadmin', 'subadmin', 'employee', 'customer')
--   `tenant_id`: Foreign key to users table (NULL for superadmin, subadmin, and customer; SET for employee)
--   `is_active`: Boolean
+2. **Sub-admin/employee panel**: `/panel`
+    - Panel id: `panel`
+    - Access: subadmin + employee
 
-## Panel Structure
+3. **Customer portal**: `/portal`
+    - Panel id: `portal`
+    - Access: customer
+    - Includes registration, password reset, email verification
 
-### 1. Superadmin Panel (`/superadmin`)
+## 4) Data Model Notes
 
-**Resources:**
+### users table
 
--   SubAdminResource - Manage sub-admins
+- `role`: `superadmin | subadmin | employee | customer`
+- `tenant_id`:
+    - superadmin: nullable
+    - subadmin: set to owner superadmin id
+    - employee: set to owner subadmin id
+    - customer: nullable
+- `is_active`: account access switch
 
-**Access:** Superadmin only
+### Removed feature: Location/Region coverage model
 
-### 2. Sub-Admin Panel (`/subadmin`)
+- The location/region feature has been removed from active functionality.
+- Related resource and tables were dropped from current usage.
 
-**Resources:**
+## 5) Route Searching Functionality
 
--   EmployeeResource - Manage employees (tenant-scoped)
--   CustomerResource - View/manage all customers (NOT tenant-scoped)
--   RoleResource - Create roles for employees
--   PermissionResource - Create permissions for employees
+Route search is a core public-facing platform feature and is independent of the removed region/location model.
 
-**Access:** Sub-admin only
-**Scoping:** Employees automatically scoped to logged-in sub-admin
+### API endpoints
 
-### 3. Customer Panel (`/customer`)
+- `GET /api/stops/search` -> stop autocomplete and lookup.
+- `POST /api/routes/search` -> main journey search.
+- `GET /api/routes/all-shapes` -> map display of route geometries.
+- `GET /api/routes/{routeName}/stops` -> stops for a route preview.
+- `GET /api/stops/nearest` -> nearest stop from coordinates.
 
-**Features:**
+### Search behavior (high level)
 
--   Self-registration enabled
--   Password reset
--   Email verification
--   No tenant relationship
+1. Validate origin/destination/date/time and optional coordinates.
+2. Resolve stop IDs using coordinate-aware matching first, then name fallback.
+3. Determine active services using `calendars` and `calendar_dates`.
+4. Try direct journeys first.
+5. If no direct path, compute transfer journeys.
+6. Return journey legs with timing, stop details, and optional shape points for map rendering.
 
-**Access:** Customer only
+### Multi-tenant search telemetry
 
-## Key Changes Made
+- Search requests are logged into `route_searches`.
+- Tenant attribution is derived from nearby stop ownership and/or the current user tenant context.
 
-1. ✅ Added `employee` role to database enum
-2. ✅ Created `EmployeeResource` for sub-admins to manage their staff
-3. ✅ Updated `CustomerResource` to remove tenant relationship
-4. ✅ Updated User model with `isEmployee()` and `employees()` relationship
-5. ✅ Changed SubAdminResource to show "Employees" count instead of "Customers"
-6. ✅ Middleware already handles employee scoping via `tenant_id`
+## 6) Resource Overview (Current)
 
-## Usage Flow
+### Superadmin resources
 
-### Superadmin Creates Sub-Admin
+- `SubAdminResource` (Operators): scoped to owned operators only.
+- `CustomerResource`: global customer management.
 
-1. Login to `/superadmin`
-2. Create sub-admin account
-3. Sub-admin receives credentials
+### Sub-admin resources
 
-### Sub-Admin Creates Employees
+- `EmployeeResource`
+- `RoleResource`
+- `PermissionResource`
+- `ScheduleImports`
 
-1. Login to `/subadmin`
-2. Navigate to Employees
-3. Create employee accounts
-4. Assign roles/permissions
-5. Employees are automatically linked via `tenant_id`
+## 7) Practical Flow
 
-### Sub-Admin Views Customers
+1. Superadmin logs into `/user` and creates an operator.
+2. Operator is automatically linked to that superadmin.
+3. Operator logs into `/panel`, creates employees, roles, and permissions.
+4. Customers use `/portal` independently.
+5. End users can search routes through public API-backed UI (stops + route search + map shapes).
 
-1. Login to `/subadmin`
-2. Navigate to Customers
-3. View all customers (not filtered by tenant)
-4. Customers are independent entities
+## 8) Validation Checklist
 
-### Customer Registration
-
-1. Visit `/customer/register`
-2. Self-register account
-3. Login and access customer portal
-4. No relationship to any sub-admin
-
-## Files Structure
-
-```
-app/
-├── Filament/
-│   ├── Superadmin/
-│   │   └── Resources/
-│   │       └── SubAdminResource.php (manages sub-admins)
-│   ├── SubAdmin/
-│   │   └── Resources/
-│   │       ├── EmployeeResource.php (manages employees - TENANT SCOPED)
-│   │       ├── CustomerResource.php (views customers - NOT SCOPED)
-│   │       ├── RoleResource.php
-│   │       └── PermissionResource.php
-│   └── Customer/
-│       └── (customer-facing resources)
-├── Http/
-│   └── Middleware/
-│       └── ApplyTenantScopes.php (scopes employees to sub-admin)
-└── Models/
-    └── User.php (4 roles: superadmin, subadmin, employee, customer)
-```
-
-## Testing Checklist
-
--   [ ] Create sub-admin from superadmin panel
--   [ ] Login as sub-admin
--   [ ] Create employees (should be scoped to sub-admin)
--   [ ] Verify employees show in "Employees" list
--   [ ] Check that employee count appears in superadmin panel
--   [ ] Verify customer registration works independently
--   [ ] Confirm customers appear in sub-admin panel but are NOT scoped
--   [ ] Test role/permission assignment to employees
+- [ ] Superadmin A cannot see Superadmin B's operators.
+- [ ] New operators are auto-linked to creating superadmin.
+- [ ] Employees only see tenant-scoped data in `/panel`.
+- [ ] Two tenants can create same role name (for example `Manager`).
+- [ ] Route search returns direct and transfer journeys correctly.
+- [ ] Route map overlays load shapes and route stops correctly.

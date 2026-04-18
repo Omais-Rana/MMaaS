@@ -16,6 +16,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rules\Unique;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -93,9 +94,21 @@ class RoleResource extends Resource
                     ->schema([
                         Forms\Components\TextInput::make('name')
                             ->required()
-                            ->unique(ignoreRecord: true)
+                            ->unique(
+                                ignoreRecord: true,
+                                modifyRuleUsing: function (Unique $rule) {
+                                    $user = Auth::user();
+                                    $tenantId = $user->role === 'subadmin'
+                                        ? $user->id
+                                        : $user->tenant_id;
+
+                                    return $rule
+                                        ->where('guard_name', 'web')
+                                        ->where('tenant_id', $tenantId);
+                                }
+                            )
                             ->maxLength(255)
-                            ->helperText('Enter a unique role name (e.g., Manager, Editor)')
+                            ->helperText('Enter a unique role name (e.g., Manager, Operator)')
                             ->columnSpanFull(),
 
                         Forms\Components\Hidden::make('tenant_id')

@@ -10,30 +10,12 @@ class EditSubAdmin extends EditRecord
 {
     protected static string $resource = SubAdminResource::class;
 
-    protected array $locations = [];
-
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        // Store locations temporarily
-        $this->locations = $data['locations'] ?? [];
-
-        // Remove locations field as it's handled by the relationship
-        unset($data['locations']);
+        // Preserve owner superadmin linkage.
+        $data['tenant_id'] = $this->record->tenant_id;
 
         return $data;
-    }
-
-    protected function afterSave(): void
-    {
-        // Sync regions (specific cities)
-        $regionIds = [];
-        foreach ($this->locations as $location) {
-            if (str_starts_with($location, 'region_')) {
-                $regionIds[] = (int) str_replace('region_', '', $location);
-            }
-        }
-
-        $this->record->regions()->sync($regionIds);
     }
 
     protected function getHeaderActions(): array
