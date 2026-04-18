@@ -234,7 +234,7 @@
                 </button>
                 <div class="text-center pt-2">
                     <button type="button" id="reset-search"
-                        class="text-xs text-gray-500 hover:text-red-600 underline">Reset map to all routes</button>
+                        class="text-xs text-gray-500 hover:text-red-600 underline">Reset map to territories</button>
                 </div>
             </form>
         </div>
@@ -242,11 +242,37 @@
         <div id="results-wrapper" class="flex-1 p-6 bg-gray-50">
             <div id="initial-state">
                 <div class="mb-4">
-                    <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wider">Available Routes</h2>
-                    <p class="text-xs text-gray-400 mt-0.5">Click a route to highlight it on the map</p>
+                    <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wider">Service Explorer</h2>
+                    <p class="text-xs text-gray-400 mt-0.5">Country/City -> Operator -> Routes</p>
                 </div>
-                <div id="bus-cards-list" class="space-y-2 pb-10">
-                    <div class="text-center py-8 text-gray-400 text-sm">Loading routes&hellip;</div>
+
+                <div class="space-y-3 mb-4">
+                    <div>
+                        <label for="country-select"
+                            class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Country</label>
+                        <select id="country-select"
+                            class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"></select>
+                    </div>
+                    <div>
+                        <label for="city-select"
+                            class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">City</label>
+                        <select id="city-select"
+                            class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"></select>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <h3 class="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Operators</h3>
+                    <div id="operator-list" class="space-y-2">
+                        <div class="text-center py-6 text-gray-400 text-sm">Loading operators&hellip;</div>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Routes</h3>
+                    <div id="route-cards-list" class="space-y-2 pb-10">
+                        <div class="text-center py-6 text-gray-400 text-sm">Select an operator to load routes.</div>
+                    </div>
                 </div>
             </div>
 
@@ -359,6 +385,11 @@
         let selectedBusCard = null; // Currently selected bus info card element
         let selectedBusRouteName = null; // Route name of selected bus card
         let walkingRouteCache = new Map(); // Cache: coord pair -> routed lat/lon path
+        let territoriesMeta = {};
+        let selectedTerritoryKey = null;
+        let serviceHierarchy = {};
+        let selectedCountry = null;
+        let selectedCity = null;
 
         function initMap() {
             if (!map) {
@@ -370,11 +401,22 @@
                     position: 'topright'
                 }).addTo(map);
 
-                // Grayscale base map
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                // High-contrast light map with clear administrative boundaries and labels.
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
                     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
                     subdomains: 'abcd',
                     maxZoom: 20
+                }).addTo(map);
+
+                map.createPane('labelsPane');
+                map.getPane('labelsPane').style.zIndex = 450;
+                map.getPane('labelsPane').style.pointerEvents = 'none';
+
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                    subdomains: 'abcd',
+                    maxZoom: 20,
+                    pane: 'labelsPane',
                 }).addTo(map);
 
                 allRoutesLayer.addTo(map);
@@ -415,7 +457,7 @@
         }
 
         function renderBusInfoPanel() {
-            const container = document.getElementById('bus-cards-list');
+            const container = document.getElementById('route-cards-list');
             if (!container) return;
             container.innerHTML = '';
 
@@ -455,6 +497,144 @@
 
                 container.appendChild(card);
             });
+        }
+
+        function territoryKey(tenantId) {
+            return `${tenantId}`;
+        }
+
+        function buildServiceHierarchy(territories) {
+            const hierarchy = {};
+
+            territories.forEach(territory => {
+                const country = (territory.country || 'France').toString();
+                const city = (territory.city || 'Unspecified').toString();
+
+                if (!hierarchy[country]) {
+                    hierarchy[country] = {};
+                }
+
+                if (!hierarchy[country][city]) {
+                    hierarchy[country][city] = [];
+                }
+
+                hierarchy[country][city].push({
+                    tenant_id: territory.tenant_id,
+                    operator_name: territory.operator_name,
+                    stops_count: territory.stops_count,
+                    territory_name: territory.name,
+                });
+            });
+
+            Object.keys(hierarchy).forEach(country => {
+                Object.keys(hierarchy[country]).forEach(city => {
+                    hierarchy[country][city].sort((a, b) => {
+                        return (a.operator_name || '').localeCompare(b.operator_name || '');
+                    });
+                });
+            });
+
+            return hierarchy;
+        }
+
+        function populateCountrySelect() {
+            const select = document.getElementById('country-select');
+            if (!select) return;
+
+            const countries = Object.keys(serviceHierarchy).sort((a, b) => a.localeCompare(b));
+            if (!selectedCountry || !countries.includes(selectedCountry)) {
+                selectedCountry = countries[0] || null;
+            }
+
+            select.innerHTML = countries.map(country => {
+                const selected = country === selectedCountry ? 'selected' : '';
+                return `<option value="${country}" ${selected}>${country}</option>`;
+            }).join('');
+        }
+
+        function populateCitySelect() {
+            const select = document.getElementById('city-select');
+            if (!select || !selectedCountry || !serviceHierarchy[selectedCountry]) return;
+
+            const cities = Object.keys(serviceHierarchy[selectedCountry]).sort((a, b) => a.localeCompare(b));
+            if (!selectedCity || !cities.includes(selectedCity)) {
+                selectedCity = cities[0] || null;
+            }
+
+            select.innerHTML = cities.map(city => {
+                const selected = city === selectedCity ? 'selected' : '';
+                return `<option value="${city}" ${selected}>${city}</option>`;
+            }).join('');
+        }
+
+        function renderOperatorList() {
+            const container = document.getElementById('operator-list');
+            if (!container) return;
+
+            if (!selectedCountry || !selectedCity || !serviceHierarchy[selectedCountry] || !serviceHierarchy[
+                    selectedCountry][selectedCity]) {
+                container.innerHTML = '<div class="text-center py-6 text-gray-400 text-sm">No operators available.</div>';
+                return;
+            }
+
+            const operators = serviceHierarchy[selectedCountry][selectedCity];
+            if (!operators.length) {
+                container.innerHTML = '<div class="text-center py-6 text-gray-400 text-sm">No operators available.</div>';
+                return;
+            }
+
+            container.innerHTML = operators.map(operator => {
+                const key = territoryKey(operator.tenant_id);
+                const activeClass = selectedTerritoryKey === key ?
+                    ' bus-card-selected border-blue-400 bg-blue-50/60' : ' hover:border-blue-300';
+
+                return `
+                    <button type="button" class="w-full text-left bus-card bg-white rounded-lg border border-gray-200 shadow-sm p-3${activeClass}" data-territory-key="${key}" data-tenant-id="${operator.tenant_id}">
+                        <div class="flex items-center justify-between gap-2">
+                            <div>
+                                <div class="text-sm font-semibold text-gray-800">${operator.operator_name || 'Operator'}</div>
+                                <div class="text-xs text-gray-500">${selectedCity} · ${operator.stops_count} stops</div>
+                            </div>
+                            <span class="text-xs font-semibold text-blue-600">Show Routes</span>
+                        </div>
+                    </button>
+                `;
+            }).join('');
+
+            container.querySelectorAll('[data-tenant-id]').forEach(button => {
+                button.addEventListener('click', async () => {
+                    await selectTerritory(Number(button.dataset.tenantId));
+                });
+            });
+        }
+
+        function renderTerritoryPanel() {
+            const territories = Object.values(territoriesMeta);
+            serviceHierarchy = buildServiceHierarchy(territories);
+
+            populateCountrySelect();
+            populateCitySelect();
+            renderOperatorList();
+
+            const routeCards = document.getElementById('route-cards-list');
+            if (routeCards) {
+                routeCards.innerHTML =
+                    '<div class="text-center py-6 text-gray-400 text-sm">Select an operator to load routes.</div>';
+            }
+        }
+
+        async function selectTerritory(tenantId) {
+            selectedTerritoryKey = territoryKey(tenantId);
+
+            document.querySelectorAll('#operator-list [data-territory-key]').forEach(card => {
+                if (card.dataset.territoryKey === selectedTerritoryKey) {
+                    card.classList.add('bus-card-selected');
+                } else {
+                    card.classList.remove('bus-card-selected');
+                }
+            });
+
+            await loadShapesForTerritory(tenantId);
         }
 
         async function selectBusCard(routeName, cardEl) {
@@ -531,17 +711,30 @@
             }
         }
 
-        async function loadAllShapes() {
+        async function loadShapesForTerritory(tenantId) {
             try {
-                const res = await fetch('/api/routes/all-shapes');
-                const data = await res.json();
+                const res = await fetch(`/api/territories/routes/all-shapes?tenant_id=${encodeURIComponent(tenantId)}`);
+                if (!res.ok) {
+                    throw new Error(`Territory routes request failed with status ${res.status}`);
+                }
+
+                const text = await res.text();
+                const data = text ? JSON.parse(text) : {
+                    routes: []
+                };
 
                 if (data && data.routes && Array.isArray(data.routes)) {
+                    if (!map.hasLayer(allRoutesLayer)) {
+                        map.addLayer(allRoutesLayer);
+                    }
+
                     allRoutesLayer.clearLayers();
                     allRoutesShapes = {};
+                    allRoutesMetaData = {};
+                    allRoutePolylines = {};
+
                     data.routes.forEach(r => {
                         if (r.shape_pts && r.shape_pts.length > 1) {
-                            // Cache ALL shapes per route (each direction has its own shape)
                             const rName = r.route_short_name || r.route_name;
                             if (rName) {
                                 if (!allRoutesShapes[rName]) allRoutesShapes[rName] = [];
@@ -549,7 +742,6 @@
                             }
                             let color = r.route_color ? '#' + r.route_color : '#9CA3AF';
 
-                            // Store route metadata (first occurrence wins)
                             if (rName && !allRoutesMetaData[rName]) {
                                 allRoutesMetaData[rName] = {
                                     color: color,
@@ -596,8 +788,8 @@
                                     defaultRouteStopsLayer.clearLayers();
                                 }
                             });
+
                             allRoutesLayer.addLayer(polyline);
-                            // Store polyline reference for bus card highlighting
                             if (rName && allRoutePolylines[rName]) {
                                 allRoutePolylines[rName].push(polyline);
                             }
@@ -616,7 +808,148 @@
                     renderBusInfoPanel();
                 }
             } catch (e) {
-                console.error('Failed to load all shapes:', e);
+                console.error('Failed to load territory routes:', e);
+            }
+        }
+
+        async function loadAllShapesFallback() {
+            try {
+                const res = await fetch('/api/routes/all-shapes');
+                if (!res.ok) {
+                    throw new Error(`All routes request failed with status ${res.status}`);
+                }
+
+                const text = await res.text();
+                const data = text ? JSON.parse(text) : {
+                    routes: []
+                };
+
+                if (!data || !Array.isArray(data.routes)) {
+                    return;
+                }
+
+                if (!map.hasLayer(allRoutesLayer)) {
+                    map.addLayer(allRoutesLayer);
+                }
+
+                allRoutesLayer.clearLayers();
+                allRoutesShapes = {};
+                allRoutesMetaData = {};
+                allRoutePolylines = {};
+
+                data.routes.forEach(r => {
+                    if (r.shape_pts && r.shape_pts.length > 1) {
+                        const rName = r.route_short_name || r.route_name;
+                        if (rName) {
+                            if (!allRoutesShapes[rName]) allRoutesShapes[rName] = [];
+                            allRoutesShapes[rName].push(r.shape_pts);
+                        }
+
+                        let color = r.route_color ? '#' + r.route_color : '#9CA3AF';
+
+                        if (rName && !allRoutesMetaData[rName]) {
+                            allRoutesMetaData[rName] = {
+                                color: color,
+                                longName: r.route_long_name || r.route_name || rName
+                            };
+                            allRoutePolylines[rName] = [];
+                        }
+
+                        let polyline = L.polyline(r.shape_pts, {
+                            color: color,
+                            weight: 2,
+                            opacity: 0.6,
+                            routeName: rName,
+                            routeColor: color
+                        });
+
+                        let routeTitle = r.route_name || r.route_short_name || 'Route';
+                        let agName = r.agency_name ?
+                            `<br><span style="font-size:11px;color:#666;">${r.agency_name}</span>` : '';
+
+                        polyline.bindTooltip(
+                            `<b>${routeTitle}</b>${agName}<br><span style="font-size:10px;color:#16a34a">🌿 CNG · Natural Gas</span>`, {
+                                sticky: true,
+                                className: 'font-sans'
+                            });
+
+                        polyline.on('mouseover', async function() {
+                            this.setStyle({
+                                weight: 5,
+                                opacity: 1
+                            });
+                            this.bringToFront();
+                            const stops = await fetchRouteStops(this.options.routeName);
+                            showDefaultRouteStops(stops, this.options.routeColor);
+                        });
+                        polyline.on('mouseout', function() {
+                            if (selectedDefaultPolyline !== this) {
+                                this.setStyle({
+                                    weight: 2,
+                                    opacity: 0.6
+                                });
+                            }
+                            if (selectedDefaultPolyline === null) {
+                                defaultRouteStopsLayer.clearLayers();
+                            }
+                        });
+
+                        allRoutesLayer.addLayer(polyline);
+                        if (rName && allRoutePolylines[rName]) {
+                            allRoutePolylines[rName].push(polyline);
+                        }
+                    }
+                });
+
+                if (allRoutesLayer.getLayers().length > 0) {
+                    let layerGroupBounds = L.featureGroup(allRoutesLayer.getLayers()).getBounds();
+                    if (layerGroupBounds.isValid()) {
+                        map.fitBounds(layerGroupBounds, {
+                            padding: [50, 50]
+                        });
+                    }
+                }
+
+                renderBusInfoPanel();
+            } catch (error) {
+                console.error('Fallback all-routes load failed:', error);
+            }
+        }
+
+        async function loadTerritories() {
+            try {
+                const res = await fetch('/api/territories');
+                if (!res.ok) {
+                    throw new Error(`Territories request failed with status ${res.status}`);
+                }
+
+                const text = await res.text();
+                const data = text ? JSON.parse(text) : {
+                    territories: []
+                };
+
+                territoriesMeta = {};
+                selectedTerritoryKey = null;
+                allRoutesLayer.clearLayers();
+                allRoutesShapes = {};
+                allRoutesMetaData = {};
+                allRoutePolylines = {};
+
+                if (data && data.territories && Array.isArray(data.territories)) {
+                    data.territories.forEach(territory => {
+                        const key = territoryKey(territory.tenant_id);
+                        territoriesMeta[key] = territory;
+                    });
+
+                    renderTerritoryPanel();
+
+                    if (data.territories.length === 0) {
+                        await loadAllShapesFallback();
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load territories:', e);
+                await loadAllShapesFallback();
             }
         }
 
@@ -675,7 +1008,44 @@
         // Initialize Map & Load shapes
         document.addEventListener('DOMContentLoaded', () => {
             initMap();
-            loadAllShapes();
+            loadTerritories();
+
+            const countrySelect = document.getElementById('country-select');
+            const citySelect = document.getElementById('city-select');
+
+            if (countrySelect) {
+                countrySelect.addEventListener('change', () => {
+                    selectedCountry = countrySelect.value || null;
+                    selectedCity = null;
+                    selectedTerritoryKey = null;
+                    populateCitySelect();
+                    renderOperatorList();
+                    const routeCards = document.getElementById('route-cards-list');
+                    if (routeCards) {
+                        routeCards.innerHTML =
+                            '<div class="text-center py-6 text-gray-400 text-sm">Select an operator to load routes.</div>';
+                    }
+                    allRoutesLayer.clearLayers();
+                    allRoutesMetaData = {};
+                    allRoutePolylines = {};
+                });
+            }
+
+            if (citySelect) {
+                citySelect.addEventListener('change', () => {
+                    selectedCity = citySelect.value || null;
+                    selectedTerritoryKey = null;
+                    renderOperatorList();
+                    const routeCards = document.getElementById('route-cards-list');
+                    if (routeCards) {
+                        routeCards.innerHTML =
+                            '<div class="text-center py-6 text-gray-400 text-sm">Select an operator to load routes.</div>';
+                    }
+                    allRoutesLayer.clearLayers();
+                    allRoutesMetaData = {};
+                    allRoutePolylines = {};
+                });
+            }
         });
 
         // Search form reset
@@ -688,6 +1058,7 @@
 
             searchResultsLayer.clearLayers();
             defaultRouteStopsLayer.clearLayers();
+            allRoutesLayer.clearLayers();
             if (selectedDefaultPolyline) {
                 selectedDefaultPolyline.setStyle({
                     weight: 2,
@@ -709,14 +1080,7 @@
             }
             selectedBusCard = null;
             selectedBusRouteName = null;
-            if (!map.hasLayer(allRoutesLayer)) {
-                map.addLayer(allRoutesLayer);
-            }
-            if (allRoutesLayer.getLayers().length > 0) {
-                map.fitBounds(L.featureGroup(allRoutesLayer.getLayers()).getBounds(), {
-                    padding: [50, 50]
-                });
-            }
+            loadTerritories();
         });
 
         // --- RESULTS RENDERING & HIGHLIGHT LOGIC ---
@@ -916,22 +1280,22 @@
                             
                             <div class="flex items-center gap-4 bg-gray-50/80 rounded-lg p-3">
                                 ${route.departure_time !== '?' ? `
-                                                                            <div class="flex-1">
-                                                                                <div class="text-xs text-gray-500 uppercase tracking-wider">Departs</div>
-                                                                                <div class="text-xl font-bold text-red-600">${route.leave_at || route.departure_time}</div>
-                                                                            </div>` : ''}
+                                                                                    <div class="flex-1">
+                                                                                        <div class="text-xs text-gray-500 uppercase tracking-wider">Departs</div>
+                                                                                        <div class="text-xl font-bold text-red-600">${route.leave_at || route.departure_time}</div>
+                                                                                    </div>` : ''}
                                 
                                 ${route.duration !== 'N/A' ? `
-                                                                            <div class="flex-1 text-center border-l border-r border-gray-200 px-2">
-                                                                                <div class="text-xs text-gray-500 uppercase tracking-wider">Duration</div>
-                                                                                <div class="text-sm font-semibold text-gray-800">${route.duration}</div>
-                                                                            </div>` : ''}
+                                                                                    <div class="flex-1 text-center border-l border-r border-gray-200 px-2">
+                                                                                        <div class="text-xs text-gray-500 uppercase tracking-wider">Duration</div>
+                                                                                        <div class="text-sm font-semibold text-gray-800">${route.duration}</div>
+                                                                                    </div>` : ''}
                                 
                                 ${route.arrival_time !== '?' ? `
-                                                                            <div class="flex-1 text-right">
-                                                                                <div class="text-xs text-gray-500 uppercase tracking-wider">Arrives</div>
-                                                                                <div class="text-xl font-bold text-green-600">${route.arrival_time}</div>
-                                                                            </div>` : ''}
+                                                                                    <div class="flex-1 text-right">
+                                                                                        <div class="text-xs text-gray-500 uppercase tracking-wider">Arrives</div>
+                                                                                        <div class="text-xl font-bold text-green-600">${route.arrival_time}</div>
+                                                                                    </div>` : ''}
                             </div>
                             ${directMidStopsHtml}
                             ${co2Badge(directDistKm)}
@@ -1032,8 +1396,11 @@
                 const timeoutId = setTimeout(() => controller.abort(), 7000);
 
                 try {
-                    const url = `${baseUrl}/${profilePath}/${fromLon},${fromLat};${toLon},${toLat}?overview=full&geometries=geojson&steps=false&alternatives=true`;
-                    const response = await fetch(url, { signal: controller.signal });
+                    const url =
+                        `${baseUrl}/${profilePath}/${fromLon},${fromLat};${toLon},${toLat}?overview=full&geometries=geojson&steps=false&alternatives=true`;
+                    const response = await fetch(url, {
+                        signal: controller.signal
+                    });
                     if (!response.ok) {
                         return [];
                     }
@@ -1052,7 +1419,8 @@
 
                             return {
                                 distanceKm: Number(route.distance || 0) / 1000,
-                                latLngs: coordinates.map(([lon, lat]) => [parseFloat(lat), parseFloat(lon)]),
+                                latLngs: coordinates.map(([lon, lat]) => [parseFloat(lat), parseFloat(
+                                    lon)]),
                             };
                         })
                         .filter(Boolean);
@@ -1083,11 +1451,31 @@
 
                 const providers = [
                     // Dedicated OSM routing hosts often have better pedestrian graph coverage in EU cities.
-                    { baseUrl: 'https://routing.openstreetmap.de/routed-foot/route/v1', profilePath: 'driving', penalty: 0 },
-                    { baseUrl: 'https://routing.openstreetmap.de/routed-bike/route/v1', profilePath: 'driving', penalty: 0.04 },
-                    { baseUrl: 'https://router.project-osrm.org/route/v1', profilePath: 'foot', penalty: 0.06 },
-                    { baseUrl: 'https://router.project-osrm.org/route/v1', profilePath: 'bike', penalty: 0.08 },
-                    { baseUrl: 'https://router.project-osrm.org/route/v1', profilePath: 'driving', penalty: 0.12 },
+                    {
+                        baseUrl: 'https://routing.openstreetmap.de/routed-foot/route/v1',
+                        profilePath: 'driving',
+                        penalty: 0
+                    },
+                    {
+                        baseUrl: 'https://routing.openstreetmap.de/routed-bike/route/v1',
+                        profilePath: 'driving',
+                        penalty: 0.04
+                    },
+                    {
+                        baseUrl: 'https://router.project-osrm.org/route/v1',
+                        profilePath: 'foot',
+                        penalty: 0.06
+                    },
+                    {
+                        baseUrl: 'https://router.project-osrm.org/route/v1',
+                        profilePath: 'bike',
+                        penalty: 0.08
+                    },
+                    {
+                        baseUrl: 'https://router.project-osrm.org/route/v1',
+                        profilePath: 'driving',
+                        penalty: 0.12
+                    },
                 ];
 
                 const settled = await Promise.allSettled(
@@ -1201,8 +1589,9 @@
                 }
                 // 3. Fall back to stop coords polyline
                 if (leg.stops && leg.stops.length > 1) {
-                    return leg.stops.map(s => s.lat && s.lon ? [parseFloat(s.lat), parseFloat(s.lon)] : null).filter(
-                        Boolean);
+                    return leg.stops.map(s => s.lat && s.lon ? [parseFloat(s.lat), parseFloat(s.lon)] : null)
+                        .filter(
+                            Boolean);
                 }
                 // 4. Last resort: straight line
                 return leg.from_lat ? [
@@ -1347,7 +1736,8 @@
                             fillOpacity: isMid ? 0.85 : 1
                         }).addTo(searchResultsLayer)
                         .bindPopup(
-                            `<strong>${stop.name}</strong><br><span style="color:#666">${stop.arrival}</span>`);
+                            `<strong>${stop.name}</strong><br><span style="color:#666">${stop.arrival}</span>`
+                        );
                 });
 
                 // Draw bold explicitly marked Origin and Destination endpoints for direct routes
@@ -1368,7 +1758,8 @@
                 const uiDestName = document.getElementById('destination').value.toLowerCase().trim();
                 const originMatch = firstStop.name.toLowerCase().includes(uiOriginName) || uiOriginName.includes(
                     firstStop.name.toLowerCase());
-                const destMatch = lastStop.name.toLowerCase().includes(uiDestName) || uiDestName.includes(lastStop.name
+                const destMatch = lastStop.name.toLowerCase().includes(uiDestName) || uiDestName.includes(lastStop
+                    .name
                     .toLowerCase());
 
                 const distToOrigin = haversineKm([

@@ -9,6 +9,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class RouteSearchController extends Controller
@@ -36,8 +37,8 @@ class RouteSearchController extends Controller
         // Use withoutGlobalScopes() to show stops from ALL operators (not just logged-in user's)
         $stops = Stop::withoutGlobalScopes()->where(function ($q) use ($normalizedQuery) {
             // Use LOWER and accent-insensitive comparison
-            $q->whereRaw('LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(stop_name, "é", "e"), "è", "e"), "ê", "e"), "à", "a"), "ô", "o"), "ù", "u"), "ç", "c")) LIKE ?', [$normalizedQuery . '%'])
-                ->orWhereRaw('LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(stop_name, "é", "e"), "è", "e"), "ê", "e"), "à", "a"), "ô", "o"), "ù", "u"), "ç", "c")) LIKE ?', ['% ' . $normalizedQuery . '%']);
+            $q->whereRaw('LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(stop_name, "é", "e"), "è", "e"), "ê", "e"), "à", "a"), "ô", "o"), "ù", "u"), "ç", "c")) LIKE ?', [$normalizedQuery.'%'])
+                ->orWhereRaw('LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(stop_name, "é", "e"), "è", "e"), "ê", "e"), "à", "a"), "ô", "o"), "ù", "u"), "ç", "c")) LIKE ?', ['% '.$normalizedQuery.'%']);
         })
             ->whereNotNull('stop_lat')
             ->whereNotNull('stop_lon')
@@ -50,7 +51,7 @@ class RouteSearchController extends Controller
                 DB::raw('MAX(stop_code) as stop_code'),
                 DB::raw('MAX(city) as city'),
                 DB::raw("CASE 
-                    WHEN LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(stop_name, 'é', 'e'), 'è', 'e'), 'ê', 'e'), 'à', 'a'), 'ô', 'o'), 'ù', 'u'), 'ç', 'c')) LIKE '" . $normalizedQuery . "%' THEN 1 
+                    WHEN LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(stop_name, 'é', 'e'), 'è', 'e'), 'ê', 'e'), 'à', 'a'), 'ô', 'o'), 'ù', 'u'), 'ç', 'c')) LIKE '".$normalizedQuery."%' THEN 1 
                     ELSE 2 
                 END as priority")
             )
@@ -167,7 +168,7 @@ class RouteSearchController extends Controller
         // Apply type=2 (removed) exceptions on top of whatever base we have
         $removedServices = $exceptions->where('exception_type', 2)->pluck('service_id')->toArray();
         if (! empty($removedServices)) {
-            $activeServiceIds = array_values(array_filter($activeServiceIds, fn($id) => ! in_array($id, $removedServices)));
+            $activeServiceIds = array_values(array_filter($activeServiceIds, fn ($id) => ! in_array($id, $removedServices)));
         }
 
         // Also add any type=1 services not yet in the list (e.g. when using calendar base)
@@ -293,7 +294,7 @@ class RouteSearchController extends Controller
                     'agency_name' => $route->operator_name ?? 'Transit Service',
                     'departure_time' => $departureTime,
                     'arrival_time' => substr($route->arrival_time, 0, 5),
-                    'duration' => round($route->duration_minutes) . ' min',
+                    'duration' => round($route->duration_minutes).' min',
                     'stops_count' => $route->stops_count,
                     'stops' => $stopsOnRoute,
                     'shape_pts' => $shapePoints,
@@ -370,7 +371,7 @@ class RouteSearchController extends Controller
         }
 
         $journeys = [];
-        $sqlMinTime = $time . ':00';
+        $sqlMinTime = $time.':00';
 
         // STRATEGY 1: Direct routes from EXACT stops (NO walking, NO transfers) - HIGHEST PRIORITY
         // For exact origin stops, no walking buffer needed - use minimum time directly
@@ -422,7 +423,7 @@ class RouteSearchController extends Controller
 
         // Group direct routes by route name — keep best (least total walk) per route
         foreach ($directRoutes as $route) {
-            $routeKey = $route->route_short_name . '_' . $route->operator_name;
+            $routeKey = $route->route_short_name.'_'.$route->operator_name;
             $originWalkDist = $this->distancePointToStopFromCache($stopCache, $originRefLat, $originRefLon, $route->origin_stop_id);
             $destWalkDist = $this->distanceStopToPointFromCache($stopCache, $route->dest_stop_id, $destRefLat, $destRefLon);
             $totalWalkDist = $originWalkDist + $destWalkDist;
@@ -540,8 +541,8 @@ class RouteSearchController extends Controller
             $journey['score'] = 10000 - ($totalTimeMinutes * 50) - ($journey['transfers'] * 200) - ($totalWalkDist * 10);
 
             if ($minimumDepartureTime && $date) {
-                $leaveAtDateTime = Carbon::parse($date . ' ' . $journey['leave_at']);
-                $minimumDateTime = Carbon::parse($date . ' ' . $minimumDepartureTime);
+                $leaveAtDateTime = Carbon::parse($date.' '.$journey['leave_at']);
+                $minimumDateTime = Carbon::parse($date.' '.$minimumDepartureTime);
                 if ($leaveAtDateTime->lt($minimumDateTime)) {
                     continue;
                 }
@@ -643,7 +644,7 @@ class RouteSearchController extends Controller
         // Process nearby routes — keep best (least walk) per route line
         $nearbyRouteOptions = [];
         foreach ($nearbyDirectRoutes as $route) {
-            $routeKey = $route->route_short_name . '_' . $route->operator_name;
+            $routeKey = $route->route_short_name.'_'.$route->operator_name;
             $originWalkDist = $this->distancePointToStopFromCache($stopCache, $originRefLat, $originRefLon, $route->origin_stop_id);
             $destWalkDist = $this->distanceStopToPointFromCache($stopCache, $route->dest_stop_id, $destRefLat, $destRefLon);
             $totalWalkDist = $originWalkDist + $destWalkDist;
@@ -770,8 +771,8 @@ class RouteSearchController extends Controller
             $journey['score'] = 10000 - ($totalTimeMinutes * 50) - ($journey['transfers'] * 200) - ($totalWalkDist * 10);
 
             if ($minimumDepartureTime && $date) {
-                $leaveAtDateTime = Carbon::parse($date . ' ' . $journey['leave_at']);
-                $minimumDateTime = Carbon::parse($date . ' ' . $minimumDepartureTime);
+                $leaveAtDateTime = Carbon::parse($date.' '.$journey['leave_at']);
+                $minimumDateTime = Carbon::parse($date.' '.$minimumDepartureTime);
                 if ($leaveAtDateTime->lt($minimumDateTime)) {
                     continue;
                 }
@@ -903,7 +904,7 @@ class RouteSearchController extends Controller
             foreach ($secondLegOptions as $option) {
                 $optWalkDist = $this->distanceStopToPointFromCache($stopCache, $option->final_stop_id, $destRefLat, $destRefLon);
                 $optWalkMin = (int) round($optWalkDist / $walkingSpeedKmh * 60);
-                $optArrival = strtotime('1970-01-01 ' . $option->final_arrival) + ($optWalkMin * 60);
+                $optArrival = strtotime('1970-01-01 '.$option->final_arrival) + ($optWalkMin * 60);
                 $optTransferWalk = $this->getWalkingDistanceFromCache($stopCache, $firstLeg->transfer_stop_id, $option->second_origin_stop_id);
                 if ($optArrival < $bestArrivalAtDest || ($optArrival === $bestArrivalAtDest && $optTransferWalk < $bestTransferWalk)) {
                     $bestArrivalAtDest = $optArrival;
@@ -916,7 +917,7 @@ class RouteSearchController extends Controller
                 // Deduplicate by (first_trip_id + transfer_stop + second_trip_id) so different
                 // transfer points on the same pair of trips are all evaluated independently.
                 // sortAndLimitJourneys will then pick the best-scoring one per departure hour.
-                $transferRouteKey = $firstLeg->trip_id . '_' . $firstLeg->transfer_stop_id . '_to_' . $secondLeg->second_trip_id;
+                $transferRouteKey = $firstLeg->trip_id.'_'.$firstLeg->transfer_stop_id.'_to_'.$secondLeg->second_trip_id;
                 if (isset($seenRoutes[$transferRouteKey])) {
                     continue;
                 }
@@ -1072,8 +1073,8 @@ class RouteSearchController extends Controller
                 $journey['score'] = 10000 - ($totalTimeMinutes * 50) - ($journey['transfers'] * 200) - (($transferWalkDist + $finalWalkDist) * 10);
 
                 if ($minimumDepartureTime && $date) {
-                    $leaveAtDateTime = Carbon::parse($date . ' ' . $journey['leave_at']);
-                    $minimumDateTime = Carbon::parse($date . ' ' . $minimumDepartureTime);
+                    $leaveAtDateTime = Carbon::parse($date.' '.$journey['leave_at']);
+                    $minimumDateTime = Carbon::parse($date.' '.$minimumDepartureTime);
                     if ($leaveAtDateTime->lt($minimumDateTime)) {
                         continue;
                     }
@@ -1112,14 +1113,14 @@ class RouteSearchController extends Controller
      */
     private function sortAndLimitJourneys(array $journeys, int $limit): array
     {
-        usort($journeys, fn($a, $b) => ($b['score'] ?? 0) <=> ($a['score'] ?? 0));
+        usort($journeys, fn ($a, $b) => ($b['score'] ?? 0) <=> ($a['score'] ?? 0));
 
         $seen = [];
         $result = [];
 
         foreach ($journeys as $journey) {
             $firstTransit = collect($journey['legs'])->firstWhere('type', 'transit');
-            $routeKey = ($firstTransit['route_name'] ?? 'unknown') . '_' . ($journey['transfers'] ?? 0);
+            $routeKey = ($firstTransit['route_name'] ?? 'unknown').'_'.($journey['transfers'] ?? 0);
 
             if (! isset($seen[$routeKey])) {
                 $seen[$routeKey] = true;
@@ -1202,7 +1203,7 @@ class RouteSearchController extends Controller
                 $clusterMaxDistance = max(0.06, $minDistance + 0.03);
 
                 $ids = $ranked
-                    ->filter(fn($row) => $row['distance'] <= $clusterMaxDistance)
+                    ->filter(fn ($row) => $row['distance'] <= $clusterMaxDistance)
                     ->pluck('id')
                     ->all();
 
@@ -1222,7 +1223,7 @@ class RouteSearchController extends Controller
         }
 
         return Stop::withoutGlobalScopes()
-            ->where('stop_name', 'LIKE', $stopName . '%')
+            ->where('stop_name', 'LIKE', $stopName.'%')
             ->pluck('id')
             ->toArray();
     }
@@ -1394,7 +1395,7 @@ class RouteSearchController extends Controller
                 ->select('stops.stop_name', 'stops.stop_lat', 'stops.stop_lon', 'stop_times.arrival_time', 'stop_times.departure_time')
                 ->get()
                 ->values()
-                ->map(fn($s) => [
+                ->map(fn ($s) => [
                     'name' => $s->stop_name,
                     'lat' => $s->stop_lat,
                     'lon' => $s->stop_lon,
@@ -1421,8 +1422,8 @@ class RouteSearchController extends Controller
      */
     private function timeDiffMinutes(string $from, string $to): int
     {
-        $f = strtotime('1970-01-01 ' . $from);
-        $t = strtotime('1970-01-01 ' . $to);
+        $f = strtotime('1970-01-01 '.$from);
+        $t = strtotime('1970-01-01 '.$to);
 
         if ($t < $f) {
             $t += 86400;
@@ -1501,8 +1502,8 @@ class RouteSearchController extends Controller
             'leave_at' => $leaveAt, // When user should leave their location
             'departure_time' => $departureTime, // When first bus departs
             'arrival_time' => $journeyEnd, // When journey actually ends (including final walk)
-            'duration' => round($duration) . ' min',
-            'transfers' => count(array_filter($legs, fn($l) => $l['type'] === 'transit')) - 1,
+            'duration' => round($duration).' min',
+            'transfers' => count(array_filter($legs, fn ($l) => $l['type'] === 'transit')) - 1,
             'legs' => $legs,
         ];
     }
@@ -1642,7 +1643,7 @@ class RouteSearchController extends Controller
                 ->where('shape_id', $shapeId)
                 ->orderBy('shape_pt_sequence')
                 ->get(['shape_pt_lat', 'shape_pt_lon'])
-                ->map(fn($pt) => [(float) $pt->shape_pt_lat, (float) $pt->shape_pt_lon])
+                ->map(fn ($pt) => [(float) $pt->shape_pt_lat, (float) $pt->shape_pt_lon])
                 ->toArray();
         }
 
@@ -1679,37 +1680,756 @@ class RouteSearchController extends Controller
 
     public function getAllRoutesWithShapes()
     {
-        $routeShapes = DB::select('
-            SELECT r.route_short_name, MAX(r.route_long_name) as route_long_name, MAX(r.route_color) as route_color, t.shape_id 
-            FROM routes r 
-            JOIN trips t ON r.id = t.route_id 
-            WHERE t.shape_id IS NOT NULL 
-            GROUP BY r.route_short_name, t.shape_id
-        ');
+        return response()->json([
+            'routes' => $this->buildRouteShapePayload(),
+        ]);
+    }
 
-        $points = DB::table('shapes')
-            ->orderBy('shape_id')
-            ->orderBy('shape_pt_sequence')
-            ->get(['shape_id', 'shape_pt_lat', 'shape_pt_lon']);
+    /**
+     * Build map route polylines with bounded memory usage.
+     *
+     * We keep one representative shape per route and direction, then sample
+     * shape points by sequence to prevent large-tenant OOM errors.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildRouteShapePayload(?int $tenantId = null): array
+    {
+        $cacheKey = $tenantId === null
+            ? 'route_shapes:all'
+            : 'route_shapes:tenant:'.$tenantId;
 
-        $shapePoints = [];
-        foreach ($points as $pt) {
-            $shapePoints[$pt->shape_id][] = [$pt->shape_pt_lat, $pt->shape_pt_lon];
+        return Cache::remember($cacheKey, now()->addHours(12), function () use ($tenantId): array {
+            $routeShapesQuery = DB::table('routes as r')
+                ->join('trips as t', 'r.id', '=', 't.route_id')
+                ->leftJoin('users as u', 'r.tenant_id', '=', 'u.id')
+                ->whereNotNull('t.shape_id');
+
+            if ($tenantId !== null) {
+                $routeShapesQuery->where('r.tenant_id', $tenantId);
+            }
+
+            $routeShapes = $routeShapesQuery
+                ->groupBy('r.route_short_name', DB::raw('COALESCE(t.direction_id, 0)'))
+                ->select(
+                    'r.route_short_name',
+                    DB::raw('MAX(r.route_long_name) as route_long_name'),
+                    DB::raw('MAX(r.route_color) as route_color'),
+                    DB::raw('MAX(r.route_text_color) as route_text_color'),
+                    DB::raw('MAX(u.name) as agency_name'),
+                    DB::raw('MIN(t.shape_id) as shape_id')
+                )
+                ->orderBy('r.route_short_name')
+                ->get();
+
+            $shapeIds = $routeShapes->pluck('shape_id')->filter()->unique()->values()->toArray();
+            if (empty($shapeIds)) {
+                return [];
+            }
+
+            $shapePoints = [];
+            DB::table('shapes')
+                ->whereIn('shape_id', $shapeIds)
+                ->where(function ($query) {
+                    $query->where('shape_pt_sequence', 1)
+                        ->orWhereRaw('MOD(shape_pt_sequence, 4) = 0');
+                })
+                ->orderBy('shape_id')
+                ->orderBy('shape_pt_sequence')
+                ->select('shape_id', 'shape_pt_lat', 'shape_pt_lon')
+                ->chunk(10000, function ($rows) use (&$shapePoints) {
+                    foreach ($rows as $row) {
+                        $shapePoints[$row->shape_id][] = [
+                            (float) $row->shape_pt_lat,
+                            (float) $row->shape_pt_lon,
+                        ];
+                    }
+                });
+
+            $routes = [];
+            foreach ($routeShapes as $routeShape) {
+                if (! isset($shapePoints[$routeShape->shape_id]) || count($shapePoints[$routeShape->shape_id]) < 2) {
+                    continue;
+                }
+
+                $routes[] = [
+                    'route_short_name' => $routeShape->route_short_name,
+                    'route_long_name' => $routeShape->route_long_name,
+                    'route_color' => $routeShape->route_color,
+                    'route_text_color' => $routeShape->route_text_color,
+                    'agency_name' => $routeShape->agency_name,
+                    'shape_pts' => $shapePoints[$routeShape->shape_id],
+                ];
+            }
+
+            return $routes;
+        });
+    }
+
+    public function getTerritories()
+    {
+        $sorted = Cache::remember('territories:list', now()->addHours(12), function () {
+            $rows = DB::table('stops as s')
+                ->join('users as u', 's.tenant_id', '=', 'u.id')
+                ->whereNotNull('s.tenant_id')
+                ->whereNotNull('s.stop_lat')
+                ->whereNotNull('s.stop_lon')
+                ->select('s.tenant_id', 's.stop_lat', 's.stop_lon', 's.city', 'u.name as operator_name')
+                ->orderBy('s.city')
+                ->get();
+
+            $territories = collect();
+
+            foreach ($rows->groupBy('tenant_id') as $tenantId => $tenantRows) {
+                $operatorName = (string) $tenantRows->first()->operator_name;
+                $stopPoints = $tenantRows->map(fn ($row) => [(float) $row->stop_lat, (float) $row->stop_lon])->all();
+                if (count($stopPoints) < 4) {
+                    continue;
+                }
+
+                $shapePoints = $this->getShapePointsForTenantCluster((int) $tenantId, $stopPoints);
+                $points = array_merge($stopPoints, $shapePoints);
+
+                $polygon = $this->buildConcaveTerritoryPolygon($points);
+                if (count($polygon) < 4) {
+                    $polygon = $this->buildConvexHull($points);
+                }
+
+                if (count($polygon) < 4) {
+                    $polygon = $this->buildBoundingPolygon($points);
+                }
+
+                $bbox = $this->calculateBbox($polygon);
+
+                $dominantCity = $tenantRows
+                    ->pluck('city')
+                    ->filter(fn ($city) => filled($city))
+                    ->countBy()
+                    ->sortDesc()
+                    ->keys()
+                    ->first();
+
+                $territories->push([
+                    'tenant_id' => (int) $tenantId,
+                    'name' => $dominantCity ? $operatorName.' - '.$dominantCity : $operatorName.' network',
+                    'city' => $dominantCity,
+                    'operator_name' => $operatorName,
+                    'stops_count' => $tenantRows->count(),
+                    'bbox' => $bbox,
+                    'polygon' => $polygon,
+                ]);
+            }
+
+            return $territories
+                ->sortByDesc('stops_count')
+                ->values();
+        });
+
+        return response()->json(['territories' => $sorted]);
+    }
+
+    public function getRoutesWithShapesByTerritory(Request $request)
+    {
+        $validated = $request->validate([
+            'tenant_id' => 'required|integer|exists:users,id',
+        ]);
+
+        $tenantId = (int) $validated['tenant_id'];
+
+        return response()->json([
+            'routes' => $this->buildRouteShapePayload($tenantId),
+        ]);
+    }
+
+    /**
+     * @param  array<int, array{0: float, 1: float}>  $points
+     * @return array<int, array{0: float, 1: float}>
+     */
+    private function buildConvexHull(array $points): array
+    {
+        $uniquePoints = [];
+        foreach ($points as [$lat, $lon]) {
+            $key = round($lat, 6).'|'.round($lon, 6);
+            $uniquePoints[$key] = [$lat, $lon];
         }
 
-        $result = [];
-        foreach ($routeShapes as $rs) {
-            if (isset($shapePoints[$rs->shape_id])) {
-                $result[] = [
-                    'route_short_name' => $rs->route_short_name,
-                    'route_long_name' => $rs->route_long_name,
-                    'route_color' => $rs->route_color,
-                    'shape_pts' => $shapePoints[$rs->shape_id],
-                ];
+        $points = array_values($uniquePoints);
+        if (count($points) <= 2) {
+            return $this->buildBoundingPolygon($points);
+        }
+
+        usort($points, function (array $a, array $b): int {
+            return $a[1] <=> $b[1] ?: ($a[0] <=> $b[0]);
+        });
+
+        $lower = [];
+        foreach ($points as $point) {
+            while (count($lower) >= 2 && $this->cross($lower[count($lower) - 2], $lower[count($lower) - 1], $point) <= 0) {
+                array_pop($lower);
+            }
+
+            $lower[] = $point;
+        }
+
+        $upper = [];
+        for ($i = count($points) - 1; $i >= 0; $i--) {
+            $point = $points[$i];
+            while (count($upper) >= 2 && $this->cross($upper[count($upper) - 2], $upper[count($upper) - 1], $point) <= 0) {
+                array_pop($upper);
+            }
+
+            $upper[] = $point;
+        }
+
+        array_pop($lower);
+        array_pop($upper);
+        $hull = array_merge($lower, $upper);
+
+        if (count($hull) < 3) {
+            return $this->buildBoundingPolygon($points);
+        }
+
+        $hull[] = $hull[0];
+
+        return $hull;
+    }
+
+    /**
+     * Build a smoother territory polygon from stop points:
+     * 1) angle-ordered radial perimeter (organic shell)
+     * 2) Chaikin corner cutting for visual smoothness
+     * 3) clamp to bbox to avoid runaway coordinates
+     *
+     * @param  array<int, array{0: float, 1: float}>  $points
+     * @return array<int, array{0: float, 1: float}>
+     */
+    private function buildConcaveTerritoryPolygon(array $points): array
+    {
+        $uniquePoints = [];
+        foreach ($points as [$lat, $lon]) {
+            $key = round($lat, 6).'|'.round($lon, 6);
+            $uniquePoints[$key] = [$lat, $lon];
+        }
+
+        $points = array_values($uniquePoints);
+        if (count($points) < 4) {
+            return $this->buildConvexHull($points);
+        }
+
+        $hull = $this->buildConvexHull($points);
+        if (count($hull) < 4) {
+            return $this->buildBoundingPolygon($points);
+        }
+
+        $ring = array_slice($hull, 0, -1);
+        $centroid = $this->calculateCentroid($ring);
+
+        // Expand slightly so smoothing does not cut valid route extremities.
+        $expanded = array_map(function (array $pt) use ($centroid): array {
+            return [
+                $centroid[0] + (($pt[0] - $centroid[0]) * 1.07),
+                $centroid[1] + (($pt[1] - $centroid[1]) * 1.07),
+            ];
+        }, $ring);
+
+        $ring = $expanded;
+
+        $ring = $this->deduplicateSequentialPoints($ring);
+        if (count($ring) < 4) {
+            return $this->buildConvexHull($points);
+        }
+
+        // Ensure orientation consistency before smoothing.
+        if ($this->signedArea($ring) < 0) {
+            $ring = array_reverse($ring);
+        }
+
+        $ring = $this->simplifyRing($ring, 0.00008);
+        if (count($ring) < 4) {
+            return $this->buildConvexHull($points);
+        }
+
+        $smoothed = $this->chaikinSmooth($ring, 3, 0.25);
+        $smoothed = $this->simplifyRing($smoothed, 0.00012);
+
+        $bbox = $this->calculateBbox($points);
+        $latPad = max(0.002, ($bbox['max_lat'] - $bbox['min_lat']) * 0.12);
+        $lonPad = max(0.002, ($bbox['max_lon'] - $bbox['min_lon']) * 0.12);
+
+        $minLat = $bbox['min_lat'] - $latPad;
+        $maxLat = $bbox['max_lat'] + $latPad;
+        $minLon = $bbox['min_lon'] - $lonPad;
+        $maxLon = $bbox['max_lon'] + $lonPad;
+
+        $polygon = array_map(function (array $pt) use ($minLat, $maxLat, $minLon, $maxLon): array {
+            return [
+                max($minLat, min($maxLat, $pt[0])),
+                max($minLon, min($maxLon, $pt[1])),
+            ];
+        }, $smoothed);
+
+        $polygon = $this->deduplicateSequentialPoints($polygon);
+        if (count($polygon) < 4) {
+            return $this->buildConvexHull($points);
+        }
+
+        $polygon[] = $polygon[0];
+
+        return $polygon;
+    }
+
+    /**
+     * @param  array{0: float, 1: float}  $a
+     * @param  array{0: float, 1: float}  $b
+     * @param  array{0: float, 1: float}  $c
+     */
+    private function cross(array $a, array $b, array $c): float
+    {
+        return ($b[1] - $a[1]) * ($c[0] - $a[0]) - ($b[0] - $a[0]) * ($c[1] - $a[1]);
+    }
+
+    /**
+     * @param  array<int, array{0: float, 1: float}>  $points
+     * @return array{0: float, 1: float}
+     */
+    private function calculateCentroid(array $points): array
+    {
+        $count = count($points);
+        if ($count === 0) {
+            return [0.0, 0.0];
+        }
+
+        $sumLat = 0.0;
+        $sumLon = 0.0;
+
+        foreach ($points as [$lat, $lon]) {
+            $sumLat += $lat;
+            $sumLon += $lon;
+        }
+
+        return [$sumLat / $count, $sumLon / $count];
+    }
+
+    /**
+     * @param  array{0: float, 1: float}  $a
+     * @param  array{0: float, 1: float}  $b
+     */
+    private function distanceSquared(array $a, array $b): float
+    {
+        return ($a[0] - $b[0]) ** 2 + ($a[1] - $b[1]) ** 2;
+    }
+
+    /**
+     * Fetch route geometry points for one tenant around the current stop cluster only.
+     *
+     * @param  array<int, array{0: float, 1: float}>  $clusterPoints
+     * @return array<int, array{0: float, 1: float}>
+     */
+    private function getShapePointsForTenantCluster(int $tenantId, array $clusterPoints): array
+    {
+        $rows = DB::table('routes as r')
+            ->join('trips as t', 'r.id', '=', 't.route_id')
+            ->join('shapes as sh', 't.shape_id', '=', 'sh.shape_id')
+            ->where('r.tenant_id', $tenantId)
+            ->whereNotNull('t.shape_id')
+            ->whereRaw('MOD(sh.shape_pt_sequence, 4) = 0 OR sh.shape_pt_sequence = 1')
+            ->distinct()
+            ->limit(12000)
+            ->get(['sh.shape_pt_lat', 'sh.shape_pt_lon']);
+
+        $shapePoints = [];
+        foreach ($rows as $row) {
+            $shapePoints[] = [(float) $row->shape_pt_lat, (float) $row->shape_pt_lon];
+        }
+
+        return $shapePoints;
+    }
+
+    /**
+     * @param  array<int, float|null>  $values
+     * @return array<int, float>
+     */
+    private function interpolateCircularMissingValues(array $values): array
+    {
+        $count = count($values);
+        $known = array_filter($values, fn ($value): bool => $value !== null);
+
+        if (empty($known)) {
+            return array_fill(0, $count, 0.0);
+        }
+
+        for ($i = 0; $i < $count; $i++) {
+            if ($values[$i] !== null) {
+                continue;
+            }
+
+            $prevIndex = null;
+            for ($step = 1; $step <= $count; $step++) {
+                $candidate = ($i - $step + $count) % $count;
+                if ($values[$candidate] !== null) {
+                    $prevIndex = $candidate;
+                    break;
+                }
+            }
+
+            $nextIndex = null;
+            for ($step = 1; $step <= $count; $step++) {
+                $candidate = ($i + $step) % $count;
+                if ($values[$candidate] !== null) {
+                    $nextIndex = $candidate;
+                    break;
+                }
+            }
+
+            if ($prevIndex === null && $nextIndex === null) {
+                $values[$i] = 0.0;
+            } elseif ($prevIndex === null) {
+                $values[$i] = (float) $values[$nextIndex];
+            } elseif ($nextIndex === null) {
+                $values[$i] = (float) $values[$prevIndex];
+            } else {
+                $forward = ($nextIndex - $prevIndex + $count) % $count;
+                $offset = ($i - $prevIndex + $count) % $count;
+                $t = $forward === 0 ? 0.0 : $offset / $forward;
+
+                $values[$i] = ((1 - $t) * (float) $values[$prevIndex]) + ($t * (float) $values[$nextIndex]);
             }
         }
 
-        return response()->json(['routes' => $result]);
+        return array_map(fn ($value): float => (float) $value, $values);
+    }
+
+    /**
+     * @param  array<int, float>  $values
+     * @return array<int, float>
+     */
+    private function smoothCircularValues(array $values, int $windowRadius): array
+    {
+        $count = count($values);
+        if ($count === 0 || $windowRadius <= 0) {
+            return $values;
+        }
+
+        $smoothed = [];
+
+        for ($i = 0; $i < $count; $i++) {
+            $sum = 0.0;
+            $weightSum = 0.0;
+
+            for ($offset = -$windowRadius; $offset <= $windowRadius; $offset++) {
+                $idx = ($i + $offset + $count) % $count;
+                $weight = ($windowRadius + 1) - abs($offset);
+                $sum += $values[$idx] * $weight;
+                $weightSum += $weight;
+            }
+
+            $smoothed[$i] = $weightSum > 0 ? $sum / $weightSum : $values[$i];
+        }
+
+        return $smoothed;
+    }
+
+    /**
+     * Limit bucket-to-bucket radius jumps to reduce narrow spikes.
+     *
+     * @param  array<int, float>  $values
+     * @return array<int, float>
+     */
+    private function limitCircularDistanceJumps(array $values, float $maxRatioDelta, int $passes): array
+    {
+        $count = count($values);
+        if ($count < 3 || $passes <= 0) {
+            return $values;
+        }
+
+        $result = $values;
+
+        for ($pass = 0; $pass < $passes; $pass++) {
+            $next = $result;
+
+            for ($i = 0; $i < $count; $i++) {
+                $prev = $result[($i - 1 + $count) % $count];
+                $curr = $result[$i];
+                $nxt = $result[($i + 1) % $count];
+                $neighborAvg = ($prev + $nxt) / 2;
+
+                if ($neighborAvg <= 0.0) {
+                    continue;
+                }
+
+                $maxAllowed = $neighborAvg * (1 + $maxRatioDelta);
+                $minAllowed = $neighborAvg * (1 - $maxRatioDelta);
+
+                if ($curr > $maxAllowed) {
+                    $next[$i] = $maxAllowed;
+                } elseif ($curr < $minAllowed) {
+                    $next[$i] = $minAllowed;
+                }
+            }
+
+            $result = $next;
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param  array<int, array{0: float, 1: float}>  $ring
+     */
+    private function signedArea(array $ring): float
+    {
+        $area = 0.0;
+        $count = count($ring);
+        if ($count < 3) {
+            return 0.0;
+        }
+
+        for ($i = 0; $i < $count; $i++) {
+            $j = ($i + 1) % $count;
+            $area += ($ring[$i][1] * $ring[$j][0]) - ($ring[$j][1] * $ring[$i][0]);
+        }
+
+        return $area / 2.0;
+    }
+
+    /**
+     * @param  array<int, array{0: float, 1: float}>  $ring
+     * @return array<int, array{0: float, 1: float}>
+     */
+    private function chaikinSmooth(array $ring, int $iterations = 2, float $ratio = 0.25): array
+    {
+        $count = count($ring);
+        if ($count < 3) {
+            return $ring;
+        }
+
+        $result = $ring;
+
+        for ($iter = 0; $iter < $iterations; $iter++) {
+            $smoothed = [];
+            $n = count($result);
+
+            for ($i = 0; $i < $n; $i++) {
+                $p0 = $result[$i];
+                $p1 = $result[($i + 1) % $n];
+
+                $q = [
+                    (1 - $ratio) * $p0[0] + $ratio * $p1[0],
+                    (1 - $ratio) * $p0[1] + $ratio * $p1[1],
+                ];
+
+                $r = [
+                    $ratio * $p0[0] + (1 - $ratio) * $p1[0],
+                    $ratio * $p0[1] + (1 - $ratio) * $p1[1],
+                ];
+
+                $smoothed[] = $q;
+                $smoothed[] = $r;
+            }
+
+            $result = $smoothed;
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param  array<int, array{0: float, 1: float}>  $points
+     * @return array<int, array{0: float, 1: float}>
+     */
+    private function deduplicateSequentialPoints(array $points): array
+    {
+        $result = [];
+        foreach ($points as $point) {
+            if (empty($result)) {
+                $result[] = $point;
+
+                continue;
+            }
+
+            $last = $result[count($result) - 1];
+            if (abs($last[0] - $point[0]) < 0.000001 && abs($last[1] - $point[1]) < 0.000001) {
+                continue;
+            }
+
+            $result[] = $point;
+        }
+
+        if (count($result) > 1) {
+            $first = $result[0];
+            $last = $result[count($result) - 1];
+            if (abs($first[0] - $last[0]) < 0.000001 && abs($first[1] - $last[1]) < 0.000001) {
+                array_pop($result);
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Group stop rows into geographic clusters to avoid one polygon bridging separate cities.
+     *
+     * @param  Collection<int, object>  $rows
+     * @return array<int, Collection<int, object>>
+     */
+    private function clusterStopsByDistance($rows, float $radiusKm): array
+    {
+        $clusters = [];
+        $visited = [];
+
+        for ($i = 0; $i < $rows->count(); $i++) {
+            if (isset($visited[$i])) {
+                continue;
+            }
+
+            $queue = [$i];
+            $visited[$i] = true;
+            $clusterIndexes = [];
+
+            while (! empty($queue)) {
+                $current = array_pop($queue);
+                $clusterIndexes[] = $current;
+
+                $currentRow = $rows[$current];
+                $currentLat = (float) $currentRow->stop_lat;
+                $currentLon = (float) $currentRow->stop_lon;
+
+                for ($j = 0; $j < $rows->count(); $j++) {
+                    if (isset($visited[$j])) {
+                        continue;
+                    }
+
+                    $candidate = $rows[$j];
+                    $candidateLat = (float) $candidate->stop_lat;
+                    $candidateLon = (float) $candidate->stop_lon;
+
+                    if ($this->haversineKm($currentLat, $currentLon, $candidateLat, $candidateLon) <= $radiusKm) {
+                        $visited[$j] = true;
+                        $queue[] = $j;
+                    }
+                }
+            }
+
+            $clusters[] = collect($clusterIndexes)->map(fn ($idx) => $rows[$idx]);
+        }
+
+        usort($clusters, fn ($a, $b): int => $b->count() <=> $a->count());
+
+        return $clusters;
+    }
+
+    private function haversineKm(float $lat1, float $lon1, float $lat2, float $lon2): float
+    {
+        $earthRadiusKm = 6371.0;
+
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLon = deg2rad($lon2 - $lon1);
+
+        $a = sin($dLat / 2) ** 2
+            + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLon / 2) ** 2;
+
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+
+        return $earthRadiusKm * $c;
+    }
+
+    /**
+     * Lightweight ring simplification for map-friendly, less jittery outlines.
+     *
+     * @param  array<int, array{0: float, 1: float}>  $ring
+     * @return array<int, array{0: float, 1: float}>
+     */
+    private function simplifyRing(array $ring, float $epsilon): array
+    {
+        if (count($ring) < 4) {
+            return $ring;
+        }
+
+        $simplified = [$ring[0]];
+
+        for ($i = 1; $i < count($ring) - 1; $i++) {
+            $prev = $simplified[count($simplified) - 1];
+            $curr = $ring[$i];
+            $next = $ring[$i + 1];
+
+            $distPrev = sqrt($this->distanceSquared($prev, $curr));
+            if ($distPrev < $epsilon) {
+                continue;
+            }
+
+            // Drop nearly-collinear micro-bends.
+            $cross = abs($this->cross($prev, $curr, $next));
+            if ($cross < ($epsilon * 0.2)) {
+                continue;
+            }
+
+            $simplified[] = $curr;
+        }
+
+        $simplified[] = $ring[count($ring) - 1];
+
+        return $this->deduplicateSequentialPoints($simplified);
+    }
+
+    /**
+     * @param  array<int, array{0: float, 1: float}>  $points
+     * @return array<int, array{0: float, 1: float}>
+     */
+    private function buildBoundingPolygon(array $points): array
+    {
+        if (empty($points)) {
+            return [];
+        }
+
+        $lats = array_map(fn ($point) => $point[0], $points);
+        $lons = array_map(fn ($point) => $point[1], $points);
+
+        $minLat = min($lats);
+        $maxLat = max($lats);
+        $minLon = min($lons);
+        $maxLon = max($lons);
+
+        $latPad = max(0.003, ($maxLat - $minLat) * 0.2);
+        $lonPad = max(0.003, ($maxLon - $minLon) * 0.2);
+
+        $minLat -= $latPad;
+        $maxLat += $latPad;
+        $minLon -= $lonPad;
+        $maxLon += $lonPad;
+
+        return [
+            [$minLat, $minLon],
+            [$minLat, $maxLon],
+            [$maxLat, $maxLon],
+            [$maxLat, $minLon],
+            [$minLat, $minLon],
+        ];
+    }
+
+    /**
+     * @param  array<int, array{0: float, 1: float}>  $polygon
+     * @return array{min_lat: float, max_lat: float, min_lon: float, max_lon: float}
+     */
+    private function calculateBbox(array $polygon): array
+    {
+        if (empty($polygon)) {
+            return [
+                'min_lat' => 0.0,
+                'max_lat' => 0.0,
+                'min_lon' => 0.0,
+                'max_lon' => 0.0,
+            ];
+        }
+
+        $lats = array_map(fn ($point) => $point[0], $polygon);
+        $lons = array_map(fn ($point) => $point[1], $polygon);
+
+        return [
+            'min_lat' => min($lats),
+            'max_lat' => max($lats),
+            'min_lon' => min($lons),
+            'max_lon' => max($lons),
+        ];
     }
 
     /**

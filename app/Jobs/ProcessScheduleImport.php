@@ -8,6 +8,7 @@ use Exception;
 use Filament\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class ProcessScheduleImport implements ShouldQueue
@@ -44,6 +45,10 @@ class ProcessScheduleImport implements ShouldQueue
                 'total_trips' => $stats['trips'],
                 'total_shapes' => $stats['shapes'],
             ]);
+
+            Cache::forget('route_shapes:all');
+            Cache::forget('route_shapes:tenant:'.$this->scheduleImport->tenant_id);
+            Cache::forget('territories:list');
 
             $this->sendSuccessNotification($stats);
         } catch (Exception $e) {

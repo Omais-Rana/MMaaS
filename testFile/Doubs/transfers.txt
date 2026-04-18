@@ -1,4 +1,0 @@
-﻿from_stop_id,to_stop_id,transfer_type,min_transfer_time
-100186,100097,0,
-100200,100103,0,
-100199,100172,0,

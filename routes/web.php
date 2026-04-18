@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\RouteSearchController;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -11,7 +13,7 @@ Route::get('/', function () {
 Route::get('/login', function () {
     // If already authenticated, redirect to appropriate panel
     if (Auth::check()) {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         return match ($user->role) {
@@ -27,12 +29,12 @@ Route::get('/login', function () {
 })->name('login');
 
 // Unified registration - redirect to user registration
-Route::get('/register', fn() => redirect('/user/register'))->name('register');
+Route::get('/register', fn () => redirect('/user/register'))->name('register');
 
 // Dashboard route - redirect to appropriate panel based on role
 Route::get('/dashboard', function () {
     if (Auth::check()) {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         return match ($user->role) {
@@ -47,13 +49,15 @@ Route::get('/dashboard', function () {
 })->name('dashboard');
 
 // Redirect panel-specific logins to unified login
-Route::get('/panel/login', fn() => redirect('/login'));
-Route::get('/portal/login', fn() => redirect('/login'));
+Route::get('/panel/login', fn () => redirect('/login'));
+Route::get('/portal/login', fn () => redirect('/login'));
 
 // Public API routes for route search
 Route::prefix('api')->group(function () {
-    Route::get('/stops/search', [\App\Http\Controllers\Api\RouteSearchController::class, 'searchStops']);
-    Route::post('/routes/search', [\App\Http\Controllers\Api\RouteSearchController::class, 'searchRoutes']);
-    Route::get('/routes/all-shapes', [\App\Http\Controllers\Api\RouteSearchController::class, 'getAllRoutesWithShapes']);
-    Route::get('/routes/{routeName}/stops', [\App\Http\Controllers\Api\RouteSearchController::class, 'getRouteStops']);
+    Route::get('/stops/search', [RouteSearchController::class, 'searchStops']);
+    Route::post('/routes/search', [RouteSearchController::class, 'searchRoutes']);
+    Route::get('/territories', [RouteSearchController::class, 'getTerritories']);
+    Route::get('/territories/routes/all-shapes', [RouteSearchController::class, 'getRoutesWithShapesByTerritory']);
+    Route::get('/routes/all-shapes', [RouteSearchController::class, 'getAllRoutesWithShapes']);
+    Route::get('/routes/{routeName}/stops', [RouteSearchController::class, 'getRouteStops']);
 });
