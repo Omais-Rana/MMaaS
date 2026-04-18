@@ -1,12 +1,9 @@
 {
     "agents": [
-        "claude_code"
+        "codex"
     ],
+    "guidelines": true,
     "packages": [
         "filament/filament"
-    ],
-    "skills": [
-        "pest-testing",
-        "tailwindcss-development"
     ]
 }

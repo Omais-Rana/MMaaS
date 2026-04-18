@@ -436,7 +436,7 @@
             routeNames.forEach(routeName => {
                 const meta = allRoutesMetaData[routeName];
                 const card = document.createElement('div');
-                card.className = 'bus-card bg-white rounded-lg border border-gray-200 shadow-sm cursor-pointer';
+                card.className = 'bus-card bg-white rounded-lg border border-gray-200 shadow-sm';
                 card.dataset.route = routeName;
 
                 card.innerHTML = `
@@ -452,7 +452,6 @@
                     <div class="bus-card-stops hidden border-t border-gray-100 max-h-56 overflow-y-auto"></div>
                 `;
 
-                card.addEventListener('click', () => selectBusCard(routeName, card));
                 container.appendChild(card);
             });
         }
@@ -570,10 +569,11 @@
                             let agName = r.agency_name ?
                                 `<br><span style="font-size:11px;color:#666;">${r.agency_name}</span>` : '';
 
-                            polyline.bindTooltip(`<b>${routeTitle}</b>${agName}<br><span style="font-size:10px;color:#16a34a">🌿 CNG · Natural Gas</span>`, {
-                                sticky: true,
-                                className: 'font-sans'
-                            });
+                            polyline.bindTooltip(
+                                `<b>${routeTitle}</b>${agName}<br><span style="font-size:10px;color:#16a34a">🌿 CNG · Natural Gas</span>`, {
+                                    sticky: true,
+                                    className: 'font-sans'
+                                });
 
                             polyline.on('mouseover', async function() {
                                 this.setStyle({
@@ -595,35 +595,6 @@
                                     defaultRouteStopsLayer.clearLayers();
                                 }
                             });
-                            polyline.on('click', async function(e) {
-                                L.DomEvent.stopPropagation(e);
-                                if (selectedDefaultPolyline === this) {
-                                    // Deselect
-                                    selectedDefaultPolyline = null;
-                                    this.setStyle({
-                                        weight: 2,
-                                        opacity: 0.6
-                                    });
-                                    defaultRouteStopsLayer.clearLayers();
-                                } else {
-                                    // Select new
-                                    if (selectedDefaultPolyline) {
-                                        selectedDefaultPolyline.setStyle({
-                                            weight: 2,
-                                            opacity: 0.6
-                                        });
-                                    }
-                                    selectedDefaultPolyline = this;
-                                    this.setStyle({
-                                        weight: 5,
-                                        opacity: 1
-                                    });
-                                    this.bringToFront();
-                                    const stops = await fetchRouteStops(this.options.routeName);
-                                    showDefaultRouteStops(stops, this.options.routeColor);
-                                }
-                            });
-
                             allRoutesLayer.addLayer(polyline);
                             // Store polyline reference for bus card highlighting
                             if (rName && allRoutePolylines[rName]) {
@@ -668,20 +639,20 @@
         }
 
         // Constants: Evolity GNV bus vs average car
-        const CO2_CAR_G_PER_KM = 120;   // g CO2/km (ADEME France baseline)
-        const CO2_BUS_G_PER_KM = 32;    // g CO2/km – Evolity CNG/GNV (Iveco Crealis)
+        const CO2_CAR_G_PER_KM = 120; // g CO2/km (ADEME France baseline)
+        const CO2_BUS_G_PER_KM = 32; // g CO2/km – Evolity CNG/GNV (Iveco Crealis)
         const CO2_SAVED_G_PER_KM = CO2_CAR_G_PER_KM - CO2_BUS_G_PER_KM; // 88g/km
 
         function co2Badge(distKm) {
             if (!distKm || distKm <= 0) return '';
             const savedG = distKm * CO2_SAVED_G_PER_KM;
-            const savedLabel = savedG >= 1000
-                ? (savedG / 1000).toFixed(2).replace(/\.?0+$/, '') + ' kg'
-                : Math.round(savedG) + ' g';
+            const savedLabel = savedG >= 1000 ?
+                (savedG / 1000).toFixed(2).replace(/\.?0+$/, '') + ' kg' :
+                Math.round(savedG) + ' g';
             const busCo2G = distKm * CO2_BUS_G_PER_KM;
-            const busCo2Label = busCo2G >= 1000
-                ? (busCo2G / 1000).toFixed(2).replace(/\.?0+$/, '') + ' kg'
-                : Math.round(busCo2G) + ' g';
+            const busCo2Label = busCo2G >= 1000 ?
+                (busCo2G / 1000).toFixed(2).replace(/\.?0+$/, '') + ' kg' :
+                Math.round(busCo2G) + ' g';
             return `<div class="flex items-center gap-2 mt-2 px-3 py-2 bg-green-50 border border-green-100 rounded-lg">
                 <span class="text-green-600 text-xs">🌿</span>
                 <div class="flex-1 min-w-0">
@@ -694,9 +665,9 @@
         function co2PopupLine(distKm) {
             if (!distKm || distKm <= 0) return '';
             const savedG = Math.round(distKm * CO2_SAVED_G_PER_KM);
-            const savedLabel = savedG >= 1000
-                ? (savedG / 1000).toFixed(2).replace(/\.?0+$/, '') + ' kg'
-                : savedG + ' g';
+            const savedLabel = savedG >= 1000 ?
+                (savedG / 1000).toFixed(2).replace(/\.?0+$/, '') + ' kg' :
+                savedG + ' g';
             return `<div style="margin-top:6px;padding:4px 6px;background:#f0fdf4;border-radius:6px;border:1px solid #bbf7d0;font-size:11px;color:#16a34a">🌿 <strong>Evolity CNG</strong> · ${(distKm).toFixed(1)} km · saves <strong>${savedLabel} CO₂</strong> vs car</div>`;
         }
 
@@ -782,8 +753,9 @@
                         </details>
                     ` : '';
 
-                    const legShapePts = leg.shape_pts && leg.shape_pts.length > 1 ? leg.shape_pts
-                        : (leg.stops && leg.stops.length > 1 ? leg.stops.map(s => [parseFloat(s.lat), parseFloat(s.lon)]) : null);
+                    const legShapePts = leg.shape_pts && leg.shape_pts.length > 1 ? leg.shape_pts :
+                        (leg.stops && leg.stops.length > 1 ? leg.stops.map(s => [parseFloat(s.lat), parseFloat(s
+                            .lon)]) : null);
                     const legDistKm = haversineKm(legShapePts);
 
                     return `
@@ -852,6 +824,17 @@
                 map.removeLayer(allRoutesLayer);
             }
             searchResultsLayer.clearLayers();
+            defaultRouteStopsLayer.clearLayers();
+            selectedDefaultPolyline = null;
+            if (selectedBusCard) {
+                selectedBusCard.classList.remove('bus-card-selected');
+                const selectedStops = selectedBusCard.querySelector('.bus-card-stops');
+                if (selectedStops) {
+                    selectedStops.classList.add('hidden');
+                }
+                selectedBusCard = null;
+                selectedBusRouteName = null;
+            }
 
             try {
                 const response = await fetch('/api/routes/search', {
@@ -914,8 +897,10 @@
                         </details>
                     ` : '';
 
-                    const directShapePts = route.shape_pts && route.shape_pts.length > 1 ? route.shape_pts
-                        : (route.stops && route.stops.length > 1 ? route.stops.map(s => [parseFloat(s.lat), parseFloat(s.lon)]) : null);
+                    const directShapePts = route.shape_pts && route.shape_pts.length > 1 ? route
+                        .shape_pts :
+                        (route.stops && route.stops.length > 1 ? route.stops.map(s => [parseFloat(s
+                            .lat), parseFloat(s.lon)]) : null);
                     const directDistKm = haversineKm(directShapePts);
 
                     return `
@@ -930,22 +915,22 @@
                             
                             <div class="flex items-center gap-4 bg-gray-50/80 rounded-lg p-3">
                                 ${route.departure_time !== '?' ? `
-                                                                    <div class="flex-1">
-                                                                        <div class="text-xs text-gray-500 uppercase tracking-wider">Departs</div>
-                                                                        <div class="text-xl font-bold text-red-600">${route.leave_at || route.departure_time}</div>
-                                                                    </div>` : ''}
+                                                                            <div class="flex-1">
+                                                                                <div class="text-xs text-gray-500 uppercase tracking-wider">Departs</div>
+                                                                                <div class="text-xl font-bold text-red-600">${route.leave_at || route.departure_time}</div>
+                                                                            </div>` : ''}
                                 
                                 ${route.duration !== 'N/A' ? `
-                                                                    <div class="flex-1 text-center border-l border-r border-gray-200 px-2">
-                                                                        <div class="text-xs text-gray-500 uppercase tracking-wider">Duration</div>
-                                                                        <div class="text-sm font-semibold text-gray-800">${route.duration}</div>
-                                                                    </div>` : ''}
+                                                                            <div class="flex-1 text-center border-l border-r border-gray-200 px-2">
+                                                                                <div class="text-xs text-gray-500 uppercase tracking-wider">Duration</div>
+                                                                                <div class="text-sm font-semibold text-gray-800">${route.duration}</div>
+                                                                            </div>` : ''}
                                 
                                 ${route.arrival_time !== '?' ? `
-                                                                    <div class="flex-1 text-right">
-                                                                        <div class="text-xs text-gray-500 uppercase tracking-wider">Arrives</div>
-                                                                        <div class="text-xl font-bold text-green-600">${route.arrival_time}</div>
-                                                                    </div>` : ''}
+                                                                            <div class="flex-1 text-right">
+                                                                                <div class="text-xs text-gray-500 uppercase tracking-wider">Arrives</div>
+                                                                                <div class="text-xl font-bold text-green-600">${route.arrival_time}</div>
+                                                                            </div>` : ''}
                             </div>
                             ${directMidStopsHtml}
                             ${co2Badge(directDistKm)}
@@ -1027,7 +1012,7 @@
 
             const bounds = [];
             const colors = {
-                walk: '#4285F4',   // Google blue
+                walk: '#4285F4', // Google blue
                 transit: '#DC2626'
             };
 
@@ -1041,7 +1026,7 @@
             function drawWalkLeg(fromLat, fromLon, toLat, toLon, popupHtml) {
                 const latlngs = [
                     [parseFloat(fromLat), parseFloat(fromLon)],
-                    [parseFloat(toLat),   parseFloat(toLon)]
+                    [parseFloat(toLat), parseFloat(toLon)]
                 ];
 
                 // Simplified robust dotted line logic
@@ -1085,7 +1070,10 @@
                     iconSize: [22, 22],
                     iconAnchor: [11, 11]
                 });
-                L.marker([midLat, midLon], { icon: walkIcon, interactive: false })
+                L.marker([midLat, midLon], {
+                        icon: walkIcon,
+                        interactive: false
+                    })
                     .addTo(searchResultsLayer);
 
                 addBounds(fromLat, fromLon);
@@ -1121,7 +1109,7 @@
                             const walkDist = leg.distance ? ` · ${(+leg.distance).toFixed(2)} km` : '';
                             drawWalkLeg(
                                 leg.from_lat, leg.from_lon,
-                                leg.to_lat,   leg.to_lon,
+                                leg.to_lat, leg.to_lon,
                                 `<strong>🚶 Walk ${leg.duration} min</strong>${walkDist}<br>${leg.from} → ${leg.to}`
                             );
                         }
@@ -1139,7 +1127,9 @@
                                     opacity: 0.9
                                 })
                                 .addTo(searchResultsLayer)
-                                .bindPopup(`<strong>🚌 ${leg.route_name}</strong><br>${leg.from} → ${leg.to}${co2PopupLine(legMapDistKm)}`);
+                                .bindPopup(
+                                    `<strong>🚌 ${leg.route_name}</strong><br>${leg.from} → ${leg.to}${co2PopupLine(legMapDistKm)}`
+                                );
                             shapePts.forEach(pt => bounds.push(pt));
                         }
 
@@ -1162,7 +1152,7 @@
                         stopsToRender.forEach(stop => {
                             if (!stop.lat || !stop.lon) return;
                             const isTransfer = stop.is_intermediate === false;
-                            
+
                             L.circleMarker([parseFloat(stop.lat), parseFloat(stop.lon)], {
                                     radius: isTransfer ? 5 : 3,
                                     fillColor: isTransfer ? '#FFFFFF' : '#FFFFFF',
@@ -1175,7 +1165,7 @@
                         });
                     }
                 }
-                
+
                 // Draw bold explicitly marked Origin and Destination endpoints
                 const firstLeg = route.legs[0];
                 const lastLeg = route.legs[route.legs.length - 1];
@@ -1183,18 +1173,26 @@
                 if (firstLeg && firstLeg.from_lat && firstLeg.from_lon) {
                     const startIcon = L.divIcon({
                         html: '<div style="background:#16a34a;color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.3);">A</div>',
-                        className: '', iconSize: [24,24], iconAnchor: [12,12]
+                        className: '',
+                        iconSize: [24, 24],
+                        iconAnchor: [12, 12]
                     });
-                    L.marker([parseFloat(firstLeg.from_lat), parseFloat(firstLeg.from_lon)], {icon: startIcon})
-                     .addTo(searchResultsLayer).bindPopup(`<strong>Origin</strong><br>${firstLeg.from}`);
+                    L.marker([parseFloat(firstLeg.from_lat), parseFloat(firstLeg.from_lon)], {
+                            icon: startIcon
+                        })
+                        .addTo(searchResultsLayer).bindPopup(`<strong>Origin</strong><br>${firstLeg.from}`);
                 }
                 if (lastLeg && lastLeg.to_lat && lastLeg.to_lon) {
                     const endIcon = L.divIcon({
                         html: '<div style="background:#dc2626;color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.3);">B</div>',
-                        className: '', iconSize: [24,24], iconAnchor: [12,12]
+                        className: '',
+                        iconSize: [24, 24],
+                        iconAnchor: [12, 12]
                     });
-                    L.marker([parseFloat(lastLeg.to_lat), parseFloat(lastLeg.to_lon)], {icon: endIcon})
-                     .addTo(searchResultsLayer).bindPopup(`<strong>Destination</strong><br>${lastLeg.to}`);
+                    L.marker([parseFloat(lastLeg.to_lat), parseFloat(lastLeg.to_lon)], {
+                            icon: endIcon
+                        })
+                        .addTo(searchResultsLayer).bindPopup(`<strong>Destination</strong><br>${lastLeg.to}`);
                 }
 
             } else if (route.stops && route.stops.length > 0) {
@@ -1246,7 +1244,7 @@
                 // Draw bold explicitly marked Origin and Destination endpoints for direct routes
                 const firstStop = route.stops[0];
                 const lastStop = route.stops[route.stops.length - 1];
-                
+
                 const uiOrigLat = selectedCoords.origin ? selectedCoords.origin.lat : null;
                 const uiOrigLon = selectedCoords.origin ? selectedCoords.origin.lon : null;
                 const uiDestLat = selectedCoords.destination ? selectedCoords.destination.lat : null;
@@ -1259,19 +1257,29 @@
 
                 const uiOriginName = document.getElementById('origin').value.toLowerCase().trim();
                 const uiDestName = document.getElementById('destination').value.toLowerCase().trim();
-                const originMatch = firstStop.name.toLowerCase().includes(uiOriginName) || uiOriginName.includes(firstStop.name.toLowerCase());
-                const destMatch = lastStop.name.toLowerCase().includes(uiDestName) || uiDestName.includes(lastStop.name.toLowerCase());
-                
-                const distToOrigin = haversineKm([[actualOriginLat, actualOriginLon], [parseFloat(firstStop.lat), parseFloat(firstStop.lon)]]);
-                const distToDest = haversineKm([[parseFloat(lastStop.lat), parseFloat(lastStop.lon)], [actualDestLat, actualDestLon]]);
+                const originMatch = firstStop.name.toLowerCase().includes(uiOriginName) || uiOriginName.includes(
+                    firstStop.name.toLowerCase());
+                const destMatch = lastStop.name.toLowerCase().includes(uiDestName) || uiDestName.includes(lastStop.name
+                    .toLowerCase());
 
-                 // For direct routes, only show walk overlays when the selected point is clearly not the same stop.
-                 if (!originMatch && distToOrigin > 0.35) {
-                     drawWalkLeg(actualOriginLat, actualOriginLon, firstStop.lat, firstStop.lon, `<strong>🚶 Walk to ${firstStop.name}</strong>`);
+                const distToOrigin = haversineKm([
+                    [actualOriginLat, actualOriginLon],
+                    [parseFloat(firstStop.lat), parseFloat(firstStop.lon)]
+                ]);
+                const distToDest = haversineKm([
+                    [parseFloat(lastStop.lat), parseFloat(lastStop.lon)],
+                    [actualDestLat, actualDestLon]
+                ]);
+
+                // For direct routes, only show walk overlays when the selected point is clearly not the same stop.
+                if (!originMatch && distToOrigin > 0.35) {
+                    drawWalkLeg(actualOriginLat, actualOriginLon, firstStop.lat, firstStop.lon,
+                        `<strong>🚶 Walk to ${firstStop.name}</strong>`);
                 }
-                
-                 if (!destMatch && distToDest > 0.35) {
-                     drawWalkLeg(lastStop.lat, lastStop.lon, actualDestLat, actualDestLon, `<strong>🚶 Walk from ${lastStop.name}</strong>`);
+
+                if (!destMatch && distToDest > 0.35) {
+                    drawWalkLeg(lastStop.lat, lastStop.lon, actualDestLat, actualDestLon,
+                        `<strong>🚶 Walk from ${lastStop.name}</strong>`);
                 }
 
                 // Anchor A/B markers to the stop if they are very close (< 100m), otherwise use exact coords
@@ -1283,18 +1291,26 @@
                 if (markerALat && markerALon) {
                     const startIcon = L.divIcon({
                         html: '<div style="background:#16a34a;color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.3);">A</div>',
-                        className: '', iconSize: [24,24], iconAnchor: [12,12]
+                        className: '',
+                        iconSize: [24, 24],
+                        iconAnchor: [12, 12]
                     });
-                    L.marker([markerALat, markerALon], {icon: startIcon})
-                     .addTo(searchResultsLayer).bindPopup(`<strong>Origin</strong>`);
+                    L.marker([markerALat, markerALon], {
+                            icon: startIcon
+                        })
+                        .addTo(searchResultsLayer).bindPopup(`<strong>Origin</strong>`);
                 }
                 if (markerBLat && markerBLon) {
                     const endIcon = L.divIcon({
                         html: '<div style="background:#dc2626;color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.3);">B</div>',
-                        className: '', iconSize: [24,24], iconAnchor: [12,12]
+                        className: '',
+                        iconSize: [24, 24],
+                        iconAnchor: [12, 12]
                     });
-                    L.marker([markerBLat, markerBLon], {icon: endIcon})
-                     .addTo(searchResultsLayer).bindPopup(`<strong>Destination</strong>`);
+                    L.marker([markerBLat, markerBLon], {
+                            icon: endIcon
+                        })
+                        .addTo(searchResultsLayer).bindPopup(`<strong>Destination</strong>`);
                 }
             }
 
