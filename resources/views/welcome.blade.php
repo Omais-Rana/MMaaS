@@ -239,57 +239,99 @@
             </form>
         </div>
 
-        <div id="results-wrapper" class="flex-1 p-6 bg-gray-50">
+        <div id="results-wrapper" class="flex-1 overflow-y-auto p-6 bg-white">
             <div id="initial-state">
-                <div class="mb-4">
-                    <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wider">Service Explorer</h2>
-                    <p class="text-xs text-gray-400 mt-0.5">Country/City -> Operator -> Routes</p>
+                <div class="mb-6">
+                    <h2 class="text-lg font-bold text-gray-800">Service Explorer</h2>
+                    <p class="text-sm text-gray-500 mt-0.5">Select a location to discover transit options.</p>
                 </div>
 
-                <div class="space-y-3 mb-4">
+                <div class="space-y-6">
+                    <!-- Locations Section -->
                     <div>
-                        <label for="country-select"
-                            class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Country</label>
-                        <select id="country-select"
-                            class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"></select>
+                        <label
+                            class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Locations</label>
+                        <div id="territory-tree" class="space-y-2 max-h-[35vh] overflow-y-auto pr-1 flex flex-col">
+                            <div class="text-center py-6 text-gray-400 text-sm">Loading locations&hellip;</div>
+                        </div>
                     </div>
+
+                    <!-- Services Section -->
                     <div>
-                        <label for="city-select"
-                            class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">City</label>
-                        <select id="city-select"
-                            class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"></select>
-                    </div>
-                </div>
-
-                <div class="mb-3">
-                    <h3 class="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Operators</h3>
-                    <div id="operator-list" class="space-y-2">
-                        <div class="text-center py-6 text-gray-400 text-sm">Loading operators&hellip;</div>
-                    </div>
-                </div>
-
-                <div>
-                    <h3 class="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Routes</h3>
-                    <div id="route-cards-list" class="space-y-2 pb-10">
-                        <div class="text-center py-6 text-gray-400 text-sm">Select an operator to load routes.</div>
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider">Available
+                                Services</label>
+                            <button type="button" id="clear-services"
+                                class="text-xs text-gray-500 hover:text-red-600 hover:underline transition-colors">Clear
+                                all</button>
+                        </div>
+                        <div id="service-list" class="space-y-2 max-h-[35vh] overflow-y-auto pr-1 flex flex-col">
+                            <div class="text-center py-6 text-gray-400 text-sm">Select a city to load services.</div>
+                        </div>
                     </div>
                 </div>
             </div>
+        </div>
+    </div> <!-- Close Left Pane -->
+
+    <!-- Search Results Pane (Initially Hidden) -->
+    <aside id="search-results-pane"
+        class="hidden w-full md:w-[360px] flex-shrink-0 h-full bg-slate-50 border-r border-gray-200 z-20 flex-col overflow-hidden shadow-lg transition-transform">
+        <div class="flex flex-col p-4 h-full">
+            <div class="mb-4">
+                <div class="flex justify-between items-center mb-1">
+                    <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider">Search Results</h3>
+                    <button type="button" id="close-search-results"
+                        class="p-1 hover:bg-slate-200 rounded text-slate-500">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <p class="text-[11px] text-slate-500 mt-0.5">Select a route for detailed stops and connections on the
+                    map.</p>
+            </div>
 
             <div id="no-results"
-                class="hidden text-center py-12 bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+                class="hidden text-center py-12 bg-white rounded-xl shadow-sm border border-gray-100 p-8 mt-4">
                 <svg class="h-12 w-12 text-red-400 mx-auto mb-3" fill="none" stroke="currentColor"
                     viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
-                <h3 class="text-lg font-bold mb-1 text-gray-800">No Routes Found</h3>
-                <p class="text-sm text-gray-500">Try adjusting your search criteria or selecting different times.</p>
+                <h3 class="text-base font-bold mb-1 text-gray-800">No Routes Found</h3>
+                <p class="text-xs text-gray-500">Try adjusting your search or times.</p>
             </div>
 
-            <div id="routes-list" class="space-y-4 hidden pb-10"></div>
+            <div id="routes-list" class="flex-1 space-y-4 overflow-y-auto pr-1 pb-6 hidden relative"></div>
         </div>
-    </div>
+    </aside>
+
+    <!-- Middle Pane: Service Lines (Collapsible) -->
+    <aside id="middle-pane"
+        class="hidden w-full md:w-[350px] lg:w-[380px] xl:w-[400px] flex-shrink-0 h-full bg-white border-r border-gray-200 z-10 transition-all duration-300 relative shadow-md">
+
+        <!-- Collapse Toggle Button (Outside Edge) -->
+        <button type="button" id="toggle-service-lines"
+            class="absolute -right-7 top-1/2 -translate-y-1/2 w-7 h-14 bg-white border border-l-0 border-gray-200 rounded-r-xl shadow-sm flex items-center justify-center text-slate-400 hover:text-slate-700 z-[1000] focus:outline-none">
+            <svg id="service-lines-chevron" class="w-5 h-5 transition-transform" fill="none"
+                stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+        </button>
+
+        <div id="service-lines-content"
+            class="h-full flex flex-col p-4 w-full overflow-hidden transition-opacity duration-300">
+            <div class="mb-4">
+                <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider">Service Lines</h3>
+                <p class="text-[11px] text-slate-500 mt-0.5">Explore active routes for your selected services.</p>
+            </div>
+
+            <div id="route-cards-list" class="flex-1 space-y-4 overflow-y-auto pr-1 pb-6 relative">
+            </div>
+        </div>
+    </aside>
 
     <!-- Right Pane: Map -->
     <div class="flex-1 h-full relative z-0 bg-gray-200">
@@ -386,10 +428,11 @@
         let selectedBusRouteName = null; // Route name of selected bus card
         let walkingRouteCache = new Map(); // Cache: coord pair -> routed lat/lon path
         let territoriesMeta = {};
-        let selectedTerritoryKey = null;
         let serviceHierarchy = {};
-        let selectedCountry = null;
-        let selectedCity = null;
+        let expandedCountries = new Set();
+        let activeCityKey = null;
+        let selectedTenantIds = new Set();
+        let tenantRoutesCache = {};
 
         function initMap() {
             if (!map) {
@@ -457,50 +500,101 @@
         }
 
         function renderBusInfoPanel() {
+            const middlePane = document.getElementById('middle-pane');
             const container = document.getElementById('route-cards-list');
-            if (!container) return;
+            if (!container || !middlePane) return;
+
+            if (selectedTenantIds.size === 0) {
+                middlePane.classList.add('hidden');
+                return;
+            } else {
+                middlePane.classList.remove('hidden');
+            }
+
             container.innerHTML = '';
 
-            const routeNames = Object.keys(allRoutesMetaData).sort((a, b) => {
-                // Sort: pure numbers first (numerically), then alphanumeric
-                const numA = parseInt(a, 10);
-                const numB = parseInt(b, 10);
-                if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
-                if (!isNaN(numA)) return -1;
-                if (!isNaN(numB)) return 1;
-                return a.localeCompare(b);
-            });
-
+            const routeNames = Object.keys(allRoutesMetaData);
             if (routeNames.length === 0) {
-                container.innerHTML = '<div class="text-center py-8 text-gray-400 text-sm">No routes available.</div>';
+                container.innerHTML =
+                    '<div class="text-center py-10 bg-white rounded-lg border border-dashed border-gray-300 mt-4"><div class="text-sm text-gray-500 font-medium">No service lines found.</div><div class="text-xs text-gray-400 mt-1">Try selecting different services.</div></div>';
                 return;
             }
 
+            const groupedRoutes = {};
             routeNames.forEach(routeName => {
                 const meta = allRoutesMetaData[routeName];
-                const card = document.createElement('div');
-                card.className = 'bus-card bg-white rounded-lg border border-gray-200 shadow-sm';
-                card.dataset.route = routeName;
+                const operatorName = meta.operatorName || 'Service';
 
-                card.innerHTML = `
-                    <div class="bus-card-header flex items-center gap-3 p-3">
-                        <span class="inline-flex items-center justify-center min-w-[2.75rem] h-7 px-2 rounded text-white text-xs font-bold shrink-0" style="background:${meta.color}">${routeName}</span>
-                        <div class="min-w-0 flex-1">
-                            <div class="text-xs font-medium text-gray-700 leading-tight line-clamp-2">${meta.longName}</div>
-                        </div>
-                        <svg class="bus-card-chevron w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
+                if (!groupedRoutes[operatorName]) {
+                    groupedRoutes[operatorName] = [];
+                }
+
+                groupedRoutes[operatorName].push(routeName);
+            });
+
+            Object.keys(groupedRoutes).sort((a, b) => a.localeCompare(b)).forEach(operatorName => {
+                const section = document.createElement('div');
+                section.className = 'bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-4';
+
+                const routes = groupedRoutes[operatorName].sort((a, b) => {
+                    const numA = parseInt(a, 10);
+                    const numB = parseInt(b, 10);
+                    if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+                    if (!isNaN(numA)) return -1;
+                    if (!isNaN(numB)) return 1;
+                    return a.localeCompare(b);
+                });
+
+                section.innerHTML = `
+                    <div class="sticky top-0 z-10 px-4 py-3 bg-slate-50 border-b border-gray-200 flex justify-between items-center backdrop-blur-sm bg-opacity-95">
+                        <div class="text-xs font-bold text-slate-800 uppercase tracking-wider">${operatorName.replace(/</g, '&lt;')}</div>
+                        <div class="text-[10px] font-semibold bg-white border border-slate-200 px-2 py-0.5 rounded-full text-slate-500">${routes.length} line${routes.length > 1 ? 's' : ''}</div>
                     </div>
-                    <div class="bus-card-stops hidden border-t border-gray-100 max-h-56 overflow-y-auto"></div>
+                    <div class="p-2 space-y-2"></div>
                 `;
 
-                container.appendChild(card);
+                const routesContainer = section.querySelector('.space-y-2');
+                routes.forEach(routeName => {
+                    const meta = allRoutesMetaData[routeName];
+                    const card = document.createElement('div');
+                    card.className =
+                        'bus-card bg-white rounded-lg border border-gray-100 hover:border-gray-300 transition-colors shadow-sm';
+                    card.dataset.route = routeName;
+
+                    card.innerHTML = `
+                        <div class="bus-card-header flex items-center gap-3 p-3 cursor-pointer">
+                            <span class="inline-flex items-center justify-center min-w-[2.75rem] h-8 px-2 rounded-md text-white text-xs font-bold shrink-0 shadow-sm" style="background:${meta.color}">${routeName}</span>
+                            <div class="min-w-0 flex-1">
+                                <div class="text-xs font-medium text-gray-700 leading-tight line-clamp-2">${meta.longName}</div>
+                            </div>
+                            <svg class="bus-card-chevron w-4 h-4 text-gray-400 shrink-0 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </div>
+                        <div class="bus-card-stops hidden border-t border-gray-100 max-h-60 overflow-y-auto bg-slate-50 rounded-b-lg"></div>
+                    `;
+
+                    routesContainer.appendChild(card);
+                });
+
+                container.appendChild(section);
+            });
+
+            container.querySelectorAll('.bus-card .bus-card-header').forEach(header => {
+                header.addEventListener('click', async () => {
+                    const card = header.closest('.bus-card');
+                    if (!card || !card.dataset.route) return;
+                    await selectBusCard(card.dataset.route, card);
+                });
             });
         }
 
         function territoryKey(tenantId) {
             return `${tenantId}`;
+        }
+
+        function cityKey(country, city) {
+            return `${country}::${city}`;
         }
 
         function buildServiceHierarchy(territories) {
@@ -519,10 +613,10 @@
                 }
 
                 hierarchy[country][city].push({
-                    tenant_id: territory.tenant_id,
-                    operator_name: territory.operator_name,
-                    stops_count: territory.stops_count,
-                    territory_name: territory.name,
+                    tenant_id: Number(territory.tenant_id),
+                    operator_name: territory.operator_name || 'Service',
+                    stops_count: territory.stops_count || 0,
+                    territory_name: territory.name || city,
                 });
             });
 
@@ -537,73 +631,127 @@
             return hierarchy;
         }
 
-        function populateCountrySelect() {
-            const select = document.getElementById('country-select');
-            if (!select) return;
-
-            const countries = Object.keys(serviceHierarchy).sort((a, b) => a.localeCompare(b));
-            if (!selectedCountry || !countries.includes(selectedCountry)) {
-                selectedCountry = countries[0] || null;
+        function getActiveCityServices() {
+            if (!activeCityKey) {
+                return [];
             }
 
-            select.innerHTML = countries.map(country => {
-                const selected = country === selectedCountry ? 'selected' : '';
-                return `<option value="${country}" ${selected}>${country}</option>`;
-            }).join('');
+            const [country, city] = activeCityKey.split('::');
+            return serviceHierarchy[country] && serviceHierarchy[country][city] ? serviceHierarchy[country][city] : [];
         }
 
-        function populateCitySelect() {
-            const select = document.getElementById('city-select');
-            if (!select || !selectedCountry || !serviceHierarchy[selectedCountry]) return;
-
-            const cities = Object.keys(serviceHierarchy[selectedCountry]).sort((a, b) => a.localeCompare(b));
-            if (!selectedCity || !cities.includes(selectedCity)) {
-                selectedCity = cities[0] || null;
-            }
-
-            select.innerHTML = cities.map(city => {
-                const selected = city === selectedCity ? 'selected' : '';
-                return `<option value="${city}" ${selected}>${city}</option>`;
-            }).join('');
-        }
-
-        function renderOperatorList() {
-            const container = document.getElementById('operator-list');
+        function renderTerritoryTree() {
+            const container = document.getElementById('territory-tree');
             if (!container) return;
 
-            if (!selectedCountry || !selectedCity || !serviceHierarchy[selectedCountry] || !serviceHierarchy[
-                    selectedCountry][selectedCity]) {
-                container.innerHTML = '<div class="text-center py-6 text-gray-400 text-sm">No operators available.</div>';
+            const countries = Object.keys(serviceHierarchy).sort((a, b) => a.localeCompare(b));
+            if (!countries.length) {
+                container.innerHTML = '<div class="text-center py-6 text-gray-400 text-sm">No locations available.</div>';
                 return;
             }
 
-            const operators = serviceHierarchy[selectedCountry][selectedCity];
-            if (!operators.length) {
-                container.innerHTML = '<div class="text-center py-6 text-gray-400 text-sm">No operators available.</div>';
-                return;
-            }
+            const cardsHtml = countries.map(country => {
+                const cities = Object.keys(serviceHierarchy[country]).sort((a, b) => a.localeCompare(b));
 
-            container.innerHTML = operators.map(operator => {
-                const key = territoryKey(operator.tenant_id);
-                const activeClass = selectedTerritoryKey === key ?
-                    ' bus-card-selected border-blue-400 bg-blue-50/60' : ' hover:border-blue-300';
+                const isExpanded = expandedCountries.has(country);
+
+                const cityButtonsHtml = cities.map(city => {
+                    const cKey = cityKey(country, city);
+                    const isActive = activeCityKey === cKey;
+                    return `
+                        <button type="button" class="city-select-btn w-full flex items-center justify-between gap-3 px-3 py-2 rounded-md text-left transition-colors ${isActive ? 'bg-red-50 text-red-700' : 'bg-transparent hover:bg-gray-50 text-gray-600'}" data-country="${country.replace(/"/g, '&quot;')}" data-city="${city.replace(/"/g, '&quot;')}">
+                            <span class="text-sm font-medium ${isActive ? 'text-red-700' : 'text-gray-600'}">${city}</span>
+                            <span class="text-[11px] font-semibold px-2 py-0.5 rounded-md ${isActive ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'}">${serviceHierarchy[country][city].length}</span>
+                        </button>
+                    `;
+                }).join('');
 
                 return `
-                    <button type="button" class="w-full text-left bus-card bg-white rounded-lg border border-gray-200 shadow-sm p-3${activeClass}" data-territory-key="${key}" data-tenant-id="${operator.tenant_id}">
-                        <div class="flex items-center justify-between gap-2">
-                            <div>
-                                <div class="text-sm font-semibold text-gray-800">${operator.operator_name || 'Operator'}</div>
-                                <div class="text-xs text-gray-500">${selectedCity} · ${operator.stops_count} stops</div>
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden mb-2">
+                        <button type="button" class="country-toggle w-full flex items-center justify-between gap-2 px-4 py-2.5 bg-gray-50 hover:bg-white transition-colors" data-country="${country.replace(/"/g, '&quot;')}">
+                            <span class="text-sm font-semibold text-gray-800">${country}</span>
+                            <svg class="country-chevron w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+                        <div class="country-cities ${isExpanded ? '' : 'hidden'} p-2 space-y-1 bg-white border-t border-gray-200 flex flex-col">
+                            ${cityButtonsHtml}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = cardsHtml;
+
+            container.querySelectorAll('.country-toggle').forEach(button => {
+                button.addEventListener('click', () => {
+                    const country = button.dataset.country;
+                    if (!country) return;
+
+                    if (expandedCountries.has(country)) {
+                        expandedCountries.delete(country);
+                    } else {
+                        expandedCountries.add(country);
+                    }
+
+                    renderTerritoryTree();
+                });
+            });
+
+            container.querySelectorAll('.city-select-btn').forEach(button => {
+                button.addEventListener('click', () => {
+                    const country = button.dataset.country;
+                    const city = button.dataset.city;
+                    if (!country || !city) return;
+                    activeCityKey = cityKey(country, city);
+                    expandedCountries.add(country);
+                    renderTerritoryTree();
+                    renderServiceList();
+                });
+            });
+        }
+
+        function renderServiceList() {
+            const container = document.getElementById('service-list');
+            if (!container) return;
+
+            const services = getActiveCityServices();
+            if (!services.length) {
+                container.innerHTML =
+                    '<div class="text-center py-6 text-gray-400 text-sm">Select a city to load services.</div>';
+                return;
+            }
+
+            container.innerHTML = services.map(service => {
+                const isSelected = selectedTenantIds.has(Number(service.tenant_id));
+                return `
+                    <button type="button" class="service-toggle w-full text-left rounded-lg p-3 transition-colors border mb-2 ${isSelected ? 'border-red-200 bg-red-50 text-red-900' : 'border-gray-200 bg-gray-50 hover:bg-white text-gray-800'}" data-tenant-id="${service.tenant_id}">
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="flex-1 min-w-0">
+                                <div class="text-sm font-semibold truncate">${service.operator_name}</div>
+                                <div class="text-[11px] font-medium mt-0.5 ${isSelected ? 'text-red-600' : 'text-gray-500'}">${service.stops_count} active stops</div>
                             </div>
-                            <span class="text-xs font-semibold text-blue-600">Show Routes</span>
+                            <div class="shrink-0 w-4 h-4 rounded-sm border flex items-center justify-center transition-colors ${isSelected ? 'border-red-600 bg-red-600' : 'border-gray-300 bg-white'}">
+                                ${isSelected ? '<svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>' : ''}
+                            </div>
                         </div>
                     </button>
                 `;
             }).join('');
 
-            container.querySelectorAll('[data-tenant-id]').forEach(button => {
+            container.querySelectorAll('.service-toggle').forEach(button => {
                 button.addEventListener('click', async () => {
-                    await selectTerritory(Number(button.dataset.tenantId));
+                    const tenantId = Number(button.dataset.tenantId);
+                    if (!tenantId) return;
+
+                    if (selectedTenantIds.has(tenantId)) {
+                        selectedTenantIds.delete(tenantId);
+                    } else {
+                        selectedTenantIds.add(tenantId);
+                    }
+
+                    renderServiceList();
+                    await loadShapesForSelectedServices();
                 });
             });
         }
@@ -612,29 +760,28 @@
             const territories = Object.values(territoriesMeta);
             serviceHierarchy = buildServiceHierarchy(territories);
 
-            populateCountrySelect();
-            populateCitySelect();
-            renderOperatorList();
-
-            const routeCards = document.getElementById('route-cards-list');
-            if (routeCards) {
-                routeCards.innerHTML =
-                    '<div class="text-center py-6 text-gray-400 text-sm">Select an operator to load routes.</div>';
-            }
-        }
-
-        async function selectTerritory(tenantId) {
-            selectedTerritoryKey = territoryKey(tenantId);
-
-            document.querySelectorAll('#operator-list [data-territory-key]').forEach(card => {
-                if (card.dataset.territoryKey === selectedTerritoryKey) {
-                    card.classList.add('bus-card-selected');
-                } else {
-                    card.classList.remove('bus-card-selected');
+            if (activeCityKey) {
+                const [country, city] = activeCityKey.split('::');
+                if (!serviceHierarchy[country] || !serviceHierarchy[country][city]) {
+                    activeCityKey = null;
                 }
-            });
+            }
 
-            await loadShapesForTerritory(tenantId);
+            if (!activeCityKey) {
+                const countries = Object.keys(serviceHierarchy).sort((a, b) => a.localeCompare(b));
+                if (countries.length) {
+                    const firstCountry = countries[0];
+                    const firstCity = Object.keys(serviceHierarchy[firstCountry]).sort((a, b) => a.localeCompare(b))[0];
+                    if (firstCity) {
+                        activeCityKey = cityKey(firstCountry, firstCity);
+                        expandedCountries.add(firstCountry);
+                    }
+                }
+            }
+
+            renderTerritoryTree();
+            renderServiceList();
+            renderBusInfoPanel();
         }
 
         async function selectBusCard(routeName, cardEl) {
@@ -711,104 +858,149 @@
             }
         }
 
-        async function loadShapesForTerritory(tenantId) {
-            try {
-                const res = await fetch(`/api/territories/routes/all-shapes?tenant_id=${encodeURIComponent(tenantId)}`);
-                if (!res.ok) {
-                    throw new Error(`Territory routes request failed with status ${res.status}`);
+        function renderRoutesOnMap(routes, shouldFitBounds = true) {
+            if (!map.hasLayer(allRoutesLayer)) {
+                map.addLayer(allRoutesLayer);
+            }
+
+            allRoutesLayer.clearLayers();
+            allRoutesShapes = {};
+            allRoutesMetaData = {};
+            allRoutePolylines = {};
+
+            routes.forEach(r => {
+                if (!r.shape_pts || r.shape_pts.length <= 1) {
+                    return;
                 }
 
-                const text = await res.text();
-                const data = text ? JSON.parse(text) : {
-                    routes: []
-                };
+                const routeName = r.route_short_name || r.route_name;
+                if (!routeName) {
+                    return;
+                }
 
-                if (data && data.routes && Array.isArray(data.routes)) {
-                    if (!map.hasLayer(allRoutesLayer)) {
-                        map.addLayer(allRoutesLayer);
+                if (!allRoutesShapes[routeName]) {
+                    allRoutesShapes[routeName] = [];
+                }
+                allRoutesShapes[routeName].push(r.shape_pts);
+
+                const color = r.route_color ? '#' + r.route_color : '#9CA3AF';
+                if (!allRoutesMetaData[routeName]) {
+                    allRoutesMetaData[routeName] = {
+                        color: color,
+                        longName: r.route_long_name || r.route_name || routeName,
+                        operatorName: r.operator_name || r.agency_name || 'Service',
+                    };
+                    allRoutePolylines[routeName] = [];
+                }
+
+                const polyline = L.polyline(r.shape_pts, {
+                    color: color,
+                    weight: 2,
+                    opacity: 0.6,
+                    routeName: routeName,
+                    routeColor: color,
+                });
+
+                const routeTitle = r.route_name || r.route_short_name || 'Route';
+                const agencyName = r.operator_name || r.agency_name;
+                const agencyLine = agencyName ?
+                    `<br><span style="font-size:11px;color:#666;">${agencyName}</span>` : '';
+
+                polyline.bindTooltip(
+                    `<b>${routeTitle}</b>${agencyLine}<br><span style="font-size:10px;color:#16a34a">🌿 CNG · Natural Gas</span>`, {
+                        sticky: true,
+                        className: 'font-sans'
+                    });
+
+                polyline.on('mouseover', async function() {
+                    this.setStyle({
+                        weight: 5,
+                        opacity: 1
+                    });
+                    this.bringToFront();
+                    const stops = await fetchRouteStops(this.options.routeName);
+                    showDefaultRouteStops(stops, this.options.routeColor);
+                });
+
+                polyline.on('mouseout', function() {
+                    if (selectedDefaultPolyline !== this) {
+                        this.setStyle({
+                            weight: 2,
+                            opacity: 0.6
+                        });
                     }
+                    if (selectedDefaultPolyline === null) {
+                        defaultRouteStopsLayer.clearLayers();
+                    }
+                });
 
+                allRoutesLayer.addLayer(polyline);
+                allRoutePolylines[routeName].push(polyline);
+            });
+
+            if (shouldFitBounds && allRoutesLayer.getLayers().length > 0) {
+                const layerGroupBounds = L.featureGroup(allRoutesLayer.getLayers()).getBounds();
+                if (layerGroupBounds.isValid()) {
+                    map.fitBounds(layerGroupBounds, {
+                        padding: [50, 50]
+                    });
+                }
+            }
+
+            renderBusInfoPanel();
+        }
+
+        async function fetchRoutesForTenant(tenantId) {
+            if (tenantRoutesCache[tenantId]) {
+                return tenantRoutesCache[tenantId];
+            }
+
+            const res = await fetch(`/api/territories/routes/all-shapes?tenant_id=${encodeURIComponent(tenantId)}`);
+            if (!res.ok) {
+                throw new Error(`Territory routes request failed with status ${res.status}`);
+            }
+
+            const text = await res.text();
+            const data = text ? JSON.parse(text) : {
+                routes: []
+            };
+
+            const tenantKey = territoryKey(tenantId);
+            const territory = territoriesMeta[tenantKey] || {};
+            const operatorName = territory.operator_name || 'Service';
+
+            const routes = Array.isArray(data.routes) ? data.routes.map(route => ({
+                ...route,
+                operator_name: operatorName,
+                tenant_id: tenantId,
+            })) : [];
+
+            tenantRoutesCache[tenantId] = routes;
+            return routes;
+        }
+
+        async function loadShapesForSelectedServices() {
+            try {
+                if (selectedTenantIds.size === 0) {
                     allRoutesLayer.clearLayers();
                     allRoutesShapes = {};
                     allRoutesMetaData = {};
                     allRoutePolylines = {};
-
-                    data.routes.forEach(r => {
-                        if (r.shape_pts && r.shape_pts.length > 1) {
-                            const rName = r.route_short_name || r.route_name;
-                            if (rName) {
-                                if (!allRoutesShapes[rName]) allRoutesShapes[rName] = [];
-                                allRoutesShapes[rName].push(r.shape_pts);
-                            }
-                            let color = r.route_color ? '#' + r.route_color : '#9CA3AF';
-
-                            if (rName && !allRoutesMetaData[rName]) {
-                                allRoutesMetaData[rName] = {
-                                    color: color,
-                                    longName: r.route_long_name || r.route_name || rName
-                                };
-                                allRoutePolylines[rName] = [];
-                            }
-
-                            let polyline = L.polyline(r.shape_pts, {
-                                color: color,
-                                weight: 2,
-                                opacity: 0.6,
-                                routeName: rName,
-                                routeColor: color
-                            });
-
-                            let routeTitle = r.route_name || r.route_short_name || 'Route';
-                            let agName = r.agency_name ?
-                                `<br><span style="font-size:11px;color:#666;">${r.agency_name}</span>` : '';
-
-                            polyline.bindTooltip(
-                                `<b>${routeTitle}</b>${agName}<br><span style="font-size:10px;color:#16a34a">🌿 CNG · Natural Gas</span>`, {
-                                    sticky: true,
-                                    className: 'font-sans'
-                                });
-
-                            polyline.on('mouseover', async function() {
-                                this.setStyle({
-                                    weight: 5,
-                                    opacity: 1
-                                });
-                                this.bringToFront();
-                                const stops = await fetchRouteStops(this.options.routeName);
-                                showDefaultRouteStops(stops, this.options.routeColor);
-                            });
-                            polyline.on('mouseout', function() {
-                                if (selectedDefaultPolyline !== this) {
-                                    this.setStyle({
-                                        weight: 2,
-                                        opacity: 0.6
-                                    });
-                                }
-                                if (selectedDefaultPolyline === null) {
-                                    defaultRouteStopsLayer.clearLayers();
-                                }
-                            });
-
-                            allRoutesLayer.addLayer(polyline);
-                            if (rName && allRoutePolylines[rName]) {
-                                allRoutePolylines[rName].push(polyline);
-                            }
-                        }
-                    });
-
-                    if (allRoutesLayer.getLayers().length > 0) {
-                        let layerGroupBounds = L.featureGroup(allRoutesLayer.getLayers()).getBounds();
-                        if (layerGroupBounds.isValid()) {
-                            map.fitBounds(layerGroupBounds, {
-                                padding: [50, 50]
-                            });
-                        }
-                    }
+                    selectedBusCard = null;
+                    selectedBusRouteName = null;
+                    selectedDefaultPolyline = null;
+                    defaultRouteStopsLayer.clearLayers();
 
                     renderBusInfoPanel();
+                    return;
                 }
+
+                const selectedIds = Array.from(selectedTenantIds.values());
+                const routesByTenant = await Promise.all(selectedIds.map(tenantId => fetchRoutesForTenant(tenantId)));
+                const mergedRoutes = routesByTenant.flat();
+                renderRoutesOnMap(mergedRoutes, true);
             } catch (e) {
-                console.error('Failed to load territory routes:', e);
+                console.error('Failed to load selected service routes:', e);
             }
         }
 
@@ -827,90 +1019,7 @@
                 if (!data || !Array.isArray(data.routes)) {
                     return;
                 }
-
-                if (!map.hasLayer(allRoutesLayer)) {
-                    map.addLayer(allRoutesLayer);
-                }
-
-                allRoutesLayer.clearLayers();
-                allRoutesShapes = {};
-                allRoutesMetaData = {};
-                allRoutePolylines = {};
-
-                data.routes.forEach(r => {
-                    if (r.shape_pts && r.shape_pts.length > 1) {
-                        const rName = r.route_short_name || r.route_name;
-                        if (rName) {
-                            if (!allRoutesShapes[rName]) allRoutesShapes[rName] = [];
-                            allRoutesShapes[rName].push(r.shape_pts);
-                        }
-
-                        let color = r.route_color ? '#' + r.route_color : '#9CA3AF';
-
-                        if (rName && !allRoutesMetaData[rName]) {
-                            allRoutesMetaData[rName] = {
-                                color: color,
-                                longName: r.route_long_name || r.route_name || rName
-                            };
-                            allRoutePolylines[rName] = [];
-                        }
-
-                        let polyline = L.polyline(r.shape_pts, {
-                            color: color,
-                            weight: 2,
-                            opacity: 0.6,
-                            routeName: rName,
-                            routeColor: color
-                        });
-
-                        let routeTitle = r.route_name || r.route_short_name || 'Route';
-                        let agName = r.agency_name ?
-                            `<br><span style="font-size:11px;color:#666;">${r.agency_name}</span>` : '';
-
-                        polyline.bindTooltip(
-                            `<b>${routeTitle}</b>${agName}<br><span style="font-size:10px;color:#16a34a">🌿 CNG · Natural Gas</span>`, {
-                                sticky: true,
-                                className: 'font-sans'
-                            });
-
-                        polyline.on('mouseover', async function() {
-                            this.setStyle({
-                                weight: 5,
-                                opacity: 1
-                            });
-                            this.bringToFront();
-                            const stops = await fetchRouteStops(this.options.routeName);
-                            showDefaultRouteStops(stops, this.options.routeColor);
-                        });
-                        polyline.on('mouseout', function() {
-                            if (selectedDefaultPolyline !== this) {
-                                this.setStyle({
-                                    weight: 2,
-                                    opacity: 0.6
-                                });
-                            }
-                            if (selectedDefaultPolyline === null) {
-                                defaultRouteStopsLayer.clearLayers();
-                            }
-                        });
-
-                        allRoutesLayer.addLayer(polyline);
-                        if (rName && allRoutePolylines[rName]) {
-                            allRoutePolylines[rName].push(polyline);
-                        }
-                    }
-                });
-
-                if (allRoutesLayer.getLayers().length > 0) {
-                    let layerGroupBounds = L.featureGroup(allRoutesLayer.getLayers()).getBounds();
-                    if (layerGroupBounds.isValid()) {
-                        map.fitBounds(layerGroupBounds, {
-                            padding: [50, 50]
-                        });
-                    }
-                }
-
-                renderBusInfoPanel();
+                renderRoutesOnMap(data.routes, true);
             } catch (error) {
                 console.error('Fallback all-routes load failed:', error);
             }
@@ -929,7 +1038,11 @@
                 };
 
                 territoriesMeta = {};
-                selectedTerritoryKey = null;
+                tenantRoutesCache = {};
+                selectedTenantIds = new Set();
+                selectedBusCard = null;
+                selectedBusRouteName = null;
+                selectedDefaultPolyline = null;
                 allRoutesLayer.clearLayers();
                 allRoutesShapes = {};
                 allRoutesMetaData = {};
@@ -1010,50 +1123,67 @@
             initMap();
             loadTerritories();
 
-            const countrySelect = document.getElementById('country-select');
-            const citySelect = document.getElementById('city-select');
-
-            if (countrySelect) {
-                countrySelect.addEventListener('change', () => {
-                    selectedCountry = countrySelect.value || null;
-                    selectedCity = null;
-                    selectedTerritoryKey = null;
-                    populateCitySelect();
-                    renderOperatorList();
-                    const routeCards = document.getElementById('route-cards-list');
-                    if (routeCards) {
-                        routeCards.innerHTML =
-                            '<div class="text-center py-6 text-gray-400 text-sm">Select an operator to load routes.</div>';
-                    }
-                    allRoutesLayer.clearLayers();
-                    allRoutesMetaData = {};
-                    allRoutePolylines = {};
+            const clearServicesBtn = document.getElementById('clear-services');
+            if (clearServicesBtn) {
+                clearServicesBtn.addEventListener('click', async () => {
+                    selectedTenantIds.clear();
+                    renderServiceList();
+                    await loadShapesForSelectedServices();
                 });
             }
+        });
 
-            if (citySelect) {
-                citySelect.addEventListener('change', () => {
-                    selectedCity = citySelect.value || null;
-                    selectedTerritoryKey = null;
-                    renderOperatorList();
-                    const routeCards = document.getElementById('route-cards-list');
-                    if (routeCards) {
-                        routeCards.innerHTML =
-                            '<div class="text-center py-6 text-gray-400 text-sm">Select an operator to load routes.</div>';
-                    }
-                    allRoutesLayer.clearLayers();
-                    allRoutesMetaData = {};
-                    allRoutePolylines = {};
-                });
+        // Toggle Service Lines menu collapse
+        document.getElementById('toggle-service-lines').addEventListener('click', () => {
+            const pane = document.getElementById('middle-pane');
+            const chevron = document.getElementById('service-lines-chevron');
+            const content = document.getElementById('service-lines-content');
+
+            // if collapsed
+            if (pane.classList.contains('w-0')) {
+                pane.classList.remove('w-0', 'md:w-0', 'border-r-0');
+                pane.classList.add('w-full', 'md:w-[350px]', 'lg:w-[380px]', 'xl:w-[400px]', 'border-r');
+                chevron.style.transform = 'rotate(0deg)';
+                content.classList.remove('opacity-0');
+                setTimeout(() => {
+                    content.classList.remove('hidden');
+                }, 10);
+            } else { // if expanded
+                pane.classList.remove('w-full', 'md:w-[350px]', 'lg:w-[380px]', 'xl:w-[400px]', 'border-r');
+                pane.classList.add('w-0', 'md:w-0', 'border-r-0');
+                chevron.style.transform = 'rotate(180deg)';
+                content.classList.add('opacity-0');
+                setTimeout(() => {
+                    content.classList.add('hidden');
+                }, 300);
             }
+        });
+
+        // Toggle Search Results pane
+        document.getElementById('close-search-results').addEventListener('click', () => {
+            const searchPane = document.getElementById('search-results-pane');
+            searchPane.classList.add('hidden');
+            searchPane.classList.remove('flex');
+
+            // clear map layers related to search
+            searchResultsLayer.clearLayers();
+            defaultRouteStopsLayer.clearLayers();
+
+            // redraw previously selected services if any
+            renderBusInfoPanel();
         });
 
         // Search form reset
         document.getElementById('reset-search').addEventListener('click', () => {
             document.getElementById('origin').value = '';
             document.getElementById('destination').value = '';
+
+            // Hide the search results pane entirely
+            const searchPane = document.getElementById('search-results-pane');
+            searchPane.classList.add('hidden');
+            searchPane.classList.remove('flex');
+
             document.getElementById('routes-list').classList.add('hidden');
-            document.getElementById('initial-state').classList.remove('hidden');
             document.getElementById('no-results').classList.add('hidden');
 
             searchResultsLayer.clearLayers();
@@ -1174,12 +1304,15 @@
             e.preventDefault();
             const origin = document.getElementById('origin');
             const destination = document.getElementById('destination');
+            const searchPane = document.getElementById('search-results-pane');
             const routesList = document.getElementById('routes-list');
             const overlay = document.getElementById('loading-overlay');
             const noResults = document.getElementById('no-results');
-            const initBtn = document.getElementById('initial-state');
 
-            initBtn.classList.add('hidden');
+            // Open the new search results pane
+            searchPane.classList.remove('hidden');
+            searchPane.classList.add('flex');
+
             overlay.classList.add('active');
             noResults.classList.add('hidden');
             routesList.innerHTML = '';
@@ -1231,6 +1364,8 @@
                 }
 
                 currentRouteData = data.routes;
+                noResults.classList.add('hidden');
+                routesList.classList.remove('hidden');
 
                 routesList.innerHTML = data.routes.map((route, index) => {
                     if (route.connection_type === 'transfer' && route.legs) {
@@ -1280,22 +1415,22 @@
                             
                             <div class="flex items-center gap-4 bg-gray-50/80 rounded-lg p-3">
                                 ${route.departure_time !== '?' ? `
-                                                                                    <div class="flex-1">
-                                                                                        <div class="text-xs text-gray-500 uppercase tracking-wider">Departs</div>
-                                                                                        <div class="text-xl font-bold text-red-600">${route.leave_at || route.departure_time}</div>
-                                                                                    </div>` : ''}
+                                                                                                <div class="flex-1">
+                                                                                                    <div class="text-xs text-gray-500 uppercase tracking-wider">Departs</div>
+                                                                                                    <div class="text-xl font-bold text-red-600">${route.leave_at || route.departure_time}</div>
+                                                                                                </div>` : ''}
                                 
                                 ${route.duration !== 'N/A' ? `
-                                                                                    <div class="flex-1 text-center border-l border-r border-gray-200 px-2">
-                                                                                        <div class="text-xs text-gray-500 uppercase tracking-wider">Duration</div>
-                                                                                        <div class="text-sm font-semibold text-gray-800">${route.duration}</div>
-                                                                                    </div>` : ''}
+                                                                                                <div class="flex-1 text-center border-l border-r border-gray-200 px-2">
+                                                                                                    <div class="text-xs text-gray-500 uppercase tracking-wider">Duration</div>
+                                                                                                    <div class="text-sm font-semibold text-gray-800">${route.duration}</div>
+                                                                                                </div>` : ''}
                                 
                                 ${route.arrival_time !== '?' ? `
-                                                                                    <div class="flex-1 text-right">
-                                                                                        <div class="text-xs text-gray-500 uppercase tracking-wider">Arrives</div>
-                                                                                        <div class="text-xl font-bold text-green-600">${route.arrival_time}</div>
-                                                                                    </div>` : ''}
+                                                                                                <div class="flex-1 text-right">
+                                                                                                    <div class="text-xs text-gray-500 uppercase tracking-wider">Arrives</div>
+                                                                                                    <div class="text-xl font-bold text-green-600">${route.arrival_time}</div>
+                                                                                                </div>` : ''}
                             </div>
                             ${directMidStopsHtml}
                             ${co2Badge(directDistKm)}
