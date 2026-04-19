@@ -1215,22 +1215,30 @@
 
         // --- RESULTS RENDERING & HIGHLIGHT LOGIC ---
         function renderTransferRoute(route, routeIndex) {
+            let totalMidStops = 0;
+            route.legs.forEach(leg => {
+                if (leg.type === 'transit' && leg.stops) {
+                    totalMidStops += leg.stops.filter(s => s.is_intermediate).length;
+                }
+            });
+
+            const badgesHtml = route.legs.map(leg => {
+                if (leg.type === 'walk') {
+                    return `<span class="text-gray-400">🚶</span>`;
+                } else {
+                    const style = leg.route_color ? `background-color: #${leg.route_color}; color: ${leg.route_text_color ? '#' + leg.route_text_color : '#FFFFFF'};` : 'background-color: #6B7280; color: #FFFFFF;';
+                    return `<span class="inline-block px-2 py-0.5 text-xs font-bold rounded" style="${style}">${leg.route_name}</span>`;
+                }
+            }).join('<span class="text-gray-300 mx-1">›</span>');
+
             const legsHtml = route.legs.map((leg, idx) => {
                 if (leg.type === 'walk') {
-                    const distLabel = leg.distance ? `${(+leg.distance).toFixed(2)} km · ` : '';
                     return `
-                        <div class="flex items-center gap-3 py-2 pl-3 ml-2 my-1 relative">
-                            <!-- dotted vertical connector (Google Maps style) -->
-                            <div class="absolute left-0 top-0 bottom-0 flex flex-col items-center" style="margin-left:-1px">
-                                <div class="flex-1 border-l-2 border-dashed border-blue-400 opacity-70"></div>
+                        <div class="flex items-center gap-3 text-sm text-gray-500 py-1">
+                            <div class="w-6 flex justify-center text-gray-400">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path></svg>
                             </div>
-                            <!-- walk icon -->
-                            <div class="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 text-sm -ml-0.5">🚶</div>
-                            <div class="flex-1">
-                                <div class="text-xs font-semibold text-blue-600 uppercase tracking-wide">Walk ${leg.duration} min</div>
-                                <div class="text-xs text-gray-500">${distLabel}${leg.from} → ${leg.to}</div>
-                            </div>
-                            ${leg.start_time ? `<div class="text-xs font-mono text-gray-400 self-start">${leg.start_time}</div>` : ''}
+                            <span class="font-medium text-gray-600">Walk ${leg.duration} min</span>
                         </div>
                     `;
                 } else if (leg.type === 'transit') {
@@ -1240,36 +1248,39 @@
 
                     const midStops = leg.stops ? leg.stops.filter(s => s.is_intermediate) : [];
                     const midStopsHtml = midStops.length > 0 ? `
-                        <details class="mt-1">
-                            <summary class="text-[10px] text-gray-400 cursor-pointer select-none hover:text-gray-600">${midStops.length} intermediate stop${midStops.length > 1 ? 's' : ''}</summary>
-                            <div class="mt-1 ml-2 space-y-0.5 border-l border-gray-200 pl-2">
-                                ${midStops.map(s => `<div class="flex justify-between text-[10px] text-gray-500"><span>${s.name}</span><span class="font-mono text-gray-400">${s.arrival}</span></div>`).join('')}
+                        <details class="mt-1.5 overflow-hidden">
+                            <summary class="text-xs text-gray-500 cursor-pointer select-none hover:text-blue-600 flex items-center gap-1">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                ${midStops.length} intermediate stops
+                            </summary>
+                            <div class="mt-2 ml-1 space-y-1.5 border-l-2 border-gray-200 pl-3 mb-2">
+                                ${midStops.map(s => `<div class="flex justify-between text-xs text-gray-600"><span>${s.name}</span><span class="font-mono text-gray-500">${s.arrival}</span></div>`).join('')}
                             </div>
                         </details>
                     ` : '';
 
-                    const legShapePts = leg.shape_pts && leg.shape_pts.length > 1 ? leg.shape_pts :
-                        (leg.stops && leg.stops.length > 1 ? leg.stops.map(s => [parseFloat(s.lat), parseFloat(s
-                            .lon)]) : null);
-                    const legDistKm = haversineKm(legShapePts);
-
                     return `
-                        <div class="flex items-start gap-3 py-3 border-l-2 border-red-500 pl-3 ml-2 relative">
-                            <div class="absolute w-2 h-2 rounded-full bg-white border-2 border-red-500 -left-[5px] top-4"></div>
-                            
-                            <div class="flex-1 min-w-0">
-                                <div class="flex items-center gap-2 mb-1">
-                                    <span class="inline-block px-1.5 py-0.5 text-xs font-bold rounded shadow-sm" style="${routeBadgeStyle}">
+                        <div class="flex items-start gap-3 py-2">
+                            <div class="w-6 flex flex-col items-center mt-1">
+                                <div class="w-3 h-3 rounded-full" style="${routeBadgeStyle}"></div>
+                                ${idx < route.legs.length - 1 ? `<div class="w-0.5 h-full bg-gray-200 my-1 min-h-[20px]"></div>` : ''}
+                            </div>
+                            <div class="flex-1 pb-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="inline-block px-2 py-0.5 text-xs font-bold rounded" style="${routeBadgeStyle}">
                                         ${leg.route_name}
                                     </span>
+                                    <span class="text-sm font-semibold text-gray-900">${leg.from}</span>
                                 </div>
-                                <div class="text-xs font-medium text-gray-900 truncate">${leg.from} → ${leg.to}</div>
+                                <div class="text-sm text-gray-600 mt-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-medium text-gray-800">${leg.departure_time}</span>
+                                        &rarr;
+                                        <span class="font-medium text-gray-800">${leg.arrival_time}</span> 
+                                        <span>at ${leg.to}</span>
+                                    </div>
+                                </div>
                                 ${midStopsHtml}
-                                ${co2Badge(legDistKm)}
-                            </div>
-                            <div class="flex flex-col items-end text-xs text-gray-600 gap-0.5 whitespace-nowrap">
-                                <div class="font-bold text-red-600">${leg.departure_time}</div>
-                                <div class="font-bold text-gray-700">${leg.arrival_time}</div>
                             </div>
                         </div>
                     `;
@@ -1278,24 +1289,36 @@
             }).join('');
 
             return `
-                <div class="route-card bg-white rounded-xl shadow-sm border border-orange-100 hover:border-orange-300 p-4 transition-all" onclick="showRouteOnMap(${routeIndex})">
-                    <div class="flex items-center gap-4 bg-gray-50/80 rounded-lg p-3 mb-3 border border-gray-100">
-                        <div class="flex-1">
-                            <div class="text-xs text-gray-500 uppercase tracking-wider">Departs</div>
-                            <div class="text-xl font-bold text-red-600">${route.leave_at || route.departure_time}</div>
+                <div class="bg-white rounded-2xl border border-gray-200 p-4 mb-3 transition-colors hover:border-gray-300" onclick="showRouteOnMap(${routeIndex})">
+                    <div class="flex justify-between items-center mb-2 cursor-pointer">
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-xl font-bold text-gray-900">${route.leave_at || route.departure_time}</span>
+                            <span class="text-gray-400">→</span>
+                            <span class="text-xl font-bold text-gray-900">${route.arrival_time}</span>
                         </div>
-                        <div class="flex-1 text-center border-l border-r border-gray-200 px-2">
-                            <div class="text-xs text-gray-500 uppercase tracking-wider">Duration</div>
-                            <div class="text-sm font-semibold text-gray-800">${route.duration}</div>
-                        </div>
-                        <div class="flex-1 text-right">
-                            <div class="text-xs text-gray-500 uppercase tracking-wider">Arrives</div>
-                            <div class="text-xl font-bold text-green-600">${route.arrival_time}</div>
+                        <div class="px-2.5 py-1 bg-gray-100 text-gray-600 font-medium text-xs rounded-full">
+                            ${route.duration}
                         </div>
                     </div>
-                    <div class="space-y-0 text-sm">
-                        ${legsHtml}
-                    </div>
+                    
+                    <details class="group mt-1 cursor-pointer" onclick="event.stopPropagation()">
+                        <summary class="flex items-center justify-between text-xs list-none outline-none">
+                            <div class="flex flex-col gap-1">
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    ${badgesHtml}
+                                </div>
+                                <div class="text-gray-500 font-medium">${totalMidStops} stops in total</div>
+                            </div>
+                            <div class="flex items-center gap-1 text-gray-500 hover:text-blue-600 transition-colors">
+                                <span class="font-medium text-xs hidden group-open:inline">Hide</span>
+                                <span class="font-medium text-xs group-open:hidden">Details</span>
+                                <svg class="w-4 h-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                        </summary>
+                        <div class="mt-4 pt-4 border-t border-gray-100">
+                            ${legsHtml}
+                        </div>
+                    </details>
                 </div>
             `;
         }
@@ -1404,36 +1427,47 @@
                     const directDistKm = haversineKm(directShapePts);
 
                     return `
-                        <div class="route-card bg-white rounded-xl shadow-sm border border-gray-100 p-4 transition-all" onclick="showRouteOnMap(${index})">
-                            <div class="flex items-center gap-2 mb-3">
-                                <span class="inline-block px-2 py-1 text-sm font-bold rounded shadow-sm" style="${routeBadgeStyle}">
-                                    ${route.route_name}
-                                </span>
-                                ${exactMatchBadge}
-                                ${connectionBadge}
+                        <div class="bg-white rounded-2xl border border-gray-200 mb-3 p-4 transition-colors hover:border-gray-300 cursor-pointer" onclick="showRouteOnMap(${index})">
+                            <div class="flex justify-between items-center mb-3">
+                                <div class="flex items-baseline gap-2">
+                                    <span class="text-xl font-bold text-gray-900">${route.leave_at || route.departure_time}</span>
+                                    <span class="text-gray-400">→</span>
+                                    <span class="text-xl font-bold text-gray-900">${route.arrival_time}</span>
+                                </div>
+                                <div class="px-2.5 py-1 bg-gray-100 text-gray-600 font-medium text-xs rounded-full">
+                                    ${route.duration}
+                                </div>
                             </div>
                             
-                            <div class="flex items-center gap-4 bg-gray-50/80 rounded-lg p-3">
-                                ${route.departure_time !== '?' ? `
-                                                                                                <div class="flex-1">
-                                                                                                    <div class="text-xs text-gray-500 uppercase tracking-wider">Departs</div>
-                                                                                                    <div class="text-xl font-bold text-red-600">${route.leave_at || route.departure_time}</div>
-                                                                                                </div>` : ''}
-                                
-                                ${route.duration !== 'N/A' ? `
-                                                                                                <div class="flex-1 text-center border-l border-r border-gray-200 px-2">
-                                                                                                    <div class="text-xs text-gray-500 uppercase tracking-wider">Duration</div>
-                                                                                                    <div class="text-sm font-semibold text-gray-800">${route.duration}</div>
-                                                                                                </div>` : ''}
-                                
-                                ${route.arrival_time !== '?' ? `
-                                                                                                <div class="flex-1 text-right">
-                                                                                                    <div class="text-xs text-gray-500 uppercase tracking-wider">Arrives</div>
-                                                                                                    <div class="text-xl font-bold text-green-600">${route.arrival_time}</div>
-                                                                                                </div>` : ''}
-                            </div>
-                            ${directMidStopsHtml}
-                            ${co2Badge(directDistKm)}
+                            <details class="group mt-1 cursor-pointer" onclick="event.stopPropagation()">
+                                <summary class="flex items-center justify-between text-xs list-none outline-none">
+                                    <div class="flex flex-col gap-1">
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <span class="inline-block px-2 py-0.5 text-xs font-bold rounded" style="${routeBadgeStyle}">
+                                                ${route.route_name}
+                                            </span>
+                                            ${exactMatchBadge}
+                                            ${connectionBadge}
+                                        </div>
+                                        <div class="text-gray-500 font-medium">${directMidStops.length} stops in total</div>
+                                    </div>
+                                    <div class="flex items-center gap-1 text-gray-500 hover:text-blue-600 transition-colors">
+                                        <span class="font-medium text-xs hidden group-open:inline">Hide</span>
+                                        <span class="font-medium text-xs group-open:hidden">Details</span>
+                                        <svg class="w-4 h-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                    </div>
+                                </summary>
+                                <div class="mt-4 pt-4 border-t border-gray-100">
+                                    ${directMidStops.length > 0 ? `
+                                    <div class="text-sm font-medium text-gray-800 mb-3 flex items-center gap-2">
+                                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                        Intermediate Stops
+                                    </div>
+                                    <div class="space-y-1.5 border-l-2 border-gray-200 ml-1.5 pl-3">
+                                        ${directMidStops.map(s => `<div class="flex justify-between text-xs text-gray-600"><span>${s.name}</span><span class="font-mono text-gray-500">${s.arrival}</span></div>`).join('')}
+                                    </div>` : '<div class="text-sm text-gray-500">No intermediate stops.</div>'}
+                                </div>
+                            </details>
                         </div>
                     `;
                 }).join('');
