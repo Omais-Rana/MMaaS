@@ -49,6 +49,7 @@ class ProcessScheduleImport implements ShouldQueue
             Cache::forget('route_shapes:all');
             Cache::forget('route_shapes:tenant:'.$this->scheduleImport->tenant_id);
             Cache::forget('territories:list');
+            Cache::forget('route_search.stop_cache.v1');
 
             $this->sendSuccessNotification($stats);
         } catch (Exception $e) {
