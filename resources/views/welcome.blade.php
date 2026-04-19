@@ -1226,7 +1226,9 @@
                 if (leg.type === 'walk') {
                     return `<span class="text-gray-400">🚶</span>`;
                 } else {
-                    const style = leg.route_color ? `background-color: #${leg.route_color}; color: ${leg.route_text_color ? '#' + leg.route_text_color : '#FFFFFF'};` : 'background-color: #6B7280; color: #FFFFFF;';
+                    const style = leg.route_color ?
+                        `background-color: #${leg.route_color}; color: ${leg.route_text_color ? '#' + leg.route_text_color : '#FFFFFF'};` :
+                        'background-color: #6B7280; color: #FFFFFF;';
                     return `<span class="inline-block px-2 py-0.5 text-xs font-bold rounded" style="${style}">${leg.route_name}</span>`;
                 }
             }).join('<span class="text-gray-300 mx-1">›</span>');
@@ -1459,13 +1461,13 @@
                                 </summary>
                                 <div class="mt-4 pt-4 border-t border-gray-100">
                                     ${directMidStops.length > 0 ? `
-                                    <div class="text-sm font-medium text-gray-800 mb-3 flex items-center gap-2">
-                                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                                        Intermediate Stops
-                                    </div>
-                                    <div class="space-y-1.5 border-l-2 border-gray-200 ml-1.5 pl-3">
-                                        ${directMidStops.map(s => `<div class="flex justify-between text-xs text-gray-600"><span>${s.name}</span><span class="font-mono text-gray-500">${s.arrival}</span></div>`).join('')}
-                                    </div>` : '<div class="text-sm text-gray-500">No intermediate stops.</div>'}
+                                        <div class="text-sm font-medium text-gray-800 mb-3 flex items-center gap-2">
+                                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                            Intermediate Stops
+                                        </div>
+                                        <div class="space-y-1.5 border-l-2 border-gray-200 ml-1.5 pl-3">
+                                            ${directMidStops.map(s => `<div class="flex justify-between text-xs text-gray-600"><span>${s.name}</span><span class="font-mono text-gray-500">${s.arrival}</span></div>`).join('')}
+                                        </div>` : '<div class="text-sm text-gray-500">No intermediate stops.</div>'}
                                 </div>
                             </details>
                         </div>
