@@ -2,7 +2,10 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Customer\Pages\Auth\Login;
+use App\Http\Middleware\SetLocale;
 use Filafly\Themes\Brisk\BriskTheme;
+use Filament\Actions\Action;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -18,7 +21,7 @@ use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
-use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class CustomerPanelProvider extends PanelProvider
@@ -28,7 +31,7 @@ class CustomerPanelProvider extends PanelProvider
         return $panel
             ->id('portal')
             ->path('portal')
-            ->login(\App\Filament\Customer\Pages\Auth\Login::class)
+            ->login(Login::class)
             ->registration()
             ->passwordReset()
             ->emailVerification()
@@ -38,9 +41,15 @@ class CustomerPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Red,
             ])
+            ->userMenuItems([
+                Action::make('switch-language')
+                    ->label(fn(): string => (Auth::user()?->locale ?? 'en') === 'en' ? 'Switch to French' : 'Passer en anglais')
+                    ->icon('heroicon-o-language')
+                    ->url(fn(): string => route('locale.toggle')),
+            ])
             ->renderHook(
-                PanelsRenderHook::USER_MENU_BEFORE,
-                fn(): string => Blade::render('@livewire(\'language-switcher-action\')')
+                PanelsRenderHook::GLOBAL_SEARCH_BEFORE,
+                fn(): string => view('filament.components.return-to-map-button')->render()
             )
             ->discoverResources(in: app_path('Filament/Customer/Resources'), for: 'App\Filament\Customer\Resources')
             ->discoverPages(in: app_path('Filament/Customer/Pages'), for: 'App\Filament\Customer\Pages')
@@ -61,7 +70,7 @@ class CustomerPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
-                \App\Http\Middleware\SetLocale::class,
+                SetLocale::class,
             ])
             ->authMiddleware([
                 Authenticate::class,

@@ -29,7 +29,7 @@ Route::get('/login', function () {
 })->name('login');
 
 // Unified registration - redirect to user registration
-Route::get('/register', fn () => redirect('/user/register'))->name('register');
+Route::get('/register', fn() => redirect('/user/register'))->name('register');
 
 // Dashboard route - redirect to appropriate panel based on role
 Route::get('/dashboard', function () {
@@ -48,9 +48,20 @@ Route::get('/dashboard', function () {
     return redirect('/login');
 })->name('dashboard');
 
+Route::middleware('auth')->get('/locale/toggle', function () {
+    /** @var User $user */
+    $user = Auth::user();
+
+    $user->update([
+        'locale' => ($user->locale ?? 'en') === 'en' ? 'fr' : 'en',
+    ]);
+
+    return redirect()->back();
+})->name('locale.toggle');
+
 // Redirect panel-specific logins to unified login
-Route::get('/panel/login', fn () => redirect('/login'));
-Route::get('/portal/login', fn () => redirect('/login'));
+Route::get('/panel/login', fn() => redirect('/login'));
+Route::get('/portal/login', fn() => redirect('/login'));
 
 // Public API routes for route search
 Route::prefix('api')->group(function () {

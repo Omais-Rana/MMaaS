@@ -2,8 +2,14 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\SubAdmin\Pages\Auth\Login;
+use App\Filament\SubAdmin\Widgets\MostSearchedRoutesWidget;
+use App\Filament\SubAdmin\Widgets\SubAdminRecentActivity;
+use App\Filament\SubAdmin\Widgets\SubAdminStatsOverview;
 use App\Http\Middleware\ApplyTenantScopes;
+use App\Http\Middleware\SetLocale;
 use Filafly\Themes\Brisk\BriskTheme;
+use Filament\Actions\Action;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -18,7 +24,7 @@ use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
-use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class SubAdminPanelProvider extends PanelProvider
@@ -28,7 +34,7 @@ class SubAdminPanelProvider extends PanelProvider
         return $panel
             ->id('panel')
             ->path('panel')
-            ->login(\App\Filament\SubAdmin\Pages\Auth\Login::class)
+            ->login(Login::class)
             ->brandName('Management Panel')
             ->globalSearch(true)
             ->globalSearchKeyBindings(['command+k', 'ctrl+k'])
@@ -38,9 +44,15 @@ class SubAdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Amber,
             ])
+            ->userMenuItems([
+                Action::make('switch-language')
+                    ->label(fn(): string => (Auth::user()?->locale ?? 'en') === 'en' ? 'Switch to French' : 'Passer en anglais')
+                    ->icon('heroicon-o-language')
+                    ->url(fn(): string => route('locale.toggle')),
+            ])
             ->renderHook(
                 PanelsRenderHook::SIDEBAR_NAV_START,
-                fn (): string => Blade::render('@livewire(\'language-switcher-action\')')
+                fn(): string => view('filament.components.return-to-map-button')->render()
             )
             ->discoverResources(in: app_path('Filament/SubAdmin/Resources'), for: 'App\Filament\SubAdmin\Resources')
             ->discoverPages(in: app_path('Filament/SubAdmin/Pages'), for: 'App\Filament\SubAdmin\Pages')
@@ -49,9 +61,9 @@ class SubAdminPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/SubAdmin/Widgets'), for: 'App\Filament\SubAdmin\Widgets')
             ->widgets([
-                \App\Filament\SubAdmin\Widgets\SubAdminStatsOverview::class,
-                \App\Filament\SubAdmin\Widgets\MostSearchedRoutesWidget::class,
-                \App\Filament\SubAdmin\Widgets\SubAdminRecentActivity::class,
+                SubAdminStatsOverview::class,
+                MostSearchedRoutesWidget::class,
+                SubAdminRecentActivity::class,
             ])
             ->middleware([
                 EncryptCookies::class,
@@ -63,7 +75,7 @@ class SubAdminPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
-                \App\Http\Middleware\SetLocale::class,
+                SetLocale::class,
             ])
             ->authMiddleware([
                 Authenticate::class,
