@@ -9,7 +9,6 @@ class RouteSearch extends Model
 {
     protected $fillable = [
         'user_id',
-        'tenant_id',
         'origin_name',
         'destination_name',
         'search_time',
