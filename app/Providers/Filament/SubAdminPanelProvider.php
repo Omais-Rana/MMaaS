@@ -8,6 +8,7 @@ use App\Filament\SubAdmin\Widgets\SubAdminRecentActivity;
 use App\Filament\SubAdmin\Widgets\SubAdminStatsOverview;
 use App\Http\Middleware\ApplyTenantScopes;
 use App\Http\Middleware\SetLocale;
+use DiogoGPinto\AuthUIEnhancer\AuthUIEnhancerPlugin;
 use Filafly\Themes\Brisk\BriskTheme;
 use Filament\Actions\Action;
 use Filament\Http\Middleware\Authenticate;
@@ -46,13 +47,13 @@ class SubAdminPanelProvider extends PanelProvider
             ])
             ->userMenuItems([
                 Action::make('switch-language')
-                    ->label(fn(): string => (Auth::user()?->locale ?? 'en') === 'en' ? 'Switch to French' : 'Passer en anglais')
+                    ->label(fn (): string => (Auth::user()?->locale ?? 'en') === 'en' ? 'Switch to French' : 'Passer en anglais')
                     ->icon('heroicon-o-language')
-                    ->url(fn(): string => route('locale.toggle')),
+                    ->url(fn (): string => route('locale.toggle')),
             ])
             ->renderHook(
                 PanelsRenderHook::SIDEBAR_NAV_START,
-                fn(): string => view('filament.components.return-to-map-button')->render()
+                fn (): string => view('filament.components.return-to-map-button')->render()
             )
             ->discoverResources(in: app_path('Filament/SubAdmin/Resources'), for: 'App\Filament\SubAdmin\Resources')
             ->discoverPages(in: app_path('Filament/SubAdmin/Pages'), for: 'App\Filament\SubAdmin\Pages')
@@ -84,6 +85,7 @@ class SubAdminPanelProvider extends PanelProvider
             ->resourceCreatePageRedirect('index')
             ->resourceEditPageRedirect('index')
             ->viteTheme('resources/css/filament/admin/theme.css')
-            ->plugin(BriskTheme::make());
+            ->plugin(BriskTheme::make())
+            ->plugin(AuthUIEnhancerPlugin::make());
     }
 }

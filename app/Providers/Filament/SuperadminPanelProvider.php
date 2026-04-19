@@ -2,11 +2,12 @@
 
 namespace App\Providers\Filament;
 
-use App\Filament\Customer\Pages\Auth\Register;
 use App\Filament\Superadmin\Pages\Auth\Login;
+use App\Filament\Customer\Pages\Auth\Register;
 use App\Filament\Superadmin\Widgets\SuperadminStatsOverview;
 use App\Http\Middleware\RedirectNonSuperadmin;
 use App\Http\Middleware\SetLocale;
+use DiogoGPinto\AuthUIEnhancer\AuthUIEnhancerPlugin;
 use Filafly\Themes\Brisk\BriskTheme;
 use Filament\Actions\Action;
 use Filament\Http\Middleware\Authenticate;
@@ -84,6 +85,12 @@ class SuperadminPanelProvider extends PanelProvider
             ->resourceCreatePageRedirect('index')
             ->resourceEditPageRedirect('index')
             ->viteTheme('resources/css/filament/admin/theme.css')
-            ->plugin(BriskTheme::make());
+            ->plugin(BriskTheme::make())
+            ->plugin(AuthUIEnhancerPlugin::make()
+                ->showEmptyPanelOnMobile(false)
+                ->formPanelPosition('right')
+                ->formPanelWidth('40%')
+                ->emptyPanelBackgroundImageOpacity('70%')
+                ->emptyPanelBackgroundImageUrl('https://images.pexels.com/photos/466685/pexels-photo-466685.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2'));
     }
 }

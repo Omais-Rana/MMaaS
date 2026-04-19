@@ -4,6 +4,7 @@ namespace App\Providers\Filament;
 
 use App\Filament\Customer\Pages\Auth\Login;
 use App\Http\Middleware\SetLocale;
+use DiogoGPinto\AuthUIEnhancer\AuthUIEnhancerPlugin;
 use Filafly\Themes\Brisk\BriskTheme;
 use Filament\Actions\Action;
 use Filament\Http\Middleware\Authenticate;
@@ -32,7 +33,6 @@ class CustomerPanelProvider extends PanelProvider
             ->id('portal')
             ->path('portal')
             ->login(Login::class)
-            ->registration()
             ->passwordReset()
             ->emailVerification()
             ->profile()
@@ -48,7 +48,7 @@ class CustomerPanelProvider extends PanelProvider
                     ->url(fn(): string => route('locale.toggle')),
             ])
             ->renderHook(
-                PanelsRenderHook::GLOBAL_SEARCH_BEFORE,
+                PanelsRenderHook::SIDEBAR_NAV_START,
                 fn(): string => view('filament.components.return-to-map-button')->render()
             )
             ->discoverResources(in: app_path('Filament/Customer/Resources'), for: 'App\Filament\Customer\Resources')
@@ -78,6 +78,7 @@ class CustomerPanelProvider extends PanelProvider
             ->resourceCreatePageRedirect('index')
             ->resourceEditPageRedirect('index')
             ->viteTheme('resources/css/filament/admin/theme.css')
-            ->plugin(BriskTheme::make());
+            ->plugin(BriskTheme::make())
+            ->plugin(AuthUIEnhancerPlugin::make());
     }
 }

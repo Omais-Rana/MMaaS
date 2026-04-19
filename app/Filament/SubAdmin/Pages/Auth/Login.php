@@ -3,12 +3,15 @@
 namespace App\Filament\SubAdmin\Pages\Auth;
 
 use App\Models\User;
+use DiogoGPinto\AuthUIEnhancer\Pages\Auth\Concerns\HasCustomLayout;
 use Filament\Auth\Pages\Login as BaseLogin;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Validation\ValidationException;
 
 class Login extends BaseLogin
 {
+    use HasCustomLayout;
+
     public function getHeading(): string|Htmlable
     {
         return 'Sign in to your account';

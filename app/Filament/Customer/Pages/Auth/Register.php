@@ -2,19 +2,27 @@
 
 namespace App\Filament\Customer\Pages\Auth;
 
+use DiogoGPinto\AuthUIEnhancer\Pages\Auth\Concerns\HasCustomLayout;
 use Filament\Auth\Pages\Register as BaseRegister;
 use Illuminate\Contracts\Support\Htmlable;
 
 class Register extends BaseRegister
 {
-    public function getHeading(): string | Htmlable
+    use HasCustomLayout;
+
+    public function getHeading(): string|Htmlable
     {
         return 'Create your account';
     }
 
-    public function getTitle(): string | Htmlable
+    public function getTitle(): string|Htmlable
     {
         return 'Sign Up';
+    }
+
+    protected function getRedirectUrl(): string
+    {
+        return '/portal';
     }
 
     protected function mutateFormDataBeforeRegister(array $data): array

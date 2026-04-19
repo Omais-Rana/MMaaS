@@ -9,19 +9,23 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+$redirectAuthenticatedUserByRole = function (User $user) {
+    return match ($user->role) {
+        'superadmin' => redirect('/user'),
+        'subadmin', 'employee' => redirect('/panel'),
+        'customer' => redirect('/portal'),
+        default => redirect('/'),
+    };
+};
+
 // Unified login - redirect to user login (which accepts all users)
-Route::get('/login', function () {
+Route::get('/login', function () use ($redirectAuthenticatedUserByRole) {
     // If already authenticated, redirect to appropriate panel
     if (Auth::check()) {
         /** @var User $user */
         $user = Auth::user();
 
-        return match ($user->role) {
-            'superadmin' => redirect('/user'),
-            'subadmin', 'employee' => redirect('/panel'),
-            'customer' => redirect('/portal'),
-            default => redirect('/'),
-        };
+        return $redirectAuthenticatedUserByRole($user);
     }
 
     // Redirect to user panel login
@@ -29,20 +33,15 @@ Route::get('/login', function () {
 })->name('login');
 
 // Unified registration - redirect to user registration
-Route::get('/register', fn() => redirect('/user/register'))->name('register');
+Route::get('/register', fn () => redirect('/user/register'))->name('register');
 
 // Dashboard route - redirect to appropriate panel based on role
-Route::get('/dashboard', function () {
+Route::get('/dashboard', function () use ($redirectAuthenticatedUserByRole) {
     if (Auth::check()) {
         /** @var User $user */
         $user = Auth::user();
 
-        return match ($user->role) {
-            'superadmin' => redirect('/user'),
-            'subadmin', 'employee' => redirect('/panel'),
-            'customer' => redirect('/portal'),
-            default => redirect('/'),
-        };
+        return $redirectAuthenticatedUserByRole($user);
     }
 
     return redirect('/login');
@@ -58,10 +57,6 @@ Route::middleware('auth')->get('/locale/toggle', function () {
 
     return redirect()->back();
 })->name('locale.toggle');
-
-// Redirect panel-specific logins to unified login
-Route::get('/panel/login', fn() => redirect('/login'));
-Route::get('/portal/login', fn() => redirect('/login'));
 
 // Public API routes for route search
 Route::prefix('api')->group(function () {

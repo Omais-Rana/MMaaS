@@ -163,11 +163,11 @@
                     </div>
                 @else
                     <div class="flex items-center gap-2">
-                        <a href="/portal/login"
+                        <a href="/user/login"
                             class="px-3 py-1.5 rounded-lg border border-gray-200 hover:border-red-300 hover:bg-red-50 text-gray-600 hover:text-red-600 text-xs font-semibold transition-colors">
                             Sign In
                         </a>
-                        <a href="/portal/register"
+                        <a href="/user/register"
                             class="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition-colors shadow-sm">
                             Sign Up
                         </a>
@@ -1484,13 +1484,13 @@
                                 </summary>
                                 <div class="mt-4 pt-4 border-t border-gray-100">
                                     ${directMidStops.length > 0 ? `
-                                            <div class="text-sm font-medium text-gray-800 mb-3 flex items-center gap-2">
-                                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                                                Intermediate Stops
-                                            </div>
-                                            <div class="space-y-1.5 border-l-2 border-gray-200 ml-1.5 pl-3">
-                                                ${directMidStops.map(s => `<div class="flex justify-between text-xs text-gray-600"><span>${s.name}</span><span class="font-mono text-gray-500">${s.arrival}</span></div>`).join('')}
-                                            </div>` : '<div class="text-sm text-gray-500">No intermediate stops.</div>'}
+                                                <div class="text-sm font-medium text-gray-800 mb-3 flex items-center gap-2">
+                                                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                                    Intermediate Stops
+                                                </div>
+                                                <div class="space-y-1.5 border-l-2 border-gray-200 ml-1.5 pl-3">
+                                                    ${directMidStops.map(s => `<div class="flex justify-between text-xs text-gray-600"><span>${s.name}</span><span class="font-mono text-gray-500">${s.arrival}</span></div>`).join('')}
+                                                </div>` : '<div class="text-sm text-gray-500">No intermediate stops.</div>'}
                                 </div>
                             </details>
                         </div>
