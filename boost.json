@@ -1,9 +1,8 @@
 {
     "agents": [
-        "codex"
+        "gemini"
     ],
-    "guidelines": true,
-    "packages": [
-        "filament/filament"
-    ]
+    "herd_mcp": false,
+    "mcp": true,
+    "sail": false
 }

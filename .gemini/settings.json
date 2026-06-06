@@ -5,15 +5,16 @@
             "args": [
                 "artisan",
                 "boost:mcp"
-            ]
+            ],
+            "cwd": "D://Project//Project"
         },
         "herd": {
             "command": "php",
             "args": [
-                "C:/Users/PMLS/.config/herd/bin/herd-mcp.phar"
+                "C:/Users/Insomnyac/.config/herd/bin/herd-mcp.phar"
             ],
             "env": {
-                "SITE_PATH": "D:\\Project\\Project"
+                "SITE_PATH": "D://Project//Project"
             }
         }
     }

@@ -14,6 +14,10 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+        crossorigin="anonymous" />
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
         .autocomplete-dropdown {
@@ -39,7 +43,7 @@
         }
 
         .route-card {
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s, background-color 0.2s;
             cursor: pointer;
         }
 
@@ -49,9 +53,9 @@
         }
 
         .route-card.is-selected {
-            outline: 2px solid #ef4444;
-            outline-offset: -2px;
-            border-color: transparent;
+            border-color: #e60000 !important;
+            box-shadow: 0 0 0 1px #e60000;
+            background-color: #fff5f5 !important;
         }
 
         .leaflet-popup-content-wrapper {
@@ -109,26 +113,24 @@
     </style>
 </head>
 
-<body class="bg-gray-50 h-screen overflow-hidden flex flex-col md:flex-row">
+<body class="bg-[#f2f2f2] h-screen overflow-hidden flex flex-col md:flex-row">
 
     <!-- Left Pane: Search & Results -->
     <div
-        class="w-full md:w-[450px] lg:w-[500px] flex-shrink-0 h-full overflow-y-auto bg-white flex flex-col z-20 shadow-2xl relative">
+        class="w-full md:w-[450px] lg:w-[500px] flex-shrink-0 h-full overflow-y-auto bg-white flex flex-col z-20 relative border-r border-[#e5e7eb]">
         <div id="loading-overlay">
             <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
         </div>
 
-        <div class="p-6 bg-gradient-to-br from-red-50 to-white border-b">
+        <div class="p-6 bg-white border-b-4 border-[#e60000]">
             <div class="flex items-center gap-3 mb-6">
-                <div
-                    class="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center shadow-lg shadow-red-200 shrink-0">
+                <div class="w-10 h-10 bg-[#e60000] rounded-full flex items-center justify-center shrink-0">
                     <svg class="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 24 24">
                         <path
                             d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
                     </svg>
                 </div>
-                <h1
-                    class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-red-600 to-red-900 flex-1">
+                <h1 class="text-[24px] font-[800] uppercase tracking-tighter text-[#25282b] flex-1">
                     Transit Finder</h1>
 
                 @auth
@@ -141,7 +143,7 @@
                     @endphp
                     <div class="flex items-center gap-2">
                         <a href="{{ $dashboardUrl }}"
-                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition-colors shadow-sm"
+                            class="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-[2px] bg-[#e60000] border border-[#e60000] hover:opacity-90 text-white text-[14.4px] font-bold transition-opacity"
                             title="Go to dashboard">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -152,7 +154,7 @@
                         <form method="POST" action="{{ $dashboardUrl }}/logout" class="inline">
                             @csrf
                             <button type="submit"
-                                class="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 hover:border-red-300 hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
+                                class="inline-flex items-center justify-center w-8 h-8 rounded-[2px] bg-white border border-[#333333] hover:opacity-90 text-[#333333] transition-opacity"
                                 title="Sign out">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -164,11 +166,11 @@
                 @else
                     <div class="flex items-center gap-2">
                         <a href="/user/login"
-                            class="px-3 py-1.5 rounded-lg border border-gray-200 hover:border-red-300 hover:bg-red-50 text-gray-600 hover:text-red-600 text-xs font-semibold transition-colors">
+                            class="px-2.5 py-1.5 rounded-[2px] bg-white border border-[#333333] hover:opacity-90 text-[#333333] text-[14.4px] font-bold transition-opacity text-center">
                             Sign In
                         </a>
                         <a href="/user/register"
-                            class="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition-colors shadow-sm">
+                            class="px-2.5 py-1.5 rounded-[2px] bg-[#e60000] border border-[#e60000] hover:opacity-90 text-white text-[14.4px] font-bold transition-opacity text-center">
                             Sign Up
                         </a>
                     </div>
@@ -177,30 +179,32 @@
 
             <form id="route-search-form" class="space-y-4">
                 <div class="relative">
-                    <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Starting
+                    <label class="block text-[14px] font-[700] text-[#7e7e7e] uppercase tracking-wider mb-1">Starting
                         Point</label>
                     <input type="text" id="origin" required
-                        class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none transition-all"
+                        class="w-full px-4 py-3 bg-white border border-[#333333] rounded-[6px] focus:ring-0 focus:border-[#e60000] outline-none transition-colors text-[#25282b] text-[16px]"
                         placeholder="e.g. Gare, Mairie..." autocomplete="off">
                     <div id="origin-autocomplete" class="autocomplete-dropdown hidden"></div>
                 </div>
 
                 <div class="flex justify-center -my-2 relative z-10">
                     <button type="button" id="swap-locations"
-                        class="w-8 h-8 bg-white border border-gray-200 hover:border-red-300 hover:bg-red-50 rounded-full flex items-center justify-center transition-all shadow-sm group">
-                        <svg class="w-4 h-4 text-gray-500 group-hover:text-red-600 transition-colors rotate-90"
-                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        class="w-8 h-8 bg-white border border-[#333333] hover:opacity-90 rounded-full flex items-center justify-center transition-opacity group">
+                        <svg class="w-4 h-4 text-[#333333] rotate-90" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
                         </svg>
                     </button>
                 </div>
 
-                <div class="relative">
-                    <label
-                        class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Destination</label>
+                <div class="relative mt-4">
+                    <div class="flex justify-between items-center mb-1">
+                        <label
+                            class="block text-[14px] font-[700] text-[#7e7e7e] uppercase tracking-wider">Destination</label>
+                    </div>
                     <input type="text" id="destination" required
-                        class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none transition-all"
+                        class="w-full px-4 py-3 bg-white border border-[#333333] rounded-[6px] focus:ring-0 focus:border-[#e60000] outline-none transition-colors text-[#25282b] text-[16px]"
                         placeholder="Where to?" autocomplete="off">
                     <div id="destination-autocomplete" class="autocomplete-dropdown hidden"></div>
                 </div>
@@ -208,24 +212,24 @@
                 <div class="grid grid-cols-2 gap-3 pt-2">
                     <div>
                         <label
-                            class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Date</label>
+                            class="block text-[14px] font-[700] text-[#7e7e7e] uppercase tracking-wider mb-1">Date</label>
                         <input type="date" id="date" required
-                            class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none cursor-pointer text-sm"
+                            class="w-full px-4 py-3 bg-white border border-[#333333] rounded-[6px] focus:ring-0 focus:border-[#e60000] outline-none cursor-pointer text-[16px] text-[#25282b]"
                             value="{{ date('Y-m-d') }}" onclick="try{this.showPicker()}catch(e){}"
                             onfocus="try{this.showPicker()}catch(e){}">
                     </div>
                     <div>
                         <label
-                            class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Time</label>
+                            class="block text-[14px] font-[700] text-[#7e7e7e] uppercase tracking-wider mb-1">Time</label>
                         <input type="time" id="time" required
-                            class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none cursor-pointer text-sm"
+                            class="w-full px-4 py-3 bg-white border border-[#333333] rounded-[6px] focus:ring-0 focus:border-[#e60000] outline-none cursor-pointer text-[16px] text-[#25282b]"
                             value="{{ date('H:i') }}" onclick="try{this.showPicker()}catch(e){}"
                             onfocus="try{this.showPicker()}catch(e){}">
                     </div>
                 </div>
 
                 <button type="submit"
-                    class="w-full mt-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold shadow-md shadow-red-200 transition-colors flex justify-center items-center gap-2">
+                    class="w-full mt-2 px-2.5 py-3 bg-[#e60000] border border-[#e60000] hover:opacity-90 text-white rounded-[2px] font-bold text-[14.4px] transition-opacity flex justify-center items-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
@@ -234,7 +238,7 @@
                 </button>
                 <div class="text-center pt-2">
                     <button type="button" id="reset-search"
-                        class="text-xs text-gray-500 hover:text-red-600 underline">Reset map to territories</button>
+                        class="text-[14px] text-[#7e7e7e] hover:text-[#e60000] underline font-medium">Reset</button>
                 </div>
             </form>
         </div>
@@ -393,11 +397,72 @@
             });
         }
 
-        // Stores {lat, lon} for each selected autocomplete stop (reset when user types manually)
         let selectedCoords = {
             origin: null,
             destination: null
         };
+
+        window.setAsRouteEndpoint = function(type, name, lat, lon) {
+            const input = document.getElementById(type);
+            if (input) {
+                input.value = name;
+                selectedCoords[type] = {
+                    lat,
+                    lon
+                };
+                if (map) {
+                    map.closePopup();
+                    if (userPinMarker) {
+                        map.removeLayer(userPinMarker);
+                        userPinMarker = null;
+                    }
+                    if (endpointMarkers[type]) {
+                        map.removeLayer(endpointMarkers[type]);
+                    }
+
+                    let iconColor = type === 'origin' ? '#28a745' : (type === 'destination' ? '#e60000' : '#3b82f6');
+                    let iconText = type === 'origin' ? 'A' : (type === 'destination' ? 'B' : 'V');
+
+                    const endpointIcon = L.divIcon({
+                        html: `<div class="w-8 h-8 rounded-full border-2 border-white shadow-md flex items-center justify-center text-white font-[800] text-[14px]" style="background-color: ${iconColor};">${iconText}</div>`,
+                        className: 'bg-transparent',
+                        iconSize: [32, 32],
+                        iconAnchor: [16, 16]
+                    });
+
+                    endpointMarkers[type] = L.marker([lat, lon], {
+                        icon: endpointIcon
+                    }).addTo(map);
+                }
+            }
+        };
+
+        document.getElementById('reset-search')?.addEventListener('click', function() {
+            // Reset the form
+            document.getElementById('route-search-form').reset();
+
+            // Clear internal state
+            selectedCoords.origin = null;
+            selectedCoords.destination = null;
+
+            // Clear map layers and markers
+            if (map) {
+                Object.keys(endpointMarkers).forEach(key => {
+                    if (endpointMarkers[key]) {
+                        map.removeLayer(endpointMarkers[key]);
+                        delete endpointMarkers[key];
+                    }
+                });
+
+                if (userPinMarker) {
+                    map.removeLayer(userPinMarker);
+                    userPinMarker = null;
+                }
+
+                if (searchResultsLayer) searchResultsLayer.clearLayers();
+                if (defaultRouteStopsLayer) defaultRouteStopsLayer.clearLayers();
+            }
+        });
 
         setupAutocomplete('origin', 'origin-autocomplete');
         setupAutocomplete('destination', 'destination-autocomplete');
@@ -411,11 +476,30 @@
             const tempCoords = selectedCoords.origin;
             selectedCoords.origin = selectedCoords.destination;
             selectedCoords.destination = tempCoords;
+
+            if (map) {
+                if (selectedCoords.origin) {
+                    setAsRouteEndpoint('origin', origin.value, selectedCoords.origin.lat, selectedCoords.origin
+                    .lon);
+                } else if (endpointMarkers['origin']) {
+                    map.removeLayer(endpointMarkers['origin']);
+                    delete endpointMarkers['origin'];
+                }
+
+                if (selectedCoords.destination) {
+                    setAsRouteEndpoint('destination', destination.value, selectedCoords.destination.lat,
+                        selectedCoords.destination.lon);
+                } else if (endpointMarkers['destination']) {
+                    map.removeLayer(endpointMarkers['destination']);
+                    delete endpointMarkers['destination'];
+                }
+            }
         });
 
         // --- MAP LOGIC ---
         let map = null;
         let allRoutesLayer = L.layerGroup();
+        let gbfsStationsLayer = L.layerGroup();
         let searchResultsLayer = L.layerGroup();
         let defaultRouteStopsLayer = L.layerGroup();
         let currentRouteData = null;
@@ -431,8 +515,20 @@
         let serviceHierarchy = {};
         let expandedCountries = new Set();
         let activeCityKey = null;
-        let selectedTenantIds = new Set();
+        let selectedTenantServices = new Set(); // Stores "tenantId:service"
         let tenantRoutesCache = {};
+        let allGbfsStations = []; // Stores all fetched stations
+        let gbfsMarkers = {}; // Cache: station_id -> L.marker
+        let expandedTenants = new Set();
+        let userPinMarker = null;
+        let endpointMarkers = {};
+
+        function getModeLabel(mode) {
+            if (mode === 'bus') return 'Buses';
+            if (mode === 'cycle') return 'Bikes';
+            if (mode === 'car') return 'Cars';
+            return mode;
+        }
 
         function initMap() {
             if (!map) {
@@ -463,8 +559,36 @@
                 }).addTo(map);
 
                 allRoutesLayer.addTo(map);
+                gbfsStationsLayer.addTo(map);
                 searchResultsLayer.addTo(map);
                 defaultRouteStopsLayer.addTo(map);
+
+                map.on('click', function(e) {
+                    const lat = e.latlng.lat;
+                    const lon = e.latlng.lng;
+                    const popupHtml = `
+                        <div class="p-1">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i class="fa-solid fa-location-dot text-[#25282b] text-[20px]"></i>
+                                <h3 class="font-[800] text-[#25282b] text-[16px] uppercase m-0 leading-tight">Pin</h3>
+                            </div>
+                            <div class="flex gap-2 mt-3 pt-3 border-t border-[#e5e7eb]">
+                                <button onclick="setAsRouteEndpoint('origin', 'Pin', ${lat}, ${lon})" class="flex-1 bg-white border border-[#333333] hover:opacity-90 text-[#333333] font-[700] py-1.5 px-2 rounded-[2px] transition-opacity text-center text-[12px]">Start here</button>
+                                <button onclick="setAsRouteEndpoint('destination', 'Pin', ${lat}, ${lon})" class="flex-1 bg-white border border-[#333333] hover:opacity-90 text-[#333333] font-[700] py-1.5 px-2 rounded-[2px] transition-opacity text-center text-[12px]">End here</button>
+                            </div>
+                        </div>
+                    `;
+
+                    if (userPinMarker) {
+                        map.removeLayer(userPinMarker);
+                    }
+
+                    userPinMarker = L.marker([lat, lon]).addTo(map)
+                        .bindPopup(popupHtml, {
+                            className: 'rounded-xl'
+                        })
+                        .openPopup();
+                });
             }
         }
 
@@ -504,7 +628,7 @@
             const container = document.getElementById('route-cards-list');
             if (!container || !middlePane) return;
 
-            if (selectedTenantIds.size === 0) {
+            if (selectedTenantServices.size === 0) {
                 middlePane.classList.add('hidden');
                 return;
             } else {
@@ -514,10 +638,37 @@
             container.innerHTML = '';
 
             const routeNames = Object.keys(allRoutesMetaData);
-            if (routeNames.length === 0) {
+
+            const selectedGbfsTenantModes = new Set();
+            for (const svcKey of selectedTenantServices) {
+                const [tId, mode] = svcKey.split(':');
+                if (mode !== 'bus') selectedGbfsTenantModes.add(svcKey);
+            }
+            const activeStations = allGbfsStations.filter(st => {
+                const isSelected = selectedGbfsTenantModes.has(`${st.tenant_id}:${st.source_type}`);
+                const available = st.status.num_bikes_available || 0;
+                return isSelected && available > 0;
+            });
+
+            if (routeNames.length === 0 && activeStations.length === 0) {
                 container.innerHTML =
-                    '<div class="text-center py-10 bg-white rounded-lg border border-dashed border-gray-300 mt-4"><div class="text-sm text-gray-500 font-medium">No service lines found.</div><div class="text-xs text-gray-400 mt-1">Try selecting different services.</div></div>';
+                    '<div class="text-center py-10 bg-white rounded-lg border border-dashed border-gray-300 mt-4"><div class="text-sm text-gray-500 font-medium">No services found.</div><div class="text-xs text-gray-400 mt-1">Try selecting different services.</div></div>';
+
+                document.querySelector('#service-lines-content h3').innerText = 'Services';
+                document.querySelector('#service-lines-content p').innerText = 'Explore routes and available vehicles.';
                 return;
+            }
+
+            if (routeNames.length > 0 && activeStations.length === 0) {
+                document.querySelector('#service-lines-content h3').innerText = 'Service Lines';
+                document.querySelector('#service-lines-content p').innerText =
+                    'Explore active routes for your selected services.';
+            } else if (routeNames.length === 0 && activeStations.length > 0) {
+                document.querySelector('#service-lines-content h3').innerText = 'Available Vehicles';
+                document.querySelector('#service-lines-content p').innerText = 'Explore stations and available vehicles.';
+            } else {
+                document.querySelector('#service-lines-content h3').innerText = 'Services';
+                document.querySelector('#service-lines-content p').innerText = 'Explore routes and available vehicles.';
             }
 
             const groupedRoutes = {};
@@ -580,6 +731,86 @@
                 container.appendChild(section);
             });
 
+            // Render Stations
+            if (activeStations.length > 0) {
+                const groupedStations = {};
+                activeStations.forEach(st => {
+                    const operatorName = st.operator_name || 'Operator';
+                    if (!groupedStations[operatorName]) groupedStations[operatorName] = [];
+                    groupedStations[operatorName].push(st);
+                });
+
+                Object.keys(groupedStations).sort((a, b) => a.localeCompare(b)).forEach(operatorName => {
+                    const section = document.createElement('div');
+                    section.className = 'bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-4';
+
+                    const stations = groupedStations[operatorName];
+                    section.innerHTML = `
+                        <div class="sticky top-0 z-10 px-4 py-3 bg-slate-50 border-b border-gray-200 flex justify-between items-center backdrop-blur-sm bg-opacity-95">
+                            <div class="text-xs font-bold text-slate-800 uppercase tracking-wider">${operatorName.replace(/</g, '&lt;')}</div>
+                            <div class="text-[10px] font-semibold bg-white border border-slate-200 px-2 py-0.5 rounded-full text-slate-500">${stations.length} station${stations.length > 1 ? 's' : ''}</div>
+                        </div>
+                        <div class="p-2 space-y-2"></div>
+                    `;
+
+                    const stationsContainer = section.querySelector('.space-y-2');
+                    stations.forEach(st => {
+                        const isCar = st.source_type === 'car';
+                        const available = st.status.num_bikes_available || 0;
+                        const hasAvail = available > 0;
+                        const badgeColor = hasAvail ? '#28a745' : '#25282b';
+                        const iconHtml = isCar ? '<i class="fa-solid fa-car text-[12px]"></i>' :
+                            '<i class="fa-solid fa-bicycle text-[12px]"></i>';
+
+                        let detailsHtml = `Capacity: ${st.capacity || 0}`;
+                        if (!isCar) {
+                            detailsHtml +=
+                                ` &middot; Bikes: ${available} / Docks: ${st.status.num_docks_available || 0}`;
+                        } else {
+                            detailsHtml += ` &middot; Cars: ${available}`;
+                            if (st.status.vehicle_types_available && st.status.vehicle_types_available
+                                .length > 0) {
+                                const names = st.status.vehicle_types_available.map(v => v
+                                    .vehicle_type_name).filter(Boolean).join(', ');
+                                if (names) detailsHtml += `<br>Vehicles: ${names}`;
+                            }
+                        }
+
+                        const card = document.createElement('div');
+                        card.className =
+                            'bus-card bg-white rounded-lg border border-gray-100 hover:border-gray-300 transition-colors shadow-sm cursor-pointer';
+                        card.innerHTML = `
+                            <div class="flex items-center gap-3 p-3">
+                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-full text-white text-xs shadow-sm shrink-0" style="background:${badgeColor}">${iconHtml}</span>
+                                <div class="min-w-0 flex-1">
+                                    <div class="text-xs font-bold text-gray-800 leading-tight line-clamp-1">${st.name}</div>
+                                    <div class="text-[10px] text-gray-500 mt-0.5">${detailsHtml}</div>
+                                </div>
+                            </div>
+                        `;
+
+                        card.addEventListener('click', () => {
+                            const marker = gbfsMarkers[st.station_id];
+                            if (marker) {
+                                // Invalidate map size in case the sidebar just opened, ensuring correct center calculation
+                                map.invalidateSize();
+                                // Set view directly to the marker
+                                map.setView(marker.getLatLng(), 16, {
+                                    animate: true
+                                });
+                                // Open popup after a slight delay to allow map to pan and prevent autoPan from fighting us
+                                setTimeout(() => {
+                                    marker.openPopup();
+                                }, 250);
+                            }
+                        });
+
+                        stationsContainer.appendChild(card);
+                    });
+                    container.appendChild(section);
+                });
+            }
+
             container.querySelectorAll('.bus-card .bus-card-header').forEach(header => {
                 header.addEventListener('click', async () => {
                     const card = header.closest('.bus-card');
@@ -617,6 +848,7 @@
                     operator_name: territory.operator_name || 'Service',
                     stops_count: territory.stops_count || 0,
                     territory_name: territory.name || city,
+                    services: territory.services || ['bus'],
                 });
             });
 
@@ -723,36 +955,99 @@
             }
 
             container.innerHTML = services.map(service => {
-                const isSelected = selectedTenantIds.has(Number(service.tenant_id));
-                return `
-                    <button type="button" class="service-toggle w-full text-left rounded-lg p-3 transition-colors border mb-2 ${isSelected ? 'border-red-200 bg-red-50 text-red-900' : 'border-gray-200 bg-gray-50 hover:bg-white text-gray-800'}" data-tenant-id="${service.tenant_id}">
-                        <div class="flex items-center justify-between gap-3">
-                            <div class="flex-1 min-w-0">
-                                <div class="text-sm font-semibold truncate">${service.operator_name}</div>
-                                <div class="text-[11px] font-medium mt-0.5 ${isSelected ? 'text-red-600' : 'text-gray-500'}">${service.stops_count} active stops</div>
+                const modes = service.services || ['bus'];
+                const hasMultiple = modes.length > 1;
+                const isExpanded = expandedTenants.has(Number(service.tenant_id));
+
+                if (!hasMultiple) {
+                    const mode = modes[0];
+                    const svcKey = `${service.tenant_id}:${mode}`;
+                    const isSelected = selectedTenantServices.has(svcKey);
+
+                    return `
+                        <button type="button" class="service-toggle-single w-full text-left rounded-lg p-3 transition-colors border mb-2 ${isSelected ? 'border-red-200 bg-red-50 text-red-900' : 'border-gray-200 bg-gray-50 hover:bg-white text-gray-800'}" data-tenant-id="${service.tenant_id}" data-mode="${mode}">
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-sm font-semibold truncate">${service.operator_name}</div>
+                                    <div class="text-[11px] font-medium mt-0.5 ${isSelected ? 'text-red-600' : 'text-gray-500'}">${service.stops_count} active stops/stations</div>
+                                </div>
+                                <div class="shrink-0 w-4 h-4 rounded-sm border flex items-center justify-center transition-colors ${isSelected ? 'border-red-600 bg-red-600' : 'border-gray-300 bg-white'}">
+                                    ${isSelected ? '<svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>' : ''}
+                                </div>
                             </div>
+                        </button>
+                    `;
+                }
+
+                const someSelected = modes.some(m => selectedTenantServices.has(`${service.tenant_id}:${m}`));
+
+                const childRows = modes.map(mode => {
+                    const svcKey = `${service.tenant_id}:${mode}`;
+                    const isSelected = selectedTenantServices.has(svcKey);
+                    const label = getModeLabel(mode);
+
+                    return `
+                        <button type="button" class="service-toggle-child w-full flex items-center justify-between gap-3 px-3 py-2 rounded-md text-left transition-colors ${isSelected ? 'bg-red-50 text-red-700' : 'bg-transparent hover:bg-gray-50 text-gray-600'}" data-tenant-id="${service.tenant_id}" data-mode="${mode}">
+                            <span class="text-sm font-medium ${isSelected ? 'text-red-700' : 'text-gray-600'}">${label}</span>
                             <div class="shrink-0 w-4 h-4 rounded-sm border flex items-center justify-center transition-colors ${isSelected ? 'border-red-600 bg-red-600' : 'border-gray-300 bg-white'}">
                                 ${isSelected ? '<svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>' : ''}
                             </div>
+                        </button>
+                    `;
+                }).join('');
+
+                return `
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden mb-2">
+                        <button type="button" class="tenant-accordion-toggle w-full flex items-center justify-between gap-2 px-4 py-3 bg-gray-50 hover:bg-white transition-colors" data-tenant-id="${service.tenant_id}">
+                            <div class="flex-1 min-w-0 text-left">
+                                <div class="text-sm font-semibold ${someSelected ? 'text-red-800' : 'text-gray-800'}">${service.operator_name}</div>
+                                <div class="text-[11px] font-medium mt-0.5 ${someSelected ? 'text-red-600' : 'text-gray-500'}">Multiple services</div>
+                            </div>
+                            <svg class="w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+                        <div class="${isExpanded ? '' : 'hidden'} p-2 space-y-1 bg-white border-t border-gray-200 flex flex-col">
+                            ${childRows}
                         </div>
-                    </button>
+                    </div>
                 `;
             }).join('');
 
-            container.querySelectorAll('.service-toggle').forEach(button => {
-                button.addEventListener('click', async () => {
+            container.querySelectorAll('.tenant-accordion-toggle').forEach(button => {
+                button.addEventListener('click', () => {
                     const tenantId = Number(button.dataset.tenantId);
-                    if (!tenantId) return;
-
-                    if (selectedTenantIds.has(tenantId)) {
-                        selectedTenantIds.delete(tenantId);
+                    if (expandedTenants.has(tenantId)) {
+                        expandedTenants.delete(tenantId);
                     } else {
-                        selectedTenantIds.add(tenantId);
+                        expandedTenants.add(tenantId);
                     }
-
                     renderServiceList();
-                    await loadShapesForSelectedServices();
                 });
+            });
+
+            const handleToggle = async (button) => {
+                const tenantId = Number(button.dataset.tenantId);
+                const mode = button.dataset.mode;
+                if (!tenantId || !mode) return;
+
+                const svcKey = `${tenantId}:${mode}`;
+                if (selectedTenantServices.has(svcKey)) {
+                    selectedTenantServices.delete(svcKey);
+                } else {
+                    selectedTenantServices.add(svcKey);
+                }
+
+                renderServiceList();
+                await loadShapesForSelectedServices();
+            };
+
+            container.querySelectorAll('.service-toggle-single').forEach(button => {
+                button.addEventListener('click', () => handleToggle(button));
+            });
+
+            container.querySelectorAll('.service-toggle-child').forEach(button => {
+                button.addEventListener('click', () => handleToggle(button));
             });
         }
 
@@ -792,13 +1087,7 @@
                 selectedBusCard.classList.remove('bus-card-selected');
                 const prevStops = selectedBusCard.querySelector('.bus-card-stops');
                 if (prevStops) prevStops.classList.add('hidden');
-                const prevRoute = selectedBusCard.dataset.route;
-                if (allRoutePolylines[prevRoute]) {
-                    allRoutePolylines[prevRoute].forEach(p => p.setStyle({
-                        weight: 2,
-                        opacity: 0.6
-                    }));
-                }
+
                 selectedBusCard = null;
                 selectedBusRouteName = null;
                 selectedDefaultPolyline = null;
@@ -806,22 +1095,42 @@
             }
 
             // If same card was clicked again, just deselect (toggle off)
-            if (isSameCard) return;
+            // Restore all routes to default visibility
+            if (isSameCard) {
+                Object.keys(allRoutePolylines).forEach(rn => {
+                    allRoutePolylines[rn].forEach(p => p.setStyle({
+                        weight: 2,
+                        opacity: 0.6
+                    }));
+                });
+                return;
+            }
 
             // Select the new card
             selectedBusCard = cardEl;
             selectedBusRouteName = routeName;
             cardEl.classList.add('bus-card-selected');
 
-            // Highlight all polylines for this route on the map
-            if (allRoutePolylines[routeName]) {
-                allRoutePolylines[routeName].forEach(p => {
-                    p.setStyle({
-                        weight: 5,
-                        opacity: 1
+            // Hide all other routes, highlight selected
+            Object.keys(allRoutePolylines).forEach(rn => {
+                if (rn === routeName) {
+                    allRoutePolylines[rn].forEach(p => {
+                        p.setStyle({
+                            weight: 5,
+                            opacity: 1
+                        });
+                        p.bringToFront();
                     });
-                    p.bringToFront();
-                });
+                } else {
+                    allRoutePolylines[rn].forEach(p => {
+                        p.setStyle({
+                            opacity: 0,
+                            weight: 0
+                        });
+                    });
+                }
+            });
+            if (allRoutePolylines[routeName]) {
                 const bounds = L.featureGroup(allRoutePolylines[routeName]).getBounds();
                 if (bounds.isValid()) {
                     map.fitBounds(bounds, {
@@ -981,24 +1290,117 @@
 
         async function loadShapesForSelectedServices() {
             try {
-                if (selectedTenantIds.size === 0) {
-                    allRoutesLayer.clearLayers();
-                    allRoutesShapes = {};
-                    allRoutesMetaData = {};
-                    allRoutePolylines = {};
-                    selectedBusCard = null;
-                    selectedBusRouteName = null;
-                    selectedDefaultPolyline = null;
-                    defaultRouteStopsLayer.clearLayers();
+                allRoutesLayer.clearLayers();
+                gbfsStationsLayer.clearLayers();
+                allRoutesShapes = {};
+                allRoutesMetaData = {};
+                allRoutePolylines = {};
+                gbfsMarkers = {};
+                selectedBusCard = null;
+                selectedBusRouteName = null;
+                selectedDefaultPolyline = null;
+                defaultRouteStopsLayer.clearLayers();
 
+                if (selectedTenantServices.size === 0) {
                     renderBusInfoPanel();
                     return;
                 }
 
-                const selectedIds = Array.from(selectedTenantIds.values());
-                const routesByTenant = await Promise.all(selectedIds.map(tenantId => fetchRoutesForTenant(tenantId)));
-                const mergedRoutes = routesByTenant.flat();
-                renderRoutesOnMap(mergedRoutes, true);
+                // 1. Handle GTFS (bus)
+                const busTenantIds = [];
+                for (const svcKey of selectedTenantServices) {
+                    const [tId, mode] = svcKey.split(':');
+                    if (mode === 'bus') {
+                        busTenantIds.push(Number(tId));
+                    }
+                }
+
+                if (busTenantIds.length > 0) {
+                    const routesByTenant = await Promise.all(busTenantIds.map(tId => fetchRoutesForTenant(tId)));
+                    const mergedRoutes = routesByTenant.flat();
+                    renderRoutesOnMap(mergedRoutes, true);
+                } else {
+                    renderBusInfoPanel();
+                }
+
+                // 2. Handle GBFS (cycle, car)
+                const selectedGbfsTenantModes = new Set();
+                for (const svcKey of selectedTenantServices) {
+                    const [tId, mode] = svcKey.split(':');
+                    if (mode !== 'bus') {
+                        selectedGbfsTenantModes.add(svcKey);
+                    }
+                }
+
+                if (selectedGbfsTenantModes.size > 0 && allGbfsStations.length > 0) {
+                    const filteredStations = allGbfsStations.filter(st => {
+                        return selectedGbfsTenantModes.has(`${st.tenant_id}:${st.source_type}`);
+                    });
+
+                    filteredStations.forEach(st => {
+                        const isCar = st.source_type === 'car';
+                        const isBike = st.source_type === 'cycle';
+                        const available = st.status.num_bikes_available || 0;
+                        const color = available > 0 ? '#28a745' : '#25282b'; // Green if >0, Charcoal if 0
+                        const carIcon = `<i class="fa-solid fa-car text-white text-[12px]"></i>`;
+                        const bikeIcon = `<i class="fa-solid fa-bicycle text-white text-[12px]"></i>`;
+                        const iconHtml = `<div class="w-7 h-7 rounded-full border border-white flex items-center justify-center" style="background-color: ${color};">
+                            ${isCar ? carIcon : bikeIcon}
+                        </div>`;
+
+                        const icon = L.divIcon({
+                            html: iconHtml,
+                            className: 'bg-transparent',
+                            iconSize: [28, 28],
+                            iconAnchor: [14, 14]
+                        });
+
+                        let popupHtml = `<div class="p-1">
+                            <div class="font-bold text-sm mb-1 text-gray-800">${st.name}</div>
+                            <div class="text-xs text-gray-600 mb-2">${st.operator_name}</div>
+                            <div class="text-xs font-medium text-gray-700 bg-gray-100 p-2 rounded-md">`;
+                        if (isBike) {
+                            popupHtml += `Capacity: ${st.capacity || 0}<br>`;
+                            popupHtml += `Bikes: ${available} / Docks: ${st.status.num_docks_available || 0}`;
+                        } else if (isCar) {
+                            popupHtml += `Available Cars: ${available}`;
+                            if (st.status.vehicle_types_available && st.status.vehicle_types_available.length >
+                                0) {
+                                const names = st.status.vehicle_types_available
+                                    .map(v => v.vehicle_type_name)
+                                    .filter(Boolean)
+                                    .join(', ');
+                                if (names) {
+                                    popupHtml += `<br>Vehicles: ${names}`;
+                                }
+                            }
+                        }
+                        popupHtml += `</div>
+                            <div class="flex gap-2 mt-3 pt-3 border-t border-[#e5e7eb]">
+                                <button onclick="setAsRouteEndpoint('origin', '${st.name.replace(/'/g, "\\'")}', ${st.lat}, ${st.lon})" class="flex-1 bg-white border border-[#333333] hover:opacity-90 text-[#333333] font-[700] py-1.5 px-2 rounded-[2px] transition-opacity text-center text-[12px]">Start here</button>
+                                <button onclick="setAsRouteEndpoint('destination', '${st.name.replace(/'/g, "\\'")}', ${st.lat}, ${st.lon})" class="flex-1 bg-white border border-[#333333] hover:opacity-90 text-[#333333] font-[700] py-1.5 px-2 rounded-[2px] transition-opacity text-center text-[12px]">End here</button>
+                            </div>
+                        </div>`;
+
+                        const marker = L.marker([st.lat, st.lon], {
+                                icon
+                            })
+                            .bindPopup(popupHtml, {
+                                className: 'rounded-xl'
+                            })
+                            .addTo(gbfsStationsLayer);
+
+                        gbfsMarkers[st.station_id] = marker;
+                    });
+                }
+
+                // Call renderBusInfoPanel at the end to render BOTH routes and stations
+                // Note: renderBusInfoPanel is already called above if there are no buses,
+                // but we should call it unconditionally or conditionally at the very end.
+                // Wait, previously if (busTenantIds.length > 0) called renderRoutesOnMap -> calls renderBusInfoPanel.
+                // If busTenantIds.length == 0, it called renderBusInfoPanel directly.
+                // So renderBusInfoPanel is always called! We don't need to add another call here.
+
             } catch (e) {
                 console.error('Failed to load selected service routes:', e);
             }
@@ -1037,13 +1439,24 @@
                     territories: []
                 };
 
+                try {
+                    const gbfsRes = await fetch('/api/shared-vehicles/stations');
+                    if (gbfsRes.ok) {
+                        const gbfsData = await gbfsRes.json();
+                        allGbfsStations = gbfsData.data || [];
+                    }
+                } catch (e) {
+                    console.error('Failed to load GBFS stations', e);
+                }
+
                 territoriesMeta = {};
                 tenantRoutesCache = {};
-                selectedTenantIds = new Set();
+                selectedTenantServices = new Set();
                 selectedBusCard = null;
                 selectedBusRouteName = null;
                 selectedDefaultPolyline = null;
                 allRoutesLayer.clearLayers();
+                gbfsStationsLayer.clearLayers();
                 allRoutesShapes = {};
                 allRoutesMetaData = {};
                 allRoutePolylines = {};
@@ -1126,7 +1539,7 @@
             const clearServicesBtn = document.getElementById('clear-services');
             if (clearServicesBtn) {
                 clearServicesBtn.addEventListener('click', async () => {
-                    selectedTenantIds.clear();
+                    selectedTenantServices.clear();
                     renderServiceList();
                     await loadShapesForSelectedServices();
                 });
@@ -1241,12 +1654,12 @@
 
             const badgesHtml = route.legs.map(leg => {
                 if (leg.type === 'walk') {
-                    return `<span class="text-gray-400">🚶</span>`;
+                    return `<span class="text-[#7e7e7e]"><i class="fa-solid fa-person-walking"></i></span>`;
                 } else {
                     const style = leg.route_color ?
                         `background-color: #${leg.route_color}; color: ${leg.route_text_color ? '#' + leg.route_text_color : '#FFFFFF'};` :
                         'background-color: #6B7280; color: #FFFFFF;';
-                    return `<span class="inline-block px-2 py-0.5 text-xs font-bold rounded" style="${style}">${leg.route_name}</span>`;
+                    return `<span class="inline-block px-2 py-0.5 text-xs font-bold rounded" style="${style}">${leg.route_name || leg.route_short_name || leg.route_long_name || 'Route'}</span>`;
                 }
             }).join('<span class="text-gray-300 mx-1">›</span>');
 
@@ -1287,7 +1700,7 @@
                             <div class="flex-1 pb-3">
                                 <div class="flex items-center gap-2">
                                     <span class="inline-block px-2 py-0.5 text-xs font-bold rounded" style="${routeBadgeStyle}">
-                                        ${leg.route_name}
+                                        ${leg.route_name || leg.route_short_name || leg.route_long_name || 'Route'}
                                     </span>
                                     <span class="text-sm font-semibold text-gray-900">${leg.from}</span>
                                 </div>
@@ -1308,7 +1721,7 @@
             }).join('');
 
             return `
-                <div class="bg-white rounded-2xl border border-gray-200 p-4 mb-3 transition-colors hover:border-gray-300" onclick="showRouteOnMap(${routeIndex})">
+                <div class="route-card bg-white rounded-[6px] border border-[#e5e7eb] p-4 mb-3 transition-colors hover:border-[#333333]" onclick="showRouteOnMap(${routeIndex})">
                     <div class="flex justify-between items-center mb-2 cursor-pointer">
                         <div class="flex items-baseline gap-2">
                             <span class="text-xl font-bold text-gray-900">${route.leave_at || route.departure_time}</span>
@@ -1368,6 +1781,18 @@
             }
             searchResultsLayer.clearLayers();
             defaultRouteStopsLayer.clearLayers();
+            
+            Object.keys(endpointMarkers).forEach(key => {
+                if (endpointMarkers[key]) {
+                    map.removeLayer(endpointMarkers[key]);
+                    delete endpointMarkers[key];
+                }
+            });
+            if (userPinMarker) {
+                map.removeLayer(userPinMarker);
+                userPinMarker = null;
+            }
+            
             selectedDefaultPolyline = null;
             if (selectedBusCard) {
                 selectedBusCard.classList.remove('bus-card-selected');
@@ -1380,126 +1805,155 @@
             }
 
             try {
-                const response = await fetch('/api/routes/search', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                    },
-                    body: JSON.stringify({
-                        origin_name: origin.value,
-                        destination_name: destination.value,
-                        date: document.getElementById('date').value,
-                        time: document.getElementById('time').value,
-                        origin_lat: selectedCoords.origin ? selectedCoords.origin.lat : null,
-                        origin_lon: selectedCoords.origin ? selectedCoords.origin.lon : null,
-                        dest_lat: selectedCoords.destination ? selectedCoords.destination.lat :
-                            null,
-                        dest_lon: selectedCoords.destination ? selectedCoords.destination.lon :
-                            null
-                    })
+                const stops = [];
+                stops.push({
+                    name: origin.value,
+                    coords: selectedCoords.origin
                 });
 
-                const data = await response.json();
+
+
+                stops.push({
+                    name: destination.value,
+                    coords: selectedCoords.destination
+                });
+
+                let currentDate = document.getElementById('date').value;
+                let currentTime = document.getElementById('time').value;
+
+                async function fetchRouteLeg(oName, dName, oCoords, dCoords, date, time) {
+                    const response = await fetch('/api/routes/search', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')
+                                .content
+                        },
+                        body: JSON.stringify({
+                            origin_name: oName,
+                            destination_name: dName,
+                            date: date,
+                            time: time,
+                            origin_lat: oCoords ? oCoords.lat : null,
+                            origin_lon: oCoords ? oCoords.lon : null,
+                            dest_lat: dCoords ? dCoords.lat : null,
+                            dest_lon: dCoords ? dCoords.lon : null
+                        })
+                    });
+                    return await response.json();
+                }
+
+                function convertDirectRouteToLeg(route) {
+                    return {
+                        type: 'transit',
+                        from: route.from || (route.stops && route.stops.length > 0 ? route.stops[0].name : 'Unknown'),
+                        to: route.to || (route.stops && route.stops.length > 0 ? route.stops[route.stops.length - 1].name : 'Unknown'),
+                        departure_time: route.leave_at || route.departure_time,
+                        arrival_time: route.arrival_time,
+                        duration: route.duration,
+                        route_name: route.route_name || route.route_short_name || route.route_long_name || 'Route',
+                        route_color: route.route_color,
+                        route_text_color: route.route_text_color,
+                        stops: route.stops,
+                        shape_pts: route.shape_pts
+                    };
+                }
+
+                let finalRoutes = [];
+
+                if (stops.length === 2) {
+                    const data = await fetchRouteLeg(stops[0].name, stops[1].name, stops[0].coords, stops[1]
+                        .coords, currentDate, currentTime);
+                    if (data.routes && data.routes.length > 0) {
+                        data.routes.forEach(route => {
+                            if (route.connection_type !== 'transfer') {
+                                route.legs = [convertDirectRouteToLeg(route)];
+                                route.connection_type = 'transfer';
+                            }
+                            finalRoutes.push(route);
+                        });
+                    }
+                } else {
+                    const firstLegData = await fetchRouteLeg(stops[0].name, stops[1].name, stops[0].coords,
+                        stops[1].coords, currentDate, currentTime);
+                    if (!firstLegData.routes || firstLegData.routes.length === 0) throw new Error(
+                        "No route found for the first leg.");
+
+                    const firstLegOptions = firstLegData.routes.slice(0, 3); // max 3 options
+
+                    for (const option of firstLegOptions) {
+                        let currentOptionLegs = [];
+                        let currentArrTime = option.arrival_time;
+                        let depTime = option.leave_at || option.departure_time;
+
+                        if (option.connection_type !== 'transfer') {
+                            currentOptionLegs.push(convertDirectRouteToLeg(option));
+                        } else {
+                            currentOptionLegs.push(...option.legs);
+                        }
+
+                        let validJourney = true;
+                        for (let i = 1; i < stops.length - 1; i++) {
+                            const fromStop = stops[i];
+                            const toStop = stops[i + 1];
+
+                            const [h, m] = currentArrTime.split(':').map(Number);
+                            const nextTimeObj = new Date(0, 0, 0, h, m + 5);
+                            const nextTimeStr =
+                                `${nextTimeObj.getHours().toString().padStart(2, '0')}:${nextTimeObj.getMinutes().toString().padStart(2, '0')}`;
+
+                            const legData = await fetchRouteLeg(fromStop.name, toStop.name, fromStop.coords,
+                                toStop.coords, currentDate, nextTimeStr);
+                            if (!legData.routes || legData.routes.length === 0) {
+                                validJourney = false;
+                                break;
+                            }
+
+                            const bestNextLeg = legData.routes[0];
+                            currentArrTime = bestNextLeg.arrival_time;
+                            if (bestNextLeg.connection_type !== 'transfer') {
+                                currentOptionLegs.push(convertDirectRouteToLeg(bestNextLeg));
+                            } else {
+                                currentOptionLegs.push(...bestNextLeg.legs);
+                            }
+                        }
+
+                        if (validJourney) {
+                            const start = new Date(`1970/01/01 ${depTime}`);
+                            const end = new Date(`1970/01/01 ${currentArrTime}`);
+                            let diffMins = Math.round((end - start) / 60000);
+                            if (diffMins < 0) diffMins += 24 * 60;
+
+                            finalRoutes.push({
+                                connection_type: 'transfer',
+                                departure_time: depTime,
+                                leave_at: depTime,
+                                arrival_time: currentArrTime,
+                                duration: `${Math.floor(diffMins / 60)}h ${diffMins % 60}m`,
+                                legs: currentOptionLegs
+                            });
+                        }
+                    }
+                }
+
                 overlay.classList.remove('active');
 
-                if (!data.routes || data.routes.length === 0) {
+                if (finalRoutes.length === 0) {
                     noResults.classList.remove('hidden');
                     return;
                 }
 
-                currentRouteData = data.routes;
+                currentRouteData = finalRoutes;
                 noResults.classList.add('hidden');
                 routesList.classList.remove('hidden');
 
-                routesList.innerHTML = data.routes.map((route, index) => {
-                    if (route.connection_type === 'transfer' && route.legs) {
-                        return renderTransferRoute(route, index);
-                    }
-
-                    const exactMatchBadge = route.is_exact_match ?
-                        '<span class="inline-block px-2 py-0.5 bg-green-100 text-green-800 text-[10px] font-bold rounded uppercase tracking-wider">Exact Focus</span>' :
-                        '';
-
-                    const connectionBadge = route.connection_type === 'from_origin' ?
-                        '<span class="inline-block px-2 py-0.5 bg-blue-100 text-blue-800 text-[10px] font-bold rounded uppercase tracking-wider">Partial: Origin</span>' :
-                        route.connection_type === 'to_destination' ?
-                        '<span class="inline-block px-2 py-0.5 bg-purple-100 text-purple-800 text-[10px] font-bold rounded uppercase tracking-wider">Partial: Dest</span>' :
-                        '';
-
-                    const routeBadgeStyle = route.route_color ?
-                        `background-color: #${route.route_color}; color: ${route.route_text_color ? '#' + route.route_text_color : '#FFFFFF'};` :
-                        'background-color: #6B7280; color: #FFFFFF;';
-
-                    const directMidStops = route.stops ? route.stops.filter(s => s.is_intermediate) :
-                [];
-                    const directMidStopsHtml = directMidStops.length > 0 ? `
-                        <details class="mt-2">
-                            <summary class="text-[10px] text-gray-400 cursor-pointer select-none hover:text-gray-600">${directMidStops.length} intermediate stop${directMidStops.length > 1 ? 's' : ''}</summary>
-                            <div class="mt-1 ml-2 space-y-0.5 border-l border-gray-200 pl-2">
-                                ${directMidStops.map(s => `<div class="flex justify-between text-[10px] text-gray-500"><span>${s.name}</span><span class="font-mono text-gray-400">${s.arrival}</span></div>`).join('')}
-                            </div>
-                        </details>
-                    ` : '';
-
-                    const directShapePts = route.shape_pts && route.shape_pts.length > 1 ? route
-                        .shape_pts :
-                        (route.stops && route.stops.length > 1 ? route.stops.map(s => [parseFloat(s
-                            .lat), parseFloat(s.lon)]) : null);
-                    const directDistKm = haversineKm(directShapePts);
-
-                    return `
-                        <div class="bg-white rounded-2xl border border-gray-200 mb-3 p-4 transition-colors hover:border-gray-300 cursor-pointer" onclick="showRouteOnMap(${index})">
-                            <div class="flex justify-between items-center mb-3">
-                                <div class="flex items-baseline gap-2">
-                                    <span class="text-xl font-bold text-gray-900">${route.leave_at || route.departure_time}</span>
-                                    <span class="text-gray-400">→</span>
-                                    <span class="text-xl font-bold text-gray-900">${route.arrival_time}</span>
-                                </div>
-                                <div class="px-2.5 py-1 bg-gray-100 text-gray-600 font-medium text-xs rounded-full">
-                                    ${route.duration}
-                                </div>
-                            </div>
-                            
-                            <details class="group mt-1 cursor-pointer" onclick="event.stopPropagation()">
-                                <summary class="flex items-center justify-between text-xs list-none outline-none">
-                                    <div class="flex flex-col gap-1.5">
-                                        <div class="flex items-center gap-2 flex-wrap">
-                                            <span class="inline-block px-2 py-0.5 text-xs font-bold rounded" style="${routeBadgeStyle}">
-                                                ${route.route_name}
-                                            </span>
-                                            ${exactMatchBadge}
-                                            ${connectionBadge}
-                                        </div>
-                                        <div class="text-gray-500 font-medium">${directMidStops.length} stops in total</div>
-                                        <div class="mt-0.5">
-                                            ${co2Badge(directDistKm)}
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center gap-1 text-gray-500 hover:text-blue-600 transition-colors">
-                                        <span class="font-medium text-xs hidden group-open:inline">Hide</span>
-                                        <span class="font-medium text-xs group-open:hidden">Details</span>
-                                        <svg class="w-4 h-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                                    </div>
-                                </summary>
-                                <div class="mt-4 pt-4 border-t border-gray-100">
-                                    ${directMidStops.length > 0 ? `
-                                                <div class="text-sm font-medium text-gray-800 mb-3 flex items-center gap-2">
-                                                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                                                    Intermediate Stops
-                                                </div>
-                                                <div class="space-y-1.5 border-l-2 border-gray-200 ml-1.5 pl-3">
-                                                    ${directMidStops.map(s => `<div class="flex justify-between text-xs text-gray-600"><span>${s.name}</span><span class="font-mono text-gray-500">${s.arrival}</span></div>`).join('')}
-                                                </div>` : '<div class="text-sm text-gray-500">No intermediate stops.</div>'}
-                                </div>
-                            </details>
-                        </div>
-                    `;
+                routesList.innerHTML = finalRoutes.map((route, index) => {
+                    return renderTransferRoute(route, index);
                 }).join('');
 
                 routesList.classList.remove('hidden');
 
-                if (data.routes && data.routes.length > 0) {
+                if (finalRoutes && finalRoutes.length > 0) {
                     showRouteOnMap(0);
                 }
 
@@ -1758,9 +2212,9 @@
                 const midPoint = latlngs[Math.floor(latlngs.length / 2)] || latlngs[0];
                 const walkIcon = L.divIcon({
                     className: '',
-                    html: `<div style="background:${colors.walk};color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.35);border:2px solid #fff">🚶</div>`,
-                    iconSize: [22, 22],
-                    iconAnchor: [11, 11]
+                    html: `<div style="background:${colors.walk};color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-[800] text-[12px];box-shadow:0 1px 4px rgba(0,0,0,.35);border:2px solid #fff"><i class="fa-solid fa-person-walking"></i></div>`,
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
                 });
                 L.marker(midPoint, {
                         icon: walkIcon,
@@ -1820,7 +2274,7 @@
                                 })
                                 .addTo(searchResultsLayer)
                                 .bindPopup(
-                                    `<strong>🚌 ${leg.route_name}</strong><br>${leg.from} → ${leg.to}${co2PopupLine(legMapDistKm)}`
+                                    `<strong>🚌 ${leg.route_name || leg.route_short_name || leg.route_long_name || 'Route'}</strong><br>${leg.from} → ${leg.to}${co2PopupLine(legMapDistKm)}`
                                 );
                             shapePts.forEach(pt => bounds.push(pt));
                         }
@@ -1914,7 +2368,9 @@
                             opacity: 0.9
                         })
                         .addTo(searchResultsLayer)
-                        .bindPopup(`<strong>🚌 ${route.route_name}</strong>${co2PopupLine(directMapDistKm)}`);
+                        .bindPopup(
+                            `<strong><i class="fa-solid fa-bus text-[#7e7e7e]"></i> ${route.route_name || route.route_short_name || route.route_long_name || 'Route'}</strong>${co2PopupLine(directMapDistKm)}`
+                            );
                     shapePts.forEach(pt => bounds.push(pt));
                 }
 
@@ -1968,12 +2424,14 @@
                 // For direct routes, only show walk overlays when the selected point is clearly not the same stop.
                 if (!originMatch && distToOrigin > 0.35) {
                     await drawWalkLeg(actualOriginLat, actualOriginLon, firstStop.lat, firstStop.lon,
-                        `<strong>🚶 Walk to ${firstStop.name}</strong>`);
+                        `<strong><i class="fa-solid fa-person-walking text-[#7e7e7e]"></i> Walk to ${firstStop.name}</strong>`
+                        );
                 }
 
                 if (!destMatch && distToDest > 0.35) {
                     await drawWalkLeg(lastStop.lat, lastStop.lon, actualDestLat, actualDestLon,
-                        `<strong>🚶 Walk from ${lastStop.name}</strong>`);
+                        `<strong><i class="fa-solid fa-person-walking text-[#7e7e7e]"></i> Walk from ${lastStop.name}</strong>`
+                        );
                 }
 
                 // Anchor A/B markers to the stop if they are very close (< 100m), otherwise use exact coords

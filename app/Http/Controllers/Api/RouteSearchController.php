@@ -1820,11 +1820,42 @@ class RouteSearchController extends Controller
                 ->orderBy('s.city')
                 ->get();
 
-            $territories = collect();
+            $gbfsRows = DB::table('gbfs_stations as gs')
+                ->join('gbfs_sources as src', 'gs.gbfs_source_id', '=', 'src.id')
+                ->join('users as u', 'src.tenant_id', '=', 'u.id')
+                ->where('src.is_active', true)
+                ->select('src.tenant_id', 'gs.lat as stop_lat', 'gs.lon as stop_lon', 'u.name as operator_name', 'src.type')
+                ->get();
 
-            foreach ($rows->groupBy('tenant_id') as $tenantId => $tenantRows) {
-                $operatorName = (string) $tenantRows->first()->operator_name;
-                $stopPoints = $tenantRows->map(fn($row) => [(float) $row->stop_lat, (float) $row->stop_lon])->all();
+            $territories = collect();
+            $gtfsGrouped = $rows->groupBy('tenant_id');
+            $gbfsGrouped = $gbfsRows->groupBy('tenant_id');
+            
+            $allTenantIds = $gtfsGrouped->keys()->concat($gbfsGrouped->keys())->unique();
+
+            foreach ($allTenantIds as $tenantId) {
+                $tenantRows = $gtfsGrouped->get($tenantId, collect());
+                $tenantGbfsRows = $gbfsGrouped->get($tenantId, collect());
+
+                $operatorName = '';
+                if ($tenantRows->isNotEmpty()) {
+                    $operatorName = (string) $tenantRows->first()->operator_name;
+                } elseif ($tenantGbfsRows->isNotEmpty()) {
+                    $operatorName = (string) $tenantGbfsRows->first()->operator_name;
+                }
+
+                $services = collect();
+                if ($tenantRows->isNotEmpty()) {
+                    $services->push('bus');
+                }
+                if ($tenantGbfsRows->isNotEmpty()) {
+                    $services = $services->concat($tenantGbfsRows->pluck('type'))->unique();
+                }
+
+                $stopPoints = $tenantRows->map(fn($row) => [(float) $row->stop_lat, (float) $row->stop_lon])
+                    ->concat($tenantGbfsRows->map(fn($row) => [(float) $row->stop_lat, (float) $row->stop_lon]))
+                    ->all();
+
                 if (count($stopPoints) < 4) {
                     continue;
                 }
@@ -1856,9 +1887,10 @@ class RouteSearchController extends Controller
                     'name' => $dominantCity ? $operatorName . ' - ' . $dominantCity : $operatorName . ' network',
                     'city' => $dominantCity,
                     'operator_name' => $operatorName,
-                    'stops_count' => $tenantRows->count(),
+                    'stops_count' => $tenantRows->count() + $tenantGbfsRows->count(),
                     'bbox' => $bbox,
                     'polygon' => $polygon,
+                    'services' => $services->values()->all(),
                 ]);
             }
 
