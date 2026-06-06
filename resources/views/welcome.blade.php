@@ -563,32 +563,7 @@
                 searchResultsLayer.addTo(map);
                 defaultRouteStopsLayer.addTo(map);
 
-                map.on('click', function(e) {
-                    const lat = e.latlng.lat;
-                    const lon = e.latlng.lng;
-                    const popupHtml = `
-                        <div class="p-1">
-                            <div class="flex items-center gap-2 mb-2">
-                                <i class="fa-solid fa-location-dot text-[#25282b] text-[20px]"></i>
-                                <h3 class="font-[800] text-[#25282b] text-[16px] uppercase m-0 leading-tight">Pin</h3>
-                            </div>
-                            <div class="flex gap-2 mt-3 pt-3 border-t border-[#e5e7eb]">
-                                <button onclick="setAsRouteEndpoint('origin', 'Pin', ${lat}, ${lon})" class="flex-1 bg-white border border-[#333333] hover:opacity-90 text-[#333333] font-[700] py-1.5 px-2 rounded-[2px] transition-opacity text-center text-[12px]">Start here</button>
-                                <button onclick="setAsRouteEndpoint('destination', 'Pin', ${lat}, ${lon})" class="flex-1 bg-white border border-[#333333] hover:opacity-90 text-[#333333] font-[700] py-1.5 px-2 rounded-[2px] transition-opacity text-center text-[12px]">End here</button>
-                            </div>
-                        </div>
-                    `;
-
-                    if (userPinMarker) {
-                        map.removeLayer(userPinMarker);
-                    }
-
-                    userPinMarker = L.marker([lat, lon]).addTo(map)
-                        .bindPopup(popupHtml, {
-                            className: 'rounded-xl'
-                        })
-                        .openPopup();
-                });
+                // Removed map.on('click') arbitrary pin logic as per user request
             }
         }
 
@@ -609,6 +584,17 @@
             if (!stops || !stops.length) return;
             stops.forEach((stop, i) => {
                 const isEndpoint = i === 0 || i === stops.length - 1;
+                const escapedName = stop.name.replace(/'/g, "\\'");
+                const popupHtml = `
+                    <div class="p-1">
+                        <div class="font-bold text-sm mb-2 text-gray-800">${stop.name}</div>
+                        <div class="flex gap-2 mt-2 pt-2 border-t border-[#e5e7eb]">
+                            <button onclick="setAsRouteEndpoint('origin', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-white border border-[#333333] hover:opacity-90 text-[#333333] font-[700] py-1.5 px-2 rounded-[2px] transition-opacity text-center text-[12px]">Start here</button>
+                            <button onclick="setAsRouteEndpoint('destination', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-white border border-[#333333] hover:opacity-90 text-[#333333] font-[700] py-1.5 px-2 rounded-[2px] transition-opacity text-center text-[12px]">End here</button>
+                        </div>
+                    </div>
+                `;
+
                 L.circleMarker([stop.lat, stop.lon], {
                         radius: isEndpoint ? 7 : 4,
                         color: color,
@@ -618,6 +604,9 @@
                     }).bindTooltip(stop.name, {
                         sticky: true,
                         className: 'font-sans text-sm'
+                    })
+                    .bindPopup(popupHtml, {
+                        className: 'rounded-xl'
                     })
                     .addTo(defaultRouteStopsLayer);
             });
@@ -1615,15 +1604,16 @@
                 const stopsEl = selectedBusCard.querySelector('.bus-card-stops');
                 if (stopsEl) stopsEl.classList.add('hidden');
             }
-            if (selectedBusRouteName && allRoutePolylines[selectedBusRouteName]) {
-                allRoutePolylines[selectedBusRouteName].forEach(p => p.setStyle({
-                    weight: 2,
-                    opacity: 0.6
-                }));
-            }
             selectedBusCard = null;
             selectedBusRouteName = null;
-            loadTerritories();
+
+            // Clear all selected services and modes
+            selectedTenantServices.clear();
+            expandedTenants.clear();
+            selectedGbfsTenantModes.clear();
+
+            renderTerritoryTree();
+            renderBusInfoPanel();
         });
 
         // --- RESULTS RENDERING & HIGHLIGHT LOGIC ---
@@ -2253,10 +2243,11 @@
                     if (leg.type === 'walk') {
                         if (leg.from_lat && leg.from_lon && leg.to_lat && leg.to_lon) {
                             const walkDist = leg.distance ? ` · ${(+leg.distance).toFixed(2)} km` : '';
+                            const flipWalk = parseFloat(leg.from_lon) > parseFloat(leg.to_lon) ? ' fa-flip-horizontal' : '';
                             await drawWalkLeg(
                                 leg.from_lat, leg.from_lon,
                                 leg.to_lat, leg.to_lon,
-                                `<strong>🚶 Walk ${leg.duration} min</strong>${walkDist}<br>${leg.from} → ${leg.to}`
+                                `<strong><i class="fa-solid fa-person-walking text-[#7e7e7e]${flipWalk}"></i> Walk ${leg.duration} min</strong>${walkDist}<br>${leg.from} → ${leg.to}`
                             );
                         }
                     } else if (leg.type === 'transit') {
@@ -2274,7 +2265,7 @@
                                 })
                                 .addTo(searchResultsLayer)
                                 .bindPopup(
-                                    `<strong>🚌 ${leg.route_name || leg.route_short_name || leg.route_long_name || 'Route'}</strong><br>${leg.from} → ${leg.to}${co2PopupLine(legMapDistKm)}`
+                                    `<strong><i class="fa-solid fa-bus text-[#7e7e7e]"></i> ${leg.route_name || leg.route_short_name || leg.route_long_name || 'Route'}</strong><br>${leg.from} → ${leg.to}${co2PopupLine(legMapDistKm)}`
                                 );
                             shapePts.forEach(pt => bounds.push(pt));
                         }
@@ -2297,17 +2288,27 @@
                         ];
                         stopsToRender.forEach(stop => {
                             if (!stop.lat || !stop.lon) return;
-                            const isTransfer = stop.is_intermediate === false;
-
+                            const isEndpoint = stop.is_intermediate === false;
+                            const escapedName = stop.name.replace(/'/g, "\\'");
+                            const popupHtml = `
+                                <div class="p-1">
+                                    <div class="font-bold text-sm mb-2 text-gray-800">${stop.name}</div>
+                                    ${stop.arrival ? `<div class="text-xs text-gray-600 mb-2">${stop.arrival}</div>` : ''}
+                                    <div class="flex gap-2 mt-2 pt-2 border-t border-[#e5e7eb]">
+                                        <button onclick="setAsRouteEndpoint('origin', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-white border border-[#333333] hover:opacity-90 text-[#333333] font-[700] py-1.5 px-2 rounded-[2px] transition-opacity text-center text-[12px]">Start here</button>
+                                        <button onclick="setAsRouteEndpoint('destination', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-white border border-[#333333] hover:opacity-90 text-[#333333] font-[700] py-1.5 px-2 rounded-[2px] transition-opacity text-center text-[12px]">End here</button>
+                                    </div>
+                                </div>
+                            `;
                             L.circleMarker([parseFloat(stop.lat), parseFloat(stop.lon)], {
-                                    radius: isTransfer ? 5 : 3,
-                                    fillColor: isTransfer ? '#FFFFFF' : '#FFFFFF',
-                                    color: isTransfer ? '#000000' : pathColor,
-                                    weight: isTransfer ? 2 : 2,
+                                    radius: isEndpoint ? 5 : 3,
+                                    fillColor: isEndpoint ? '#FFFFFF' : '#FFFFFF',
+                                    color: isEndpoint ? '#000000' : pathColor,
+                                    weight: isEndpoint ? 2 : 2,
                                     opacity: 1,
                                     fillOpacity: 1
                                 }).addTo(searchResultsLayer)
-                                .bindPopup(`<strong>${stop.name}</strong><br>${stop.arrival || ''}`);
+                                .bindPopup(popupHtml, { className: 'rounded-xl' });
                         });
                     }
                 }
@@ -2316,29 +2317,39 @@
                 const firstLeg = route.legs[0];
                 const lastLeg = route.legs[route.legs.length - 1];
 
-                if (firstLeg && firstLeg.from_lat && firstLeg.from_lon) {
+                const uiOrigLat = selectedCoords.origin ? parseFloat(selectedCoords.origin.lat) : null;
+                const uiOrigLon = selectedCoords.origin ? parseFloat(selectedCoords.origin.lon) : null;
+                const uiDestLat = selectedCoords.destination ? parseFloat(selectedCoords.destination.lat) : null;
+                const uiDestLon = selectedCoords.destination ? parseFloat(selectedCoords.destination.lon) : null;
+
+                const startLat = uiOrigLat || (firstLeg && firstLeg.from_lat ? parseFloat(firstLeg.from_lat) : null);
+                const startLon = uiOrigLon || (firstLeg && firstLeg.from_lon ? parseFloat(firstLeg.from_lon) : null);
+                const endLat = uiDestLat || (lastLeg && lastLeg.to_lat ? parseFloat(lastLeg.to_lat) : null);
+                const endLon = uiDestLon || (lastLeg && lastLeg.to_lon ? parseFloat(lastLeg.to_lon) : null);
+
+                if (startLat && startLon) {
                     const startIcon = L.divIcon({
                         html: '<div style="background:#16a34a;color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.3);">A</div>',
                         className: '',
                         iconSize: [24, 24],
                         iconAnchor: [12, 12]
                     });
-                    L.marker([parseFloat(firstLeg.from_lat), parseFloat(firstLeg.from_lon)], {
+                    L.marker([startLat, startLon], {
                             icon: startIcon
                         })
-                        .addTo(searchResultsLayer).bindPopup(`<strong>Origin</strong><br>${firstLeg.from}`);
+                        .addTo(searchResultsLayer).bindPopup(`<strong>Origin</strong><br>${firstLeg ? firstLeg.from : 'Start'}`);
                 }
-                if (lastLeg && lastLeg.to_lat && lastLeg.to_lon) {
+                if (endLat && endLon) {
                     const endIcon = L.divIcon({
                         html: '<div style="background:#dc2626;color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.3);">B</div>',
                         className: '',
                         iconSize: [24, 24],
                         iconAnchor: [12, 12]
                     });
-                    L.marker([parseFloat(lastLeg.to_lat), parseFloat(lastLeg.to_lon)], {
+                    L.marker([endLat, endLon], {
                             icon: endIcon
                         })
-                        .addTo(searchResultsLayer).bindPopup(`<strong>Destination</strong><br>${lastLeg.to}`);
+                        .addTo(searchResultsLayer).bindPopup(`<strong>Destination</strong><br>${lastLeg ? lastLeg.to : 'End'}`);
                 }
 
             } else if (route.stops && route.stops.length > 0) {
@@ -2377,6 +2388,17 @@
                 route.stops.forEach(stop => {
                     if (!stop || !stop.lat || !stop.lon) return;
                     const isMid = stop.is_intermediate === true;
+                    const escapedName = stop.name.replace(/'/g, "\\'");
+                    const popupHtml = `
+                        <div class="p-1">
+                            <div class="font-bold text-sm mb-2 text-gray-800">${stop.name}</div>
+                            ${stop.arrival ? `<div class="text-xs text-gray-600 mb-2">${stop.arrival}</div>` : ''}
+                            <div class="flex gap-2 mt-2 pt-2 border-t border-[#e5e7eb]">
+                                <button onclick="setAsRouteEndpoint('origin', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-white border border-[#333333] hover:opacity-90 text-[#333333] font-[700] py-1.5 px-2 rounded-[2px] transition-opacity text-center text-[12px]">Start here</button>
+                                <button onclick="setAsRouteEndpoint('destination', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-white border border-[#333333] hover:opacity-90 text-[#333333] font-[700] py-1.5 px-2 rounded-[2px] transition-opacity text-center text-[12px]">End here</button>
+                            </div>
+                        </div>
+                    `;
                     L.circleMarker([parseFloat(stop.lat), parseFloat(stop.lon)], {
                             radius: isMid ? 4 : 7,
                             fillColor: isMid ? '#FFFFFF' : pathColor,
@@ -2385,9 +2407,7 @@
                             opacity: 1,
                             fillOpacity: isMid ? 0.85 : 1
                         }).addTo(searchResultsLayer)
-                        .bindPopup(
-                            `<strong>${stop.name}</strong><br><span style="color:#666">${stop.arrival}</span>`
-                        );
+                        .bindPopup(popupHtml, { className: 'rounded-xl' });
                 });
 
                 // Draw bold explicitly marked Origin and Destination endpoints for direct routes
@@ -2423,22 +2443,23 @@
 
                 // For direct routes, only show walk overlays when the selected point is clearly not the same stop.
                 if (!originMatch && distToOrigin > 0.35) {
+                    const flipStart = parseFloat(firstStop.lon) < actualOriginLon ? ' fa-flip-horizontal' : '';
                     await drawWalkLeg(actualOriginLat, actualOriginLon, firstStop.lat, firstStop.lon,
-                        `<strong><i class="fa-solid fa-person-walking text-[#7e7e7e]"></i> Walk to ${firstStop.name}</strong>`
+                        `<strong><i class="fa-solid fa-person-walking text-[#7e7e7e]${flipStart}"></i> Walk to ${firstStop.name}</strong>`
                         );
                 }
 
                 if (!destMatch && distToDest > 0.35) {
+                    const flipEnd = actualDestLon < parseFloat(lastStop.lon) ? ' fa-flip-horizontal' : '';
                     await drawWalkLeg(lastStop.lat, lastStop.lon, actualDestLat, actualDestLon,
-                        `<strong><i class="fa-solid fa-person-walking text-[#7e7e7e]"></i> Walk from ${lastStop.name}</strong>`
+                        `<strong><i class="fa-solid fa-person-walking text-[#7e7e7e]${flipEnd}"></i> Walk from ${lastStop.name}</strong>`
                         );
                 }
 
-                // Anchor A/B markers to the stop if they are very close (< 100m), otherwise use exact coords
-                const markerALat = distToOrigin < 0.1 ? parseFloat(firstStop.lat) : actualOriginLat;
-                const markerALon = distToOrigin < 0.1 ? parseFloat(firstStop.lon) : actualOriginLon;
-                const markerBLat = distToDest < 0.1 ? parseFloat(lastStop.lat) : actualDestLat;
-                const markerBLon = distToDest < 0.1 ? parseFloat(lastStop.lon) : actualDestLon;
+                const markerALat = actualOriginLat;
+                const markerALon = actualOriginLon;
+                const markerBLat = actualDestLat;
+                const markerBLon = actualDestLon;
 
                 if (markerALat && markerALon) {
                     const startIcon = L.divIcon({
