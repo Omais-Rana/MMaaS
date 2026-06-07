@@ -420,7 +420,7 @@
                         map.removeLayer(endpointMarkers[type]);
                     }
 
-                    let iconColor = type === 'origin' ? '#28a745' : (type === 'destination' ? '#e60000' : '#3b82f6');
+                    let iconColor = type === 'origin' ? '#3b82f6' : (type === 'destination' ? '#e60000' : '#3b82f6');
                     let iconText = type === 'origin' ? 'A' : (type === 'destination' ? 'B' : 'V');
 
                     const endpointIcon = L.divIcon({
@@ -502,6 +502,7 @@
         let gbfsStationsLayer = L.layerGroup();
         let searchResultsLayer = L.layerGroup();
         let defaultRouteStopsLayer = L.layerGroup();
+        let territoryStopsLayer = L.layerGroup();
         let currentRouteData = null;
         let allRoutesShapes = {}; // Cache: route_short_name -> full shape_pts array
         let routeStopsCache = {}; // Cache: routeName -> stops array
@@ -562,6 +563,20 @@
                 gbfsStationsLayer.addTo(map);
                 searchResultsLayer.addTo(map);
                 defaultRouteStopsLayer.addTo(map);
+                territoryStopsLayer.addTo(map);
+
+                const legend = L.control({ position: 'bottomright' });
+                legend.onAdd = function() {
+                    const div = L.DomUtil.create('div', 'bg-white p-3 rounded-lg shadow-md border border-gray-200 text-sm');
+                    div.innerHTML = `
+                        <div class="font-bold mb-2">Legend</div>
+                        <div class="flex items-center gap-2 mb-1"><div class="w-3 h-3 rounded-full border-2 border-[#3b82f6] bg-white"></div> Bus Station</div>
+                        <div class="flex items-center gap-2 mb-1"><div class="w-3 h-3 rounded-full border-2 border-[#f59e0b] bg-white"></div> Cycle Station</div>
+                        <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full border-2 border-[#a855f7] bg-white"></div> Car Station</div>
+                    `;
+                    return div;
+                };
+                legend.addTo(map);
 
                 // Removed map.on('click') arbitrary pin logic as per user request
             }
@@ -882,7 +897,6 @@
                     return `
                         <button type="button" class="city-select-btn w-full flex items-center justify-between gap-3 px-3 py-2 rounded-md text-left transition-colors ${isActive ? 'bg-red-50 text-red-700' : 'bg-transparent hover:bg-gray-50 text-gray-600'}" data-country="${country.replace(/"/g, '&quot;')}" data-city="${city.replace(/"/g, '&quot;')}">
                             <span class="text-sm font-medium ${isActive ? 'text-red-700' : 'text-gray-600'}">${city}</span>
-                            <span class="text-[11px] font-semibold px-2 py-0.5 rounded-md ${isActive ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'}">${serviceHierarchy[country][city].length}</span>
                         </button>
                     `;
                 }).join('');
@@ -928,6 +942,94 @@
                     expandedCountries.add(country);
                     renderTerritoryTree();
                     renderServiceList();
+                    
+                    const services = getActiveCityServices();
+                    if (services.length > 0 && map) {
+                        let minLat = 90, maxLat = -90, minLon = 180, maxLon = -180;
+                        let hasBounds = false;
+                        services.forEach(svc => {
+                            const meta = territoriesMeta[territoryKey(svc.tenant_id)];
+                            if (meta && meta.bbox) {
+                                hasBounds = true;
+                                minLat = Math.min(minLat, meta.bbox.min_lat);
+                                maxLat = Math.max(maxLat, meta.bbox.max_lat);
+                                minLon = Math.min(minLon, meta.bbox.min_lon);
+                                maxLon = Math.max(maxLon, meta.bbox.max_lon);
+                            }
+                        });
+
+                        if (hasBounds) {
+                            map.fitBounds([
+                                [minLat, minLon],
+                                [maxLat, maxLon]
+                            ], { padding: [20, 20], maxZoom: 14 });
+                        }
+
+                        territoryStopsLayer.clearLayers();
+                        
+                        services.forEach(svc => {
+                            fetch('/api/territories/' + svc.tenant_id + '/stops')
+                                .then(res => res.json())
+                                .then(data => {
+                                    if (data.stops) {
+                                        data.stops.forEach(stop => {
+                                            const escapedName = stop.name.replace(/'/g, "\\'");
+                                            const popupHtml = `
+                                                <div class="p-1">
+                                                    <div class="font-bold text-sm mb-2 text-gray-800">${stop.name}</div>
+                                                    <div class="text-xs text-gray-600 mb-2 capitalize">Bus Station</div>
+                                                    <div class="flex gap-2 mt-2 pt-2 border-t border-[#e5e7eb]">
+                                                        <button onclick="setAsRouteEndpoint('origin', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-white border border-[#333333] hover:opacity-90 text-[#333333] font-[700] py-1.5 px-2 rounded-[2px] transition-opacity text-center text-[12px]">Start here</button>
+                                                        <button onclick="setAsRouteEndpoint('destination', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-white border border-[#333333] hover:opacity-90 text-[#333333] font-[700] py-1.5 px-2 rounded-[2px] transition-opacity text-center text-[12px]">End here</button>
+                                                    </div>
+                                                </div>
+                                            `;
+                                            L.circleMarker([stop.lat, stop.lon], {
+                                                radius: 4,
+                                                color: '#3b82f6',
+                                                fillColor: '#fff',
+                                                fillOpacity: 1,
+                                                weight: 2
+                                            }).bindTooltip(stop.name, {
+                                                sticky: true,
+                                                className: 'font-sans text-sm'
+                                            }).bindPopup(popupHtml, {
+                                                className: 'rounded-xl'
+                                            }).addTo(territoryStopsLayer);
+                                        });
+                                    }
+                                    if (data.gbfs_stations) {
+                                        data.gbfs_stations.forEach(station => {
+                                            const escapedName = station.name.replace(/'/g, "\\'");
+                                            const popupHtml = `
+                                                <div class="p-1">
+                                                    <div class="font-bold text-sm mb-2 text-gray-800">${station.name}</div>
+                                                    <div class="text-xs text-gray-600 mb-2 capitalize">${station.gbfs_type} Station</div>
+                                                    <div class="flex gap-2 mt-2 pt-2 border-t border-[#e5e7eb]">
+                                                        <button onclick="setAsRouteEndpoint('origin', '${escapedName}', ${station.lat}, ${station.lon})" class="flex-1 bg-white border border-[#333333] hover:opacity-90 text-[#333333] font-[700] py-1.5 px-2 rounded-[2px] transition-opacity text-center text-[12px]">Start here</button>
+                                                        <button onclick="setAsRouteEndpoint('destination', '${escapedName}', ${station.lat}, ${station.lon})" class="flex-1 bg-white border border-[#333333] hover:opacity-90 text-[#333333] font-[700] py-1.5 px-2 rounded-[2px] transition-opacity text-center text-[12px]">End here</button>
+                                                    </div>
+                                                </div>
+                                            `;
+                                            const markerColor = station.gbfs_type === 'car' ? '#a855f7' : '#f59e0b';
+                                            L.circleMarker([station.lat, station.lon], {
+                                                radius: 4,
+                                                color: markerColor,
+                                                fillColor: '#fff',
+                                                fillOpacity: 1,
+                                                weight: 2
+                                            }).bindTooltip(station.name, {
+                                                sticky: true,
+                                                className: 'font-sans text-sm'
+                                            }).bindPopup(popupHtml, {
+                                                className: 'rounded-xl'
+                                            }).addTo(territoryStopsLayer);
+                                        });
+                                    }
+                                })
+                                .catch(err => console.error('Failed to load stops for territory:', err));
+                        });
+                    }
                 });
             });
         }
@@ -1656,11 +1758,56 @@
             const legsHtml = route.legs.map((leg, idx) => {
                 if (leg.type === 'walk') {
                     return `
-                        <div class="flex items-center gap-3 text-sm text-gray-500 py-1">
-                            <div class="w-6 flex justify-center text-gray-400">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path></svg>
+                        <div class="relative pl-6 py-2">
+                            <div class="flex items-start gap-3">
+                                ${idx < route.legs.length - 1 ? '<div class="absolute left-[11px] top-4 bottom-[-10px] w-0.5 border-l-2 border-dotted border-[#e5e7eb]"></div>' : ''}
+                                <div class="absolute left-[-29px] top-1.5 w-[14px] h-[14px] rounded-full border-2 border-[#1a1a1a] bg-white z-10 shadow-sm"></div>
+                                <div class="font-mono text-sm font-semibold text-[#1a1a1a] w-12 pt-0.5 shrink-0">${leg.start_time || ''}</div>
+                                <div>
+                                    <div class="font-[800] text-[#1a1a1a] leading-snug">${leg.from || 'Origin'}</div>
+                                    <div class="mt-1 flex items-center gap-2">
+                                        <span class="text-xs font-medium text-gray-500"><i class="fa-solid fa-person-walking"></i> Walk ${leg.duration} min</span>
+                                    </div>
+                                </div>
                             </div>
-                            <span class="font-medium text-gray-600">Walk ${leg.duration} min</span>
+                            ${idx === route.legs.length - 1 ? `
+                            <div class="relative flex items-start gap-3 mt-4">
+                                <div class="absolute left-[-29px] top-1.5 w-[14px] h-[14px] rounded-full border-2 border-[#1a1a1a] bg-white z-10 shadow-sm"></div>
+                                <div class="font-mono text-sm font-semibold text-[#1a1a1a] w-12 pt-0.5 shrink-0">${leg.end_time || ''}</div>
+                                <div class="font-[800] text-[#1a1a1a] leading-snug">${leg.to || 'Destination'}</div>
+                            </div>
+                            ` : ''}
+                        </div>
+                    `;
+                } else if (leg.type === 'bike' || leg.type === 'car') {
+                    const iconClass = leg.type === 'bike' ? 'fa-bicycle' : 'fa-car';
+                    const routeBadgeStyle = leg.route_color ?
+                        `background-color: #${leg.route_color}; color: ${leg.route_text_color ? '#' + leg.route_text_color : '#FFFFFF'};` :
+                        'background-color: #3b82f6; color: #FFFFFF;';
+                    
+                    return `
+                        <div class="relative pl-6 py-3">
+                            <div class="absolute left-[11px] top-4 bottom-4 w-0.5 bg-[#e5e7eb]"></div>
+                            
+                            <!-- Ride Start -->
+                            <div class="relative flex items-start gap-3 mb-4">
+                                <div class="absolute left-[-29px] top-1.5 w-[14px] h-[14px] rounded-full border-2 border-[#1a1a1a] bg-white z-10 shadow-sm"></div>
+                                <div class="font-mono text-sm font-semibold text-[#1a1a1a] w-12 pt-0.5 shrink-0">${leg.start_time}</div>
+                                <div>
+                                    <div class="font-[800] text-[#1a1a1a] leading-snug">${leg.from}</div>
+                                    <div class="mt-1 flex items-center gap-2">
+                                        <span class="inline-block px-1.5 py-0.5 text-[10px] font-bold rounded uppercase tracking-wide" style="${routeBadgeStyle}">${leg.route_name || leg.type}</span>
+                                        <span class="text-xs font-medium text-gray-500"><i class="fa-solid ${iconClass}"></i> Ride ${leg.duration} min</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Ride End -->
+                            <div class="relative flex items-start gap-3">
+                                <div class="absolute left-[-29px] top-1.5 w-[14px] h-[14px] rounded-full border-2 border-[#1a1a1a] bg-white z-10 shadow-sm"></div>
+                                <div class="font-mono text-sm font-semibold text-[#1a1a1a] w-12 pt-0.5 shrink-0">${leg.end_time}</div>
+                                <div class="font-[800] text-[#1a1a1a] leading-snug">${leg.to}</div>
+                            </div>
                         </div>
                     `;
                 } else if (leg.type === 'transit') {
@@ -1833,8 +1980,8 @@
                     return await response.json();
                 }
 
-                function convertDirectRouteToLeg(route) {
-                    return {
+                function convertDirectRouteToLegs(route, originCoords, destCoords, originName, destName) {
+                    const transitLeg = {
                         type: 'transit',
                         from: route.from || (route.stops && route.stops.length > 0 ? route.stops[0].name : 'Unknown'),
                         to: route.to || (route.stops && route.stops.length > 0 ? route.stops[route.stops.length - 1].name : 'Unknown'),
@@ -1845,8 +1992,52 @@
                         route_color: route.route_color,
                         route_text_color: route.route_text_color,
                         stops: route.stops,
-                        shape_pts: route.shape_pts
+                        shape_pts: route.shape_pts,
+                        from_lat: route.stops && route.stops.length > 0 ? route.stops[0].lat : null,
+                        from_lon: route.stops && route.stops.length > 0 ? route.stops[0].lon : null,
+                        to_lat: route.stops && route.stops.length > 0 ? route.stops[route.stops.length - 1].lat : null,
+                        to_lon: route.stops && route.stops.length > 0 ? route.stops[route.stops.length - 1].lon : null,
                     };
+
+                    const legs = [];
+
+                    if (originCoords && transitLeg.from_lat) {
+                        const distToStart = haversineKm([[originCoords[0], originCoords[1]], [transitLeg.from_lat, transitLeg.from_lon]]);
+                        if (distToStart > 0.05) {
+                            legs.push({
+                                type: 'walk',
+                                from: originName || 'Origin',
+                                to: transitLeg.from,
+                                from_lat: originCoords[0],
+                                from_lon: originCoords[1],
+                                to_lat: transitLeg.from_lat,
+                                to_lon: transitLeg.from_lon,
+                                distance: distToStart.toFixed(2),
+                                duration: Math.round(distToStart / 5.0 * 60)
+                            });
+                        }
+                    }
+
+                    legs.push(transitLeg);
+
+                    if (destCoords && transitLeg.to_lat) {
+                        const distToEnd = haversineKm([[transitLeg.to_lat, transitLeg.to_lon], [destCoords[0], destCoords[1]]]);
+                        if (distToEnd > 0.05) {
+                            legs.push({
+                                type: 'walk',
+                                from: transitLeg.to,
+                                to: destName || 'Destination',
+                                from_lat: transitLeg.to_lat,
+                                from_lon: transitLeg.to_lon,
+                                to_lat: destCoords[0],
+                                to_lon: destCoords[1],
+                                distance: distToEnd.toFixed(2),
+                                duration: Math.round(distToEnd / 5.0 * 60)
+                            });
+                        }
+                    }
+
+                    return legs;
                 }
 
                 let finalRoutes = [];
@@ -1857,7 +2048,7 @@
                     if (data.routes && data.routes.length > 0) {
                         data.routes.forEach(route => {
                             if (route.connection_type !== 'transfer') {
-                                route.legs = [convertDirectRouteToLeg(route)];
+                                route.legs = convertDirectRouteToLegs(route, stops[0].coords, stops[1].coords, stops[0].name, stops[1].name);
                                 route.connection_type = 'transfer';
                             }
                             finalRoutes.push(route);
@@ -1877,7 +2068,7 @@
                         let depTime = option.leave_at || option.departure_time;
 
                         if (option.connection_type !== 'transfer') {
-                            currentOptionLegs.push(convertDirectRouteToLeg(option));
+                            currentOptionLegs.push(...convertDirectRouteToLegs(option, stops[0].coords, stops[1].coords, stops[0].name, stops[1].name));
                         } else {
                             currentOptionLegs.push(...option.legs);
                         }
@@ -1902,7 +2093,7 @@
                             const bestNextLeg = legData.routes[0];
                             currentArrTime = bestNextLeg.arrival_time;
                             if (bestNextLeg.connection_type !== 'transfer') {
-                                currentOptionLegs.push(convertDirectRouteToLeg(bestNextLeg));
+                                currentOptionLegs.push(...convertDirectRouteToLegs(bestNextLeg, fromStop.coords, toStop.coords, fromStop.name, toStop.name));
                             } else {
                                 currentOptionLegs.push(...bestNextLeg.legs);
                             }
@@ -2069,7 +2260,7 @@
                 }
             }
 
-            async function fetchWalkingRouteLatLngs(fromLat, fromLon, toLat, toLon) {
+            async function fetchWalkingRouteLatLngs(fromLat, fromLon, toLat, toLon, mode = 'foot') {
                 const fromLatNum = parseFloat(fromLat);
                 const fromLonNum = parseFloat(fromLon);
                 const toLatNum = parseFloat(toLat);
@@ -2080,41 +2271,33 @@
                     [toLatNum, toLonNum]
                 ];
 
-                const cacheKey = buildWalkCacheKey(fromLatNum, fromLonNum, toLatNum, toLonNum);
-                const reverseCacheKey = buildWalkCacheKey(toLatNum, toLonNum, fromLatNum, fromLonNum);
+                const cacheKey = buildWalkCacheKey(fromLatNum, fromLonNum, toLatNum, toLonNum) + '_' + mode;
+                const reverseCacheKey = buildWalkCacheKey(toLatNum, toLonNum, fromLatNum, fromLonNum) + '_' + mode;
 
                 if (walkingRouteCache.has(cacheKey)) {
                     return walkingRouteCache.get(cacheKey);
                 }
 
-                const providers = [
-                    // Dedicated OSM routing hosts often have better pedestrian graph coverage in EU cities.
-                    {
-                        baseUrl: 'https://routing.openstreetmap.de/routed-foot/route/v1',
-                        profilePath: 'driving',
-                        penalty: 0
-                    },
-                    {
-                        baseUrl: 'https://routing.openstreetmap.de/routed-bike/route/v1',
-                        profilePath: 'driving',
-                        penalty: 0.04
-                    },
-                    {
-                        baseUrl: 'https://router.project-osrm.org/route/v1',
-                        profilePath: 'foot',
-                        penalty: 0.06
-                    },
-                    {
-                        baseUrl: 'https://router.project-osrm.org/route/v1',
-                        profilePath: 'bike',
-                        penalty: 0.08
-                    },
-                    {
-                        baseUrl: 'https://router.project-osrm.org/route/v1',
-                        profilePath: 'driving',
-                        penalty: 0.12
-                    },
-                ];
+                let providers = [];
+                if (mode === 'bike') {
+                    providers = [
+                        { baseUrl: 'https://routing.openstreetmap.de/routed-bike/route/v1', profilePath: 'driving', penalty: 0 },
+                        { baseUrl: 'https://router.project-osrm.org/route/v1', profilePath: 'bike', penalty: 0.05 }
+                    ];
+                } else if (mode === 'car') {
+                    providers = [
+                        { baseUrl: 'https://routing.openstreetmap.de/routed-car/route/v1', profilePath: 'driving', penalty: 0 },
+                        { baseUrl: 'https://router.project-osrm.org/route/v1', profilePath: 'driving', penalty: 0.05 }
+                    ];
+                } else {
+                    providers = [
+                        { baseUrl: 'https://routing.openstreetmap.de/routed-foot/route/v1', profilePath: 'driving', penalty: 0 },
+                        { baseUrl: 'https://routing.openstreetmap.de/routed-bike/route/v1', profilePath: 'driving', penalty: 0.04 },
+                        { baseUrl: 'https://router.project-osrm.org/route/v1', profilePath: 'foot', penalty: 0.06 },
+                        { baseUrl: 'https://router.project-osrm.org/route/v1', profilePath: 'bike', penalty: 0.08 },
+                        { baseUrl: 'https://router.project-osrm.org/route/v1', profilePath: 'driving', penalty: 0.12 }
+                    ];
+                }
 
                 const settled = await Promise.allSettled(
                     providers.map(provider => fetchWalkCandidates(
@@ -2161,22 +2344,23 @@
             }
 
             /**
-             * Draw a Google Maps-style walking dotted line between two coordinates.
+             * Draw a routing line between two coordinates (walk, bike, or car).
              */
-            async function drawWalkLeg(fromLat, fromLon, toLat, toLon, popupHtml) {
-                const latlngs = await fetchWalkingRouteLatLngs(fromLat, fromLon, toLat, toLon);
+            async function drawWalkLeg(fromLat, fromLon, toLat, toLon, popupHtml, mode = 'foot', pathColor = null, iconHtml = null) {
+                const latlngs = await fetchWalkingRouteLatLngs(fromLat, fromLon, toLat, toLon, mode);
+                const colorToUse = pathColor || colors.walk;
 
                 // Simplified robust dotted line logic
                 L.polyline(latlngs, {
-                    color: colors.walk,
+                    color: colorToUse,
                     weight: 6,
                     lineCap: 'square', // Better for dots
-                    dashArray: '4, 8', // 4px dot, 8px gap
+                    dashArray: mode === 'foot' ? '4, 8' : null, // Solid line for non-walk
                     opacity: 0.8
                 }).addTo(searchResultsLayer).bindPopup(popupHtml);
 
                 L.polyline(latlngs, {
-                    color: colors.walk,
+                    color: colorToUse,
                     weight: 12,
                     opacity: 0.15, // Subtle halo
                     lineCap: 'round'
@@ -2185,7 +2369,7 @@
                 // Endpoint markers
                 const endpointStyle = {
                     radius: 5,
-                    fillColor: colors.walk,
+                    fillColor: colorToUse,
                     color: '#FFFFFF',
                     weight: 2,
                     opacity: 1,
@@ -2198,11 +2382,12 @@
                     .addTo(searchResultsLayer)
                     .bindPopup(popupHtml);
 
-                // Walking figure icon at midpoint
+                // Figure icon at midpoint
                 const midPoint = latlngs[Math.floor(latlngs.length / 2)] || latlngs[0];
+                const finalIconHtml = iconHtml || `<div style="background:${colorToUse};color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-[800] text-[12px];box-shadow:0 1px 4px rgba(0,0,0,.35);border:2px solid #fff"><i class="fa-solid fa-person-walking"></i></div>`;
                 const walkIcon = L.divIcon({
                     className: '',
-                    html: `<div style="background:${colors.walk};color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-[800] text-[12px];box-shadow:0 1px 4px rgba(0,0,0,.35);border:2px solid #fff"><i class="fa-solid fa-person-walking"></i></div>`,
+                    html: finalIconHtml,
                     iconSize: [24, 24],
                     iconAnchor: [12, 12]
                 });
@@ -2249,6 +2434,33 @@
                                 leg.to_lat, leg.to_lon,
                                 `<strong><i class="fa-solid fa-person-walking text-[#7e7e7e]${flipWalk}"></i> Walk ${leg.duration} min</strong>${walkDist}<br>${leg.from} → ${leg.to}`
                             );
+                        }
+                    } else if (leg.type === 'bike' || leg.type === 'car') {
+                        if (leg.from_lat && leg.from_lon && leg.to_lat && leg.to_lon) {
+                            const rideDist = leg.distance ? ` · ${(+leg.distance).toFixed(2)} km` : '';
+                            const flipRide = parseFloat(leg.from_lon) > parseFloat(leg.to_lon) ? ' fa-flip-horizontal' : '';
+                            const iconClass = leg.type === 'bike' ? 'fa-bicycle' : 'fa-car';
+                            const pathColor = leg.route_color ? '#' + leg.route_color : colors.walk;
+                            const customIconHtml = `<div style="background:${pathColor};color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-[800] text-[12px];box-shadow:0 1px 4px rgba(0,0,0,.35);border:2px solid #fff"><i class="fa-solid ${iconClass}${flipRide}"></i></div>`;
+                            
+                            await drawWalkLeg(
+                                leg.from_lat, leg.from_lon,
+                                leg.to_lat, leg.to_lon,
+                                `<strong><i class="fa-solid ${iconClass} text-[#7e7e7e]${flipRide}"></i> ${leg.route_name || 'Ride'} ${leg.duration} min</strong>${rideDist}<br>${leg.from} → ${leg.to}`,
+                                leg.type,
+                                pathColor,
+                                customIconHtml
+                            );
+
+                            const stationIcon = L.divIcon({
+                                className: '',
+                                html: `<div style="background:${pathColor};color:#fff;width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 5px rgba(0,0,0,.3);border:2px solid #fff"><i class="fa-solid ${iconClass}"></i></div>`,
+                                iconSize: [28, 28],
+                                iconAnchor: [14, 14]
+                            });
+
+                            L.marker([leg.from_lat, leg.from_lon], { icon: stationIcon, zIndexOffset: 1000 }).addTo(searchResultsLayer).bindPopup(`<strong><i class="fa-solid ${iconClass}"></i> ${leg.from}</strong><br>Station`);
+                            L.marker([leg.to_lat, leg.to_lon], { icon: stationIcon, zIndexOffset: 1000 }).addTo(searchResultsLayer).bindPopup(`<strong><i class="fa-solid ${iconClass}"></i> ${leg.to}</strong><br>Station`);
                         }
                     } else if (leg.type === 'transit') {
                         const pathColor = leg.route_color ? '#' + leg.route_color : colors.transit;
@@ -2329,7 +2541,7 @@
 
                 if (startLat && startLon) {
                     const startIcon = L.divIcon({
-                        html: '<div style="background:#16a34a;color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.3);">A</div>',
+                        html: '<div style="background:#3b82f6;color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.3);">A</div>',
                         className: '',
                         iconSize: [24, 24],
                         iconAnchor: [12, 12]
@@ -2463,7 +2675,7 @@
 
                 if (markerALat && markerALon) {
                     const startIcon = L.divIcon({
-                        html: '<div style="background:#16a34a;color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.3);">A</div>',
+                        html: '<div style="background:#3b82f6;color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.3);">A</div>',
                         className: '',
                         iconSize: [24, 24],
                         iconAnchor: [12, 12]

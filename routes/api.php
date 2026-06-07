@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\RouteSearchController;
 use App\Models\Stop;
 
 Route::post('/routes/search', [RouteSearchController::class, 'searchRoutes']);
+Route::get('/territories/{tenantId}/stops', [RouteSearchController::class, 'getTerritoryStops']);
 
 Route::get('/stops/nearest', function (Request $request) {
     $lat = $request->input('lat');

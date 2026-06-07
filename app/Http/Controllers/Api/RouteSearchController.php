@@ -213,6 +213,8 @@ class RouteSearchController extends Controller
 
         $routes = collect($uniqueRoutes);
 
+        $gbfsRoutes = $this->getGbfsRoutes($originLat, $originLon, $destLat, $destLon, $time, $originName, $destinationName);
+
         // If direct routes found, return them
         if ($routes->isNotEmpty()) {
             $selectedTime = substr($time, 0, 5);
@@ -291,9 +293,13 @@ class RouteSearchController extends Controller
                 ->values()
                 ->toArray();
 
+            $finalRoutes = collect($formattedRoutes)->merge($gbfsRoutes)->sortBy(function($r) {
+                return (int) str_replace(' min', '', $r['duration']);
+            })->values()->toArray();
+
             return response()->json([
-                'routes' => $formattedRoutes,
-                'total' => count($formattedRoutes),
+                'routes' => $finalRoutes,
+                'total' => count($finalRoutes),
             ]);
         }
 
@@ -313,10 +319,14 @@ class RouteSearchController extends Controller
             $destLon
         );
 
+        $finalTransferRoutes = collect($transferRoutes)->merge($gbfsRoutes)->sortBy(function($r) {
+            return (int) str_replace(' min', '', $r['duration']);
+        })->values()->toArray();
+
         return response()->json([
-            'routes' => $transferRoutes,
-            'total' => count($transferRoutes),
-            'message' => count($transferRoutes) > 0
+            'routes' => $finalTransferRoutes,
+            'total' => count($finalTransferRoutes),
+            'message' => count($finalTransferRoutes) > 0
                 ? 'Showing routes with transfers. Walking may be required between stops.'
                 : 'No routes found. Try adjusting your search time or date.',
         ]);
@@ -2504,5 +2514,205 @@ class RouteSearchController extends Controller
             'min_lon' => min($lons),
             'max_lon' => max($lons),
         ];
+    }
+    /**
+     * Generate point-to-point GBFS routes (bikes and cars).
+     */
+    private function getGbfsRoutes(?float $originLat, ?float $originLon, ?float $destLat, ?float $destLon, string $time, string $originName, string $destName): array
+    {
+        $gbfsRoutes = [];
+        
+        // Try to find a Bike route
+        $bikeOrigin = $this->getNearestGbfsStation($originLat, $originLon, true, 'cycle');
+        $bikeDest = $this->getNearestGbfsStation($destLat, $destLon, false, 'cycle');
+        
+        if ($bikeOrigin && $bikeDest && $bikeOrigin->id !== $bikeDest->id) {
+            $gbfsRoutes[] = $this->buildGbfsRoute($bikeOrigin, $bikeDest, $originLat, $originLon, $destLat, $destLon, $time, $originName, $destName, 'bike', '3b82f6');
+        }
+
+        // Try to find a Car route
+        $carOrigin = $this->getNearestGbfsStation($originLat, $originLon, true, 'car');
+        $carDest = $this->getNearestGbfsStation($destLat, $destLon, false, 'car');
+        
+        if ($carOrigin && $carDest && $carOrigin->id !== $carDest->id) {
+            $gbfsRoutes[] = $this->buildGbfsRoute($carOrigin, $carDest, $originLat, $originLon, $destLat, $destLon, $time, $originName, $destName, 'car', 'ef4444');
+        }
+
+        return $gbfsRoutes;
+    }
+
+    private function buildGbfsRoute($stationA, $stationB, $originLat, $originLon, $destLat, $destLon, $time, $originName, $destName, $type, $color)
+    {
+        $walkDistA = $this->haversineDistance($originLat, $originLon, $stationA->lat, $stationA->lon);
+        $walkDurA = (int) round(($walkDistA / 5.0) * 60);
+
+        // Bike ~15km/h = 15/60 km/min = 0.25 km/min. Time = dist / 0.25 = dist * 4
+        // Car ~30km/h = 30/60 km/min = 0.5 km/min. Time = dist / 0.5 = dist * 2
+        $rideDist = $this->haversineDistance($stationA->lat, $stationA->lon, $stationB->lat, $stationB->lon); // Straight line proxy
+        $rideDur = $type === 'car' ? (int) round($rideDist * 2) : (int) round($rideDist * 4);
+
+        $walkDistB = $this->haversineDistance($stationB->lat, $stationB->lon, $destLat, $destLon);
+        $walkDurB = (int) round(($walkDistB / 5.0) * 60);
+
+        $totalDuration = $walkDurA + $rideDur + $walkDurB;
+        $departureTimeObj = Carbon::createFromFormat('H:i', substr($time, 0, 5));
+        
+        $legs = [];
+        $currentTimeObj = clone $departureTimeObj;
+
+        if ($walkDistA > 0.05) {
+            $endTimeObj = (clone $currentTimeObj)->addMinutes($walkDurA);
+            $legs[] = [
+                'type' => 'walk',
+                'from' => $originName,
+                'to' => $stationA->name,
+                'from_lat' => $originLat,
+                'from_lon' => $originLon,
+                'to_lat' => $stationA->lat,
+                'to_lon' => $stationA->lon,
+                'distance' => round($walkDistA, 2),
+                'duration' => $walkDurA,
+                'start_time' => $currentTimeObj->format('H:i'),
+                'end_time' => $endTimeObj->format('H:i'),
+            ];
+            $currentTimeObj = $endTimeObj;
+        }
+
+        $endTimeObj = (clone $currentTimeObj)->addMinutes($rideDur);
+        $legs[] = [
+            'type' => $type,
+            'from' => $stationA->name,
+            'to' => $stationB->name,
+            'from_lat' => $stationA->lat,
+            'from_lon' => $stationA->lon,
+            'to_lat' => $stationB->lat,
+            'to_lon' => $stationB->lon,
+            'distance' => round($rideDist, 2),
+            'duration' => $rideDur,
+            'start_time' => $currentTimeObj->format('H:i'),
+            'end_time' => $endTimeObj->format('H:i'),
+            'route_name' => ($stationA->source->tenant->name ?? 'GBFS') . ' ' . ucfirst($type),
+            'route_color' => $color,
+        ];
+        $currentTimeObj = $endTimeObj;
+
+        if ($walkDistB > 0.05) {
+            $endTimeObj = (clone $currentTimeObj)->addMinutes($walkDurB);
+            $legs[] = [
+                'type' => 'walk',
+                'from' => $stationB->name,
+                'to' => $destName,
+                'from_lat' => $stationB->lat,
+                'from_lon' => $stationB->lon,
+                'to_lat' => $destLat,
+                'to_lon' => $destLon,
+                'distance' => round($walkDistB, 2),
+                'duration' => $walkDurB,
+                'start_time' => $currentTimeObj->format('H:i'),
+                'end_time' => $endTimeObj->format('H:i'),
+            ];
+            $currentTimeObj = $endTimeObj;
+        }
+
+        return [
+            'route_name' => ($stationA->source->tenant->name ?? 'GBFS') . ' ' . ucfirst($type),
+            'route_short_name' => ucfirst($type),
+            'route_color' => $color,
+            'route_text_color' => 'ffffff',
+            'agency_name' => $stationA->source->tenant->name ?? 'GBFS',
+            'departure_time' => $departureTimeObj->format('H:i'),
+            'arrival_time' => $currentTimeObj->format('H:i'),
+            'duration' => $totalDuration . ' min',
+            'connection_type' => 'transfer',
+            'is_gbfs' => true,
+            'gbfs_type' => $type,
+            'stops' => [],
+            'legs' => $legs,
+        ];
+    }
+    
+    /**
+     * Find the nearest GBFS station with availability.
+     */
+    private function getNearestGbfsStation(?float $lat, ?float $lon, bool $needsVehicle)
+    {
+        if (!$lat || !$lon) {
+            return null;
+        }
+
+        $stations = \App\Models\GbfsStation::with(['source', 'source.tenant'])
+            ->whereHas('source', function ($query) {
+                $query->where('is_active', true);
+            })->get();
+
+        $bestStation = null;
+        $minDist = 2.0; // Max 2km away
+
+        foreach ($stations as $station) {
+            $dist = $this->haversineDistance($lat, $lon, $station->lat, $station->lon);
+            if ($dist <= $minDist) {
+                $sourceId = $station->gbfs_source_id;
+                $stationId = $station->station_id;
+                $cacheKey = "gbfs_station_status_{$sourceId}_{$stationId}";
+                $status = Cache::get($cacheKey, []);
+
+                // Determine availability
+                $isCar = $station->source->type === 'car';
+                $available = 0;
+                
+                if ($needsVehicle) {
+                    if ($isCar) {
+                        if (isset($status['vehicle_types_available'])) {
+                            foreach ($status['vehicle_types_available'] as $type) {
+                                $available += $type['count'] ?? 0;
+                            }
+                        } else {
+                            $available = $status['num_bikes_available'] ?? 0;
+                        }
+                    } else {
+                        $available = $status['num_bikes_available'] ?? 0;
+                    }
+
+                    if ($available > 0 || !empty($status['is_renting'])) {
+                        $minDist = $dist;
+                        $bestStation = $station;
+                    }
+                } else {
+                    // Needs dock
+                    $docks = $status['num_docks_available'] ?? 0;
+                    if ($docks > 0 || !empty($status['is_returning'])) {
+                        $minDist = $dist;
+                        $bestStation = $station;
+                    }
+                }
+            }
+        }
+
+        return $bestStation;
+    }
+
+    /**
+     * Get all stops and stations for a specific territory.
+     */
+    public function getTerritoryStops(Request $request, $tenantId)
+    {
+        $stops = DB::table('stops')
+            ->where('tenant_id', $tenantId)
+            ->whereNotNull('stop_lat')
+            ->whereNotNull('stop_lon')
+            ->select('id', 'stop_name as name', 'stop_lat as lat', 'stop_lon as lon')
+            ->get();
+
+        $gbfsStations = DB::table('gbfs_stations as gs')
+            ->join('gbfs_sources as src', 'gs.gbfs_source_id', '=', 'src.id')
+            ->where('src.tenant_id', $tenantId)
+            ->where('src.is_active', true)
+            ->select('gs.name', 'gs.lat', 'gs.lon', 'src.type as gbfs_type')
+            ->get();
+
+        return response()->json([
+            'stops' => $stops,
+            'gbfs_stations' => $gbfsStations
+        ]);
     }
 }
