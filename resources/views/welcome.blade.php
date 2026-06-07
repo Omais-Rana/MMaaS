@@ -578,7 +578,16 @@
                 };
                 legend.addTo(map);
 
-                // Removed map.on('click') arbitrary pin logic as per user request
+                map.on('click', function() {
+                    if (selectedDefaultPolyline) {
+                        selectedDefaultPolyline.setStyle({
+                            weight: 2,
+                            opacity: 0.6
+                        });
+                        selectedDefaultPolyline = null;
+                        defaultRouteStopsLayer.clearLayers();
+                    }
+                });
             }
         }
 
@@ -1312,26 +1321,35 @@
                         className: 'font-sans'
                     });
 
-                polyline.on('mouseover', async function() {
+                polyline.on('click', async function(e) {
+                    L.DomEvent.stopPropagation(e);
+                    
+                    if (selectedDefaultPolyline === this) {
+                        this.setStyle({
+                            weight: 2,
+                            opacity: 0.6
+                        });
+                        selectedDefaultPolyline = null;
+                        defaultRouteStopsLayer.clearLayers();
+                        return;
+                    }
+
+                    if (selectedDefaultPolyline) {
+                        selectedDefaultPolyline.setStyle({
+                            weight: 2,
+                            opacity: 0.6
+                        });
+                    }
+
+                    selectedDefaultPolyline = this;
                     this.setStyle({
                         weight: 5,
                         opacity: 1
                     });
                     this.bringToFront();
+                    
                     const stops = await fetchRouteStops(this.options.routeName);
                     showDefaultRouteStops(stops, this.options.routeColor);
-                });
-
-                polyline.on('mouseout', function() {
-                    if (selectedDefaultPolyline !== this) {
-                        this.setStyle({
-                            weight: 2,
-                            opacity: 0.6
-                        });
-                    }
-                    if (selectedDefaultPolyline === null) {
-                        defaultRouteStopsLayer.clearLayers();
-                    }
                 });
 
                 allRoutesLayer.addLayer(polyline);
