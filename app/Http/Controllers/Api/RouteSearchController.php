@@ -879,22 +879,35 @@ class RouteSearchController extends Controller
                 'u2.name as second_operator_name'
             )
             ->orderBy('st2_start.departure_time')
-            ->get()
-            ->groupBy('second_origin_stop_id');
+            ->get();
+
+        $secondLegsGrouped = [];
+        foreach ($allSecondLegs as $leg) {
+            $secondLegsGrouped[$leg->second_origin_stop_id][] = $leg;
+        }
 
         // Match first legs to pre-fetched second legs in PHP
         foreach ($transferRoutes as $firstLeg) {
+            // FIX: Filter absurd 1st legs early (massive performance boost)
+            $walkToTransferDist = $this->distancePointToStopFromCache($stopCache, $originRefLat, $originRefLon, $firstLeg->transfer_stop_id);
+            $walkToTransferDuration = $this->calculateWalkingMinutes($walkToTransferDist, $walkingSpeedKmh);
+            $bus1Duration = $this->timeDiffMinutes(substr($time, 0, 5), substr($firstLeg->transfer_arrival, 0, 5));
+            
+            if ($walkToTransferDuration <= $bus1Duration + 3) {
+                continue; // Walking directly to transfer point is faster/same
+            }
+
             $nearbyTransferIds = $nearbyByTransfer[$firstLeg->transfer_stop_id] ?? [$firstLeg->transfer_stop_id];
             $minDepartureTime = date('H:i:s', strtotime($firstLeg->transfer_arrival) + ($minTransferTime * 60));
             $maxDepartureTime = date('H:i:s', strtotime($firstLeg->transfer_arrival) + ($maxTransferWaitTime * 60));
 
-            // Collect matching second legs from pre-fetched data (0 DB queries)
-            $secondLegOptions = collect();
+            // Collect matching second legs from pre-fetched data (0 DB queries) using raw arrays
+            $secondLegOptions = [];
             foreach ($nearbyTransferIds as $nearbyStopId) {
-                $legsFromStop = $allSecondLegs->get($nearbyStopId, collect());
-                foreach ($legsFromStop as $leg) {
+                if (!isset($secondLegsGrouped[$nearbyStopId])) continue;
+                foreach ($secondLegsGrouped[$nearbyStopId] as $leg) {
                     if ($leg->second_departure >= $minDepartureTime && $leg->second_departure <= $maxDepartureTime) {
-                        $secondLegOptions->push($leg);
+                        $secondLegOptions[] = $leg;
                     }
                 }
             }
@@ -934,6 +947,29 @@ class RouteSearchController extends Controller
                 }
 
                 $transferWalkDist = $this->getWalkingDistanceFromCache($stopCache, $firstLeg->transfer_stop_id, $secondLeg->second_origin_stop_id);
+                $transferWalkDuration = $this->calculateWalkingMinutes($transferWalkDist, $walkingSpeedKmh);
+
+                // FIX: Filter out garbage routes where walking is faster than taking the bus leg
+                // Check Leg 1 (is Bus 1 useless?)
+                $walkToSecondOriginDist = $this->distancePointToStopFromCache($stopCache, $originRefLat, $originRefLon, $secondLeg->second_origin_stop_id);
+                $walkToSecondOriginDuration = $this->calculateWalkingMinutes($walkToSecondOriginDist, $walkingSpeedKmh);
+                
+                $bus1Duration = $this->timeDiffMinutes(substr($time, 0, 5), substr($firstLeg->transfer_arrival, 0, 5)) + $transferWalkDuration;
+                if ($walkToSecondOriginDuration <= $bus1Duration + 3) {
+                    continue; // Walking directly is faster/same as Bus 1
+                }
+
+                // Check Leg 2 (is Bus 2 useless?)
+                $walkToDestDist = $this->distanceStopToPointFromCache($stopCache, $firstLeg->transfer_stop_id, $destRefLat, $destRefLon);
+                $walkToDestDuration = $this->calculateWalkingMinutes($walkToDestDist, $walkingSpeedKmh);
+                
+                $bus2Duration = $this->timeDiffMinutes(substr($firstLeg->transfer_arrival, 0, 5), substr($secondLeg->final_arrival, 0, 5));
+                $finalWalkDist = $this->distanceStopToPointFromCache($stopCache, $secondLeg->final_stop_id, $destRefLat, $destRefLon);
+                $finalWalkDuration = $this->calculateWalkingMinutes($finalWalkDist, $walkingSpeedKmh);
+                
+                if ($walkToDestDuration <= $bus2Duration + $finalWalkDuration + 3) {
+                    continue; // Walking directly is faster/same as Bus 2
+                }
 
                 $firstLegStops = $this->fetchTripStops($firstLeg->trip_id, $firstLeg->origin_sequence, $firstLeg->transfer_sequence);
                 $firstShapePoints = [];
@@ -1126,6 +1162,30 @@ class RouteSearchController extends Controller
                     $expandedDestStopIds[] = $nearby->id;
                 }
             }
+        }
+        // FIX: Filter absurd transit routes
+        $directWalkDistanceKm = ($originLat && $destLat) ? $this->haversineDistance($originLat, $originLon, $destLat, $destLon) * 1.3 : 0;
+        $directWalkDuration = $directWalkDistanceKm > 0 ? $this->calculateWalkingMinutes($directWalkDistanceKm, 4.0) : 0;
+
+        if ($directWalkDuration > 0) {
+            $filteredJourneys = [];
+            foreach ($foundJourneys as $journey) {
+                // Allow GBFS (bike/car) routes to pass through
+                if (!empty($journey['is_gbfs'])) {
+                    $filteredJourneys[] = $journey;
+                    continue;
+                }
+
+                $totalTimeMinutes = $this->timeDiffMinutes($journey['leave_at'], $journey['arrival_time']);
+                
+                // If the transit journey takes significantly longer than simply walking directly, drop it!
+                if ($totalTimeMinutes > ($directWalkDuration + 10)) {
+                    continue;
+                }
+
+                $filteredJourneys[] = $journey;
+            }
+            $foundJourneys = $filteredJourneys;
         }
 
         return $this->sortAndLimitJourneys($foundJourneys, 5);
