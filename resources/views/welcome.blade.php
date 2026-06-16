@@ -6,7 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Transit Finder</title>
-    <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/geist@1.0.3/dist/fonts/geist-sans/style.css" rel="stylesheet">
 
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
@@ -20,13 +21,22 @@
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
+        body {
+            font-family: 'Geist', sans-serif;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
         .autocomplete-dropdown {
             position: absolute;
             z-index: 1000;
-            background: white;
-            border: 1px solid #e5e7eb;
-            border-radius: 0.5rem;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            background: #191C21;
+            color: #FFFFFF;
+            border: 1px solid #374151;
+            border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
             max-height: 300px;
             overflow-y: auto;
             width: 100%;
@@ -36,10 +46,15 @@
         .autocomplete-item {
             padding: 0.75rem 1rem;
             cursor: pointer;
+            border-bottom: 1px solid #374151;
+        }
+        
+        .autocomplete-item:last-child {
+            border-bottom: none;
         }
 
         .autocomplete-item:hover {
-            background-color: #fee2e2;
+            background-color: #374151;
         }
 
         .route-card {
@@ -49,22 +64,28 @@
 
         .route-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
         }
 
         .route-card.is-selected {
-            border-color: #e60000 !important;
-            box-shadow: 0 0 0 1px #e60000;
-            background-color: #fff5f5 !important;
+            border-color: #EA580C !important;
+            box-shadow: 0 0 0 1px #EA580C;
+            background-color: #111827 !important;
         }
 
         .leaflet-popup-content-wrapper {
-            border-radius: 0.5rem;
+            border-radius: 8px;
+            background: #191C21;
+            color: #FFFFFF;
+        }
+
+        .leaflet-popup-tip {
+            background: #191C21;
         }
 
         .leaflet-popup-content {
             margin: 0.75rem;
-            font-family: 'Inter', sans-serif;
+            font-family: 'Geist', sans-serif;
         }
 
         /* Loading overlay for the whole app */
@@ -72,7 +93,7 @@
             display: none;
             position: absolute;
             inset: 0;
-            background: rgba(255, 255, 255, 0.7);
+            background: rgba(25, 28, 33, 0.8);
             z-index: 50;
             align-items: center;
             justify-content: center;
@@ -85,15 +106,17 @@
         /* Bus info cards */
         .bus-card {
             transition: background-color 0.15s, border-color 0.15s;
+            background-color: #191C21;
+            border-color: #374151;
         }
 
         .bus-card:hover {
-            background-color: #f9fafb;
+            background-color: #111827;
         }
 
         .bus-card.bus-card-selected {
-            border-color: #ef4444 !important;
-            background-color: #fff7f7;
+            border-color: #EA580C !important;
+            background-color: #111827;
         }
 
         .bus-card-chevron {
@@ -113,24 +136,23 @@
     </style>
 </head>
 
-<body class="bg-[#f2f2f2] h-screen overflow-hidden flex flex-col md:flex-row">
+<body class="bg-[#FFFFFF] h-screen overflow-hidden flex flex-col md:flex-row text-[#111827]">
 
     <!-- Left Pane: Search & Results -->
-    <div
-        class="w-full md:w-[450px] lg:w-[500px] flex-shrink-0 h-full overflow-y-auto bg-white flex flex-col z-20 relative border-r border-[#e5e7eb]">
+    <div style="-webkit-overflow-scrolling: touch;"
+        class="w-full md:w-[450px] lg:w-[500px] flex-shrink-0 h-[50vh] md:h-full overflow-y-auto block bg-[#191C21] text-white z-20 relative border-b md:border-b-0 md:border-r border-[#374151]">
         <div id="loading-overlay">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[#EA580C]"></div>
         </div>
 
-        <div class="p-6 bg-white border-b-4 border-[#e60000]">
+        <div class="p-6 bg-[#191C21] border-b border-[#374151]">
             <div class="flex items-center gap-3 mb-6">
-                <div class="w-10 h-10 bg-[#e60000] rounded-full flex items-center justify-center shrink-0">
-                    <svg class="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <path
-                            d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                <div class="w-10 h-10 bg-[#EA580C] rounded-[8px] flex items-center justify-center shrink-0 shadow-lg shadow-[#EA580C]/20">
+                    <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                 </div>
-                <h1 class="text-[24px] font-[800] uppercase tracking-tighter text-[#25282b] flex-1">
+                <h1 class="text-[24px] font-[600] tracking-tight text-white flex-1 font-sans">
                     Transit Finder</h1>
 
                 @auth
@@ -143,9 +165,9 @@
                     @endphp
                     <div class="flex items-center gap-2">
                         <a href="{{ $dashboardUrl }}"
-                            class="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-[2px] bg-[#e60000] border border-[#e60000] hover:opacity-90 text-white text-[14.4px] font-bold transition-opacity"
+                            class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-[8px] bg-[#EA580C] hover:bg-[#FDBA74] hover:text-[#191C21] text-white text-[14px] font-[600] transition-colors shadow-sm"
                             title="Go to dashboard">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                             </svg>
@@ -154,7 +176,7 @@
                         <form method="POST" action="{{ $dashboardUrl }}/logout" class="inline">
                             @csrf
                             <button type="submit"
-                                class="inline-flex items-center justify-center w-8 h-8 rounded-[2px] bg-white border border-[#333333] hover:opacity-90 text-[#333333] transition-opacity"
+                                class="inline-flex items-center justify-center w-9 h-9 rounded-[8px] bg-[#191C21] border border-[#374151] hover:bg-[#374151] text-[#D1D5DB] hover:text-white transition-colors"
                                 title="Sign out">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -166,31 +188,30 @@
                 @else
                     <div class="flex items-center gap-2">
                         <a href="/user/login"
-                            class="px-2.5 py-1.5 rounded-[2px] bg-white border border-[#333333] hover:opacity-90 text-[#333333] text-[14.4px] font-bold transition-opacity text-center">
+                            class="px-3 py-1.5 rounded-[8px] bg-[#191C21] border border-[#374151] hover:bg-[#374151] text-[#D1D5DB] hover:text-white text-[14px] font-[600] transition-colors text-center shadow-sm">
                             Sign In
                         </a>
                         <a href="/user/register"
-                            class="px-2.5 py-1.5 rounded-[2px] bg-[#e60000] border border-[#e60000] hover:opacity-90 text-white text-[14.4px] font-bold transition-opacity text-center">
+                            class="px-3 py-1.5 rounded-[8px] bg-[#EA580C] hover:bg-[#FDBA74] hover:text-[#191C21] text-white text-[14px] font-[600] transition-colors text-center shadow-sm">
                             Sign Up
                         </a>
                     </div>
                 @endauth
             </div>
 
-            <form id="route-search-form" class="space-y-4">
+            <form id="route-search-form" class="space-y-3">
                 <div class="relative">
-                    <label class="block text-[14px] font-[700] text-[#7e7e7e] uppercase tracking-wider mb-1">Starting
-                        Point</label>
+                    <label class="hidden text-[12px] font-[600] text-[#9CA3AF] uppercase tracking-wider mb-1 font-mono">Starting Point</label>
                     <input type="text" id="origin" required
-                        class="w-full px-4 py-3 bg-white border border-[#333333] rounded-[6px] focus:ring-0 focus:border-[#e60000] outline-none transition-colors text-[#25282b] text-[16px]"
-                        placeholder="e.g. Gare, Mairie..." autocomplete="off">
+                        class="w-full px-4 py-2 bg-[#111827] border border-[#374151] rounded-[8px] focus:ring-0 focus:border-[#EA580C] outline-none transition-colors text-white placeholder-[#6B7280] text-[14px] shadow-inner"
+                        placeholder="Starting Point" autocomplete="off">
                     <div id="origin-autocomplete" class="autocomplete-dropdown hidden"></div>
                 </div>
 
-                <div class="flex justify-center -my-2 relative z-10">
+                <div class="flex justify-center -my-3.5 relative z-10">
                     <button type="button" id="swap-locations"
-                        class="w-8 h-8 bg-white border border-[#333333] hover:opacity-90 rounded-full flex items-center justify-center transition-opacity group">
-                        <svg class="w-4 h-4 text-[#333333] rotate-90" fill="none" stroke="currentColor"
+                        class="w-8 h-8 bg-[#1F2937] border border-[#374151] hover:bg-[#374151] rounded-full flex items-center justify-center transition-colors group shadow-md shadow-[#111827]/50">
+                        <svg class="w-4 h-4 text-[#9CA3AF] group-hover:text-white transition-colors rotate-90" fill="none" stroke="currentColor"
                             viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
@@ -198,79 +219,73 @@
                     </button>
                 </div>
 
-                <div class="relative mt-4">
-                    <div class="flex justify-between items-center mb-1">
-                        <label
-                            class="block text-[14px] font-[700] text-[#7e7e7e] uppercase tracking-wider">Destination</label>
+                <div class="relative mt-2">
+                    <div class="hidden justify-between items-center mb-1">
+                        <label class="block text-[12px] font-[600] text-[#9CA3AF] uppercase tracking-wider font-mono">Destination</label>
                     </div>
                     <input type="text" id="destination" required
-                        class="w-full px-4 py-3 bg-white border border-[#333333] rounded-[6px] focus:ring-0 focus:border-[#e60000] outline-none transition-colors text-[#25282b] text-[16px]"
-                        placeholder="Where to?" autocomplete="off">
+                        class="w-full px-4 py-2 bg-[#111827] border border-[#374151] rounded-[8px] focus:ring-0 focus:border-[#EA580C] outline-none transition-colors text-white placeholder-[#6B7280] text-[14px] shadow-inner"
+                        placeholder="Destination" autocomplete="off">
                     <div id="destination-autocomplete" class="autocomplete-dropdown hidden"></div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3 pt-2">
                     <div>
-                        <label
-                            class="block text-[14px] font-[700] text-[#7e7e7e] uppercase tracking-wider mb-1">Date</label>
+                        <label class="hidden text-[12px] font-[600] text-[#9CA3AF] uppercase tracking-wider mb-1 font-mono">Date</label>
                         <input type="date" id="date" required
-                            class="w-full px-4 py-3 bg-white border border-[#333333] rounded-[6px] focus:ring-0 focus:border-[#e60000] outline-none cursor-pointer text-[16px] text-[#25282b]"
+                            class="w-full px-4 py-2 bg-[#111827] border border-[#374151] rounded-[8px] focus:ring-0 focus:border-[#EA580C] outline-none cursor-pointer text-[14px] text-white [color-scheme:dark] shadow-inner"
                             value="{{ date('Y-m-d') }}" onclick="try{this.showPicker()}catch(e){}"
                             onfocus="try{this.showPicker()}catch(e){}">
                     </div>
                     <div>
-                        <label
-                            class="block text-[14px] font-[700] text-[#7e7e7e] uppercase tracking-wider mb-1">Time</label>
+                        <label class="hidden text-[12px] font-[600] text-[#9CA3AF] uppercase tracking-wider mb-1 font-mono">Time</label>
                         <input type="time" id="time" required
-                            class="w-full px-4 py-3 bg-white border border-[#333333] rounded-[6px] focus:ring-0 focus:border-[#e60000] outline-none cursor-pointer text-[16px] text-[#25282b]"
+                            class="w-full px-4 py-2 bg-[#111827] border border-[#374151] rounded-[8px] focus:ring-0 focus:border-[#EA580C] outline-none cursor-pointer text-[14px] text-white [color-scheme:dark] shadow-inner"
                             value="{{ date('H:i') }}" onclick="try{this.showPicker()}catch(e){}"
                             onfocus="try{this.showPicker()}catch(e){}">
                     </div>
                 </div>
 
                 <button type="submit"
-                    class="w-full mt-2 px-2.5 py-3 bg-[#e60000] border border-[#e60000] hover:opacity-90 text-white rounded-[2px] font-bold text-[14.4px] transition-opacity flex justify-center items-center gap-2">
+                    class="w-full mt-4 px-4 py-3 bg-[#EA580C] hover:bg-[#FDBA74] hover:text-[#191C21] text-white rounded-[8px] font-[600] text-[15px] transition-colors flex justify-center items-center gap-2 shadow-lg shadow-[#EA580C]/20">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                             d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                     </svg>
                     Search Routes
                 </button>
-                <div class="text-center pt-2">
+                <div class="text-center pt-3">
                     <button type="button" id="reset-search"
-                        class="text-[14px] text-[#7e7e7e] hover:text-[#e60000] underline font-medium">Reset</button>
+                        class="text-[13px] text-[#6B7280] hover:text-[#EA580C] hover:underline font-[500] transition-colors">Reset Search</button>
                 </div>
             </form>
         </div>
 
-        <div id="results-wrapper" class="flex-1 overflow-y-auto p-6 bg-white">
+        <div id="results-wrapper" class="p-6 bg-[#191C21]">
             <div id="initial-state">
                 <div class="mb-6">
-                    <h2 class="text-lg font-bold text-gray-800">Service Explorer</h2>
-                    <p class="text-sm text-gray-500 mt-0.5">Select a location to discover transit options.</p>
+                    <h2 class="text-[18px] font-[600] text-white">Service Explorer</h2>
+                    <p class="text-[13px] text-[#9CA3AF] mt-1">Select a location to discover transit options.</p>
                 </div>
 
                 <div class="space-y-6">
                     <!-- Locations Section -->
                     <div>
-                        <label
-                            class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Locations</label>
-                        <div id="territory-tree" class="space-y-2 max-h-[35vh] overflow-y-auto pr-1 flex flex-col">
-                            <div class="text-center py-6 text-gray-400 text-sm">Loading locations&hellip;</div>
+                        <label class="block text-[12px] font-[600] text-[#6B7280] uppercase tracking-wider mb-3 font-mono">Locations</label>
+                        <div id="territory-tree" class="space-y-2 pr-1 flex flex-col">
+                            <div class="text-center py-6 text-[#6B7280] text-[13px]">Loading locations&hellip;</div>
                         </div>
                     </div>
 
                     <!-- Services Section -->
                     <div>
-                        <div class="flex items-center justify-between mb-2">
-                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider">Available
-                                Services</label>
+                        <div class="flex items-center justify-between mb-3">
+                            <label class="block text-[12px] font-[600] text-[#6B7280] uppercase tracking-wider font-mono">Available Services</label>
                             <button type="button" id="clear-services"
-                                class="text-xs text-gray-500 hover:text-red-600 hover:underline transition-colors">Clear
-                                all</button>
+                                class="text-[12px] text-[#9CA3AF] hover:text-[#EA580C] hover:underline transition-colors">Clear all</button>
                         </div>
-                        <div id="service-list" class="space-y-2 max-h-[35vh] overflow-y-auto pr-1 flex flex-col">
-                            <div class="text-center py-6 text-gray-400 text-sm">Select a city to load services.</div>
+                        <div id="service-list" class="space-y-2 pr-1 flex flex-col">
+                            <div class="text-center py-6 text-[#6B7280] text-[13px]">Select a city to load services.</div>
                         </div>
                     </div>
                 </div>
@@ -280,45 +295,43 @@
 
     <!-- Search Results Pane (Initially Hidden) -->
     <aside id="search-results-pane"
-        class="hidden w-full md:w-[360px] flex-shrink-0 h-full bg-slate-50 border-r border-gray-200 z-20 flex-col overflow-hidden shadow-lg transition-transform">
-        <div class="flex flex-col p-4 h-full">
-            <div class="mb-4">
-                <div class="flex justify-between items-center mb-1">
-                    <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider">Search Results</h3>
-                    <button type="button" id="close-search-results"
-                        class="p-1 hover:bg-slate-200 rounded text-slate-500">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
-                </div>
-                <p class="text-[11px] text-slate-500 mt-0.5">Select a route for detailed stops and connections on the
-                    map.</p>
+        class="hidden w-full md:w-[350px] lg:w-[380px] xl:w-[400px] flex-shrink-0 h-[45vh] md:h-full bg-[#191C21] border-b md:border-b-0 md:border-r border-[#374151] z-10 transition-all duration-300 relative shadow-lg flex flex-col p-6 overflow-hidden">
+        <div class="mb-4">
+            <div class="flex justify-between items-center mb-1">
+                <h3 class="text-[14px] font-[600] text-white uppercase tracking-wider font-mono">Search Results</h3>
+                <button type="button" id="close-search-results"
+                    class="p-1.5 hover:bg-[#374151] rounded-[8px] text-[#9CA3AF] hover:text-white transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
             </div>
-
-            <div id="no-results"
-                class="hidden text-center py-12 bg-white rounded-xl shadow-sm border border-gray-100 p-8 mt-4">
-                <svg class="h-12 w-12 text-red-400 mx-auto mb-3" fill="none" stroke="currentColor"
-                    viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                <h3 class="text-base font-bold mb-1 text-gray-800">No Routes Found</h3>
-                <p class="text-xs text-gray-500">Try adjusting your search or times.</p>
-            </div>
-
-            <div id="routes-list" class="flex-1 space-y-4 overflow-y-auto pr-1 pb-6 hidden relative"></div>
+            <p class="text-[12px] text-[#6B7280] mt-1">Select a route for detailed stops and connections on the
+                map.</p>
         </div>
+
+        <div id="no-results"
+            class="hidden text-center py-12 bg-[#111827] rounded-[8px] shadow-sm border border-[#374151] p-8 mt-4">
+            <svg class="h-12 w-12 text-[#EA580C] mx-auto mb-3" fill="none" stroke="currentColor"
+                viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <h3 class="text-[15px] font-[600] mb-1 text-white">No Routes Found</h3>
+            <p class="text-[12px] text-[#9CA3AF]">Try adjusting your search or times.</p>
+        </div>
+
+        <div id="routes-list" class="flex-1 space-y-4 overflow-y-auto pr-1 pb-6 hidden relative custom-scrollbar"></div>
     </aside>
 
     <!-- Middle Pane: Service Lines (Collapsible) -->
     <aside id="middle-pane"
-        class="hidden w-full md:w-[350px] lg:w-[380px] xl:w-[400px] flex-shrink-0 h-full bg-white border-r border-gray-200 z-10 transition-all duration-300 relative shadow-md">
+        class="hidden w-full md:w-[350px] lg:w-[380px] xl:w-[400px] flex-shrink-0 h-[45vh] md:h-full bg-[#191C21] border-b md:border-b-0 md:border-r border-[#374151] z-10 transition-all duration-300 relative shadow-lg">
 
         <!-- Collapse Toggle Button (Outside Edge) -->
         <button type="button" id="toggle-service-lines"
-            class="absolute -right-7 top-1/2 -translate-y-1/2 w-7 h-14 bg-white border border-l-0 border-gray-200 rounded-r-xl shadow-sm flex items-center justify-center text-slate-400 hover:text-slate-700 z-[1000] focus:outline-none">
+            class="absolute -right-7 top-1/2 -translate-y-1/2 w-7 h-14 bg-[#191C21] border border-l-0 border-[#374151] rounded-r-[8px] shadow-sm flex items-center justify-center text-[#9CA3AF] hover:text-white z-[1000] focus:outline-none transition-colors">
             <svg id="service-lines-chevron" class="w-5 h-5 transition-transform" fill="none"
                 stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
@@ -326,10 +339,10 @@
         </button>
 
         <div id="service-lines-content"
-            class="h-full flex flex-col p-4 w-full overflow-hidden transition-opacity duration-300">
-            <div class="mb-4">
-                <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider">Service Lines</h3>
-                <p class="text-[11px] text-slate-500 mt-0.5">Explore active routes for your selected services.</p>
+            class="h-full flex flex-col p-6 w-full overflow-hidden transition-opacity duration-300">
+            <div class="mb-5">
+                <h3 class="text-[14px] font-[600] text-white uppercase tracking-wider font-mono">Service Lines</h3>
+                <p class="text-[12px] text-[#6B7280] mt-1">Explore active routes for your selected services.</p>
             </div>
 
             <div id="route-cards-list" class="flex-1 space-y-4 overflow-y-auto pr-1 pb-6 relative">
@@ -364,12 +377,12 @@
                         return;
                     }
                     dropdown.innerHTML = stops.map(s => {
-                        const cityTag = s.city ? '<div class="text-[10px] text-gray-400 mt-0.5">' +
+                        const cityTag = s.city ? '<div class="text-[10px] text-[#9CA3AF] mt-0.5 font-mono">' +
                             s.city + '</div>' : '';
-                        return '<div class="autocomplete-item border-b border-gray-50 last:border-0" data-name="' +
+                        return '<div class="autocomplete-item p-3 hover:bg-[#111827] cursor-pointer border-b border-[#374151] last:border-0 transition-colors" data-name="' +
                             s.stop_name + '" data-lat="' + (s.stop_lat || '') + '" data-lon="' + (s
                                 .stop_lon || '') + '">' +
-                            '<div class="font-medium text-sm text-gray-800">' + s.stop_name +
+                            '<div class="font-[500] text-[13px] text-white">' + s.stop_name +
                             '</div>' + cityTag +
                             '</div>';
                     }).join('');
@@ -503,6 +516,7 @@
         let searchResultsLayer = L.layerGroup();
         let defaultRouteStopsLayer = L.layerGroup();
         let territoryStopsLayer = L.layerGroup();
+        let parkingLayer = L.layerGroup();
         let currentRouteData = null;
         let allRoutesShapes = {}; // Cache: route_short_name -> full shape_pts array
         let routeStopsCache = {}; // Cache: routeName -> stops array
@@ -567,13 +581,33 @@
 
                 const legend = L.control({ position: 'bottomright' });
                 legend.onAdd = function() {
-                    const div = L.DomUtil.create('div', 'bg-white p-3 rounded-lg shadow-md border border-gray-200 text-sm');
+                    const div = L.DomUtil.create('div', 'bg-[#191C21] p-3 rounded-[8px] shadow-md border border-[#374151] text-[13px] text-white font-mono uppercase tracking-wider');
                     div.innerHTML = `
-                        <div class="font-bold mb-2">Legend</div>
-                        <div class="flex items-center gap-2 mb-1"><div class="w-3 h-3 rounded-full border-2 border-[#3b82f6] bg-white"></div> Bus Station</div>
-                        <div class="flex items-center gap-2 mb-1"><div class="w-3 h-3 rounded-full border-2 border-[#f59e0b] bg-white"></div> Cycle Station</div>
-                        <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full border-2 border-[#a855f7] bg-white"></div> Car Station</div>
+                        <div class="font-[600] mb-3 text-[#EA580C]">Legend</div>
+                        <div class="flex items-center gap-3 mb-2"><div class="w-6 h-6 flex items-center justify-center rounded-full bg-[#374151] text-white shadow-sm border border-[#6B7280]"><i class="fa-solid fa-bus text-[10px]"></i></div> Bus Station</div>
+                        <div class="flex items-center gap-3 mb-2"><div class="w-6 h-6 flex items-center justify-center rounded-full bg-[#374151] text-[#f59e0b] shadow-sm border border-[#6B7280]"><i class="fa-solid fa-bicycle text-[10px]"></i></div> Cycle Station</div>
+                        <div class="flex items-center gap-3 mb-2"><div class="w-6 h-6 flex items-center justify-center rounded-full bg-[#374151] text-[#a855f7] shadow-sm border border-[#6B7280]"><i class="fa-solid fa-car text-[10px]"></i></div> Car Station</div>
+                        <label class="flex items-center gap-3 cursor-pointer select-none mt-3 pt-2 border-t border-[#374151]">
+                            <input type="checkbox" id="toggle-parking" class="rounded border-[#374151] bg-[#111827] text-[#EA580C] shadow-sm focus:ring-[#EA580C]">
+                            <div class="w-6 h-6 flex items-center justify-center rounded-full bg-[#374151] text-[#10b981] shadow-sm border border-[#6B7280]"><i class="fa-solid fa-square-parking text-[10px]"></i></div> Parking Spot
+                        </label>
                     `;
+
+                    L.DomEvent.disableClickPropagation(div);
+
+                    setTimeout(() => {
+                        const toggle = document.getElementById('toggle-parking');
+                        if (toggle) {
+                            toggle.addEventListener('change', function(e) {
+                                if (e.target.checked) {
+                                    parkingLayer.addTo(map);
+                                } else {
+                                    parkingLayer.remove();
+                                }
+                            });
+                        }
+                    }, 0);
+
                     return div;
                 };
                 legend.addTo(map);
@@ -613,8 +647,8 @@
                     <div class="p-1">
                         <div class="font-bold text-sm mb-2 text-gray-800">${stop.name}</div>
                         <div class="flex gap-2 mt-2 pt-2 border-t border-[#e5e7eb]">
-                            <button onclick="setAsRouteEndpoint('origin', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-white border border-[#333333] hover:opacity-90 text-[#333333] font-[700] py-1.5 px-2 rounded-[2px] transition-opacity text-center text-[12px]">Start here</button>
-                            <button onclick="setAsRouteEndpoint('destination', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-white border border-[#333333] hover:opacity-90 text-[#333333] font-[700] py-1.5 px-2 rounded-[2px] transition-opacity text-center text-[12px]">End here</button>
+                            <button onclick="setAsRouteEndpoint('origin', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-[#191C21] border border-[#EA580C] hover:bg-[#EA580C] hover:text-white text-[#EA580C] font-[600] py-1.5 px-2 rounded-[6px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">Start</button>
+                            <button onclick="setAsRouteEndpoint('destination', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-[#191C21] border border-[#EA580C] hover:bg-[#EA580C] hover:text-white text-[#EA580C] font-[600] py-1.5 px-2 rounded-[6px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">End</button>
                         </div>
                     </div>
                 `;
@@ -665,7 +699,7 @@
 
             if (routeNames.length === 0 && activeStations.length === 0) {
                 container.innerHTML =
-                    '<div class="text-center py-10 bg-white rounded-lg border border-dashed border-gray-300 mt-4"><div class="text-sm text-gray-500 font-medium">No services found.</div><div class="text-xs text-gray-400 mt-1">Try selecting different services.</div></div>';
+                    '<div class="text-center py-10 bg-[#191C21] rounded-[8px] border border-dashed border-[#374151] mt-4"><div class="text-[13px] text-[#9CA3AF] font-[500]">No services found.</div><div class="text-[11px] text-[#6B7280] mt-1">Try selecting different services.</div></div>';
 
                 document.querySelector('#service-lines-content h3').innerText = 'Services';
                 document.querySelector('#service-lines-content p').innerText = 'Explore routes and available vehicles.';
@@ -698,7 +732,7 @@
 
             Object.keys(groupedRoutes).sort((a, b) => a.localeCompare(b)).forEach(operatorName => {
                 const section = document.createElement('div');
-                section.className = 'bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-4';
+                section.className = 'bg-[#111827] rounded-[8px] border border-[#374151] shadow-sm overflow-hidden mb-4';
 
                 const routes = groupedRoutes[operatorName].sort((a, b) => {
                     const numA = parseInt(a, 10);
@@ -710,9 +744,9 @@
                 });
 
                 section.innerHTML = `
-                    <div class="sticky top-0 z-10 px-4 py-3 bg-slate-50 border-b border-gray-200 flex justify-between items-center backdrop-blur-sm bg-opacity-95">
-                        <div class="text-xs font-bold text-slate-800 uppercase tracking-wider">${operatorName.replace(/</g, '&lt;')}</div>
-                        <div class="text-[10px] font-semibold bg-white border border-slate-200 px-2 py-0.5 rounded-full text-slate-500">${routes.length} line${routes.length > 1 ? 's' : ''}</div>
+                    <div class="sticky top-0 z-10 px-4 py-3 bg-[#191C21] border-b border-[#374151] flex justify-between items-center backdrop-blur-md bg-opacity-90">
+                        <div class="text-[11px] font-[600] text-white uppercase tracking-wider font-mono">${operatorName.replace(/</g, '&lt;')}</div>
+                        <div class="text-[10px] font-[600] bg-[#111827] border border-[#374151] px-2 py-0.5 rounded-full text-[#9CA3AF] shadow-inner font-mono">${routes.length} line${routes.length > 1 ? 's' : ''}</div>
                     </div>
                     <div class="p-2 space-y-2"></div>
                 `;
@@ -722,20 +756,20 @@
                     const meta = allRoutesMetaData[routeName];
                     const card = document.createElement('div');
                     card.className =
-                        'bus-card bg-white rounded-lg border border-gray-100 hover:border-gray-300 transition-colors shadow-sm';
+                        'bus-card bg-[#191C21] rounded-[8px] border border-[#374151] hover:border-[#6B7280] transition-colors shadow-sm';
                     card.dataset.route = routeName;
 
                     card.innerHTML = `
                         <div class="bus-card-header flex items-center gap-3 p-3 cursor-pointer">
-                            <span class="inline-flex items-center justify-center min-w-[2.75rem] h-8 px-2 rounded-md text-white text-xs font-bold shrink-0 shadow-sm" style="background:${meta.color}">${routeName}</span>
+                            <span class="inline-flex items-center justify-center min-w-[2.75rem] h-8 px-2 rounded-[6px] text-white text-[12px] font-[600] shrink-0 shadow-md font-mono" style="background:${meta.color}">${routeName}</span>
                             <div class="min-w-0 flex-1">
-                                <div class="text-xs font-medium text-gray-700 leading-tight line-clamp-2">${meta.longName}</div>
+                                <div class="text-[13px] font-[500] text-white leading-tight line-clamp-2">${meta.longName}</div>
                             </div>
-                            <svg class="bus-card-chevron w-4 h-4 text-gray-400 shrink-0 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="bus-card-chevron w-4 h-4 text-[#6B7280] shrink-0 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </div>
-                        <div class="bus-card-stops hidden border-t border-gray-100 max-h-60 overflow-y-auto bg-slate-50 rounded-b-lg"></div>
+                        <div class="bus-card-stops hidden border-t border-[#374151] max-h-60 overflow-y-auto bg-[#111827] rounded-b-[8px]"></div>
                     `;
 
                     routesContainer.appendChild(card);
@@ -755,13 +789,13 @@
 
                 Object.keys(groupedStations).sort((a, b) => a.localeCompare(b)).forEach(operatorName => {
                     const section = document.createElement('div');
-                    section.className = 'bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-4';
+                    section.className = 'bg-[#111827] rounded-[8px] border border-[#374151] shadow-sm overflow-hidden mb-4';
 
                     const stations = groupedStations[operatorName];
                     section.innerHTML = `
-                        <div class="sticky top-0 z-10 px-4 py-3 bg-slate-50 border-b border-gray-200 flex justify-between items-center backdrop-blur-sm bg-opacity-95">
-                            <div class="text-xs font-bold text-slate-800 uppercase tracking-wider">${operatorName.replace(/</g, '&lt;')}</div>
-                            <div class="text-[10px] font-semibold bg-white border border-slate-200 px-2 py-0.5 rounded-full text-slate-500">${stations.length} station${stations.length > 1 ? 's' : ''}</div>
+                        <div class="sticky top-0 z-10 px-4 py-3 bg-[#191C21] border-b border-[#374151] flex justify-between items-center backdrop-blur-md bg-opacity-90">
+                            <div class="text-[11px] font-[600] text-white uppercase tracking-wider font-mono">${operatorName.replace(/</g, '&lt;')}</div>
+                            <div class="text-[10px] font-[600] bg-[#111827] border border-[#374151] px-2 py-0.5 rounded-full text-[#9CA3AF] shadow-inner font-mono">${stations.length} station${stations.length > 1 ? 's' : ''}</div>
                         </div>
                         <div class="p-2 space-y-2"></div>
                     `;
@@ -791,13 +825,13 @@
 
                         const card = document.createElement('div');
                         card.className =
-                            'bus-card bg-white rounded-lg border border-gray-100 hover:border-gray-300 transition-colors shadow-sm cursor-pointer';
+                            'bus-card bg-[#191C21] rounded-[8px] border border-[#374151] hover:border-[#6B7280] transition-colors shadow-sm cursor-pointer';
                         card.innerHTML = `
                             <div class="flex items-center gap-3 p-3">
-                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-full text-white text-xs shadow-sm shrink-0" style="background:${badgeColor}">${iconHtml}</span>
+                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-full text-white text-[12px] shadow-md shrink-0" style="background:${badgeColor}">${iconHtml}</span>
                                 <div class="min-w-0 flex-1">
-                                    <div class="text-xs font-bold text-gray-800 leading-tight line-clamp-1">${st.name}</div>
-                                    <div class="text-[10px] text-gray-500 mt-0.5">${detailsHtml}</div>
+                                    <div class="text-[13px] font-[600] text-white leading-tight line-clamp-1">${st.name}</div>
+                                    <div class="text-[11px] text-[#9CA3AF] mt-1 font-mono">${detailsHtml}</div>
                                 </div>
                             </div>
                         `;
@@ -904,21 +938,21 @@
                     const cKey = cityKey(country, city);
                     const isActive = activeCityKey === cKey;
                     return `
-                        <button type="button" class="city-select-btn w-full flex items-center justify-between gap-3 px-3 py-2 rounded-md text-left transition-colors ${isActive ? 'bg-red-50 text-red-700' : 'bg-transparent hover:bg-gray-50 text-gray-600'}" data-country="${country.replace(/"/g, '&quot;')}" data-city="${city.replace(/"/g, '&quot;')}">
-                            <span class="text-sm font-medium ${isActive ? 'text-red-700' : 'text-gray-600'}">${city}</span>
+                        <button type="button" class="city-select-btn w-full flex items-center justify-between gap-3 px-3 py-2 rounded-[6px] text-left transition-colors ${isActive ? 'bg-[#111827] text-[#EA580C] border border-[#EA580C]' : 'bg-transparent hover:bg-[#374151] text-[#9CA3AF] border border-transparent'}" data-country="${country.replace(/"/g, '&quot;')}" data-city="${city.replace(/"/g, '&quot;')}">
+                            <span class="text-[13px] font-[600] ${isActive ? 'text-[#EA580C]' : 'text-[#9CA3AF]'}">${city}</span>
                         </button>
                     `;
                 }).join('');
 
                 return `
-                    <div class="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden mb-2">
-                        <button type="button" class="country-toggle w-full flex items-center justify-between gap-2 px-4 py-2.5 bg-gray-50 hover:bg-white transition-colors" data-country="${country.replace(/"/g, '&quot;')}">
-                            <span class="text-sm font-semibold text-gray-800">${country}</span>
-                            <svg class="country-chevron w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="bg-[#191C21] border border-[#374151] rounded-[8px] overflow-hidden mb-3">
+                        <button type="button" class="country-toggle w-full flex items-center justify-between gap-2 px-4 py-2.5 bg-[#191C21] hover:bg-[#111827] transition-colors" data-country="${country.replace(/"/g, '&quot;')}">
+                            <span class="text-[14px] font-[600] text-white uppercase tracking-wider font-mono">${country}</span>
+                            <svg class="country-chevron w-4 h-4 text-[#6B7280] transition-transform ${isExpanded ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </button>
-                        <div class="country-cities ${isExpanded ? '' : 'hidden'} p-2 space-y-1 bg-white border-t border-gray-200 flex flex-col">
+                        <div class="country-cities ${isExpanded ? '' : 'hidden'} p-2 space-y-1 bg-[#111827] border-t border-[#374151] flex flex-col">
                             ${cityButtonsHtml}
                         </div>
                     </div>
@@ -984,21 +1018,22 @@
                                         data.stops.forEach(stop => {
                                             const escapedName = stop.name.replace(/'/g, "\\'");
                                             const popupHtml = `
-                                                <div class="p-1">
-                                                    <div class="font-bold text-sm mb-2 text-gray-800">${stop.name}</div>
-                                                    <div class="text-xs text-gray-600 mb-2 capitalize">Bus Station</div>
-                                                    <div class="flex gap-2 mt-2 pt-2 border-t border-[#e5e7eb]">
-                                                        <button onclick="setAsRouteEndpoint('origin', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-white border border-[#333333] hover:opacity-90 text-[#333333] font-[700] py-1.5 px-2 rounded-[2px] transition-opacity text-center text-[12px]">Start here</button>
-                                                        <button onclick="setAsRouteEndpoint('destination', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-white border border-[#333333] hover:opacity-90 text-[#333333] font-[700] py-1.5 px-2 rounded-[2px] transition-opacity text-center text-[12px]">End here</button>
+                                                <div class="p-2 w-[220px]">
+                                                    <div class="font-[600] text-[14px] mb-1 text-white leading-tight">${stop.name}</div>
+                                                    <div class="text-[11px] text-[#9CA3AF] mb-3 capitalize font-mono">Bus Station</div>
+                                                    <div class="flex gap-2 pt-3 border-t border-[#374151]">
+                                                        <button onclick="setAsRouteEndpoint('origin', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-[#191C21] border border-[#EA580C] hover:bg-[#EA580C] hover:text-white text-[#EA580C] font-[600] py-1.5 px-2 rounded-[6px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">Start</button>
+                                                        <button onclick="setAsRouteEndpoint('destination', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-[#191C21] border border-[#EA580C] hover:bg-[#EA580C] hover:text-white text-[#EA580C] font-[600] py-1.5 px-2 rounded-[6px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">End</button>
                                                     </div>
                                                 </div>
                                             `;
-                                            L.circleMarker([stop.lat, stop.lon], {
-                                                radius: 4,
-                                                color: '#3b82f6',
-                                                fillColor: '#fff',
-                                                fillOpacity: 1,
-                                                weight: 2
+                                            const icon = L.divIcon({
+                                                html: '<div style="background:#3b82f6;color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.3);"><i class="fa-solid fa-bus"></i></div>',
+                                                className: '',
+                                                iconSize: [24, 24],
+                                                iconAnchor: [12, 12]
+                                            });
+                                            L.marker([stop.lat, stop.lon], { icon: icon
                                             }).bindTooltip(stop.name, {
                                                 sticky: true,
                                                 className: 'font-sans text-sm'
@@ -1011,22 +1046,24 @@
                                         data.gbfs_stations.forEach(station => {
                                             const escapedName = station.name.replace(/'/g, "\\'");
                                             const popupHtml = `
-                                                <div class="p-1">
-                                                    <div class="font-bold text-sm mb-2 text-gray-800">${station.name}</div>
-                                                    <div class="text-xs text-gray-600 mb-2 capitalize">${station.gbfs_type} Station</div>
-                                                    <div class="flex gap-2 mt-2 pt-2 border-t border-[#e5e7eb]">
-                                                        <button onclick="setAsRouteEndpoint('origin', '${escapedName}', ${station.lat}, ${station.lon})" class="flex-1 bg-white border border-[#333333] hover:opacity-90 text-[#333333] font-[700] py-1.5 px-2 rounded-[2px] transition-opacity text-center text-[12px]">Start here</button>
-                                                        <button onclick="setAsRouteEndpoint('destination', '${escapedName}', ${station.lat}, ${station.lon})" class="flex-1 bg-white border border-[#333333] hover:opacity-90 text-[#333333] font-[700] py-1.5 px-2 rounded-[2px] transition-opacity text-center text-[12px]">End here</button>
+                                                <div class="p-2 w-[220px]">
+                                                    <div class="font-[600] text-[14px] mb-1 text-white leading-tight">${station.name}</div>
+                                                    <div class="text-[11px] text-[#9CA3AF] mb-3 capitalize font-mono">${station.gbfs_type} Station</div>
+                                                    <div class="flex gap-2 pt-3 border-t border-[#374151]">
+                                                        <button onclick="setAsRouteEndpoint('origin', '${escapedName}', ${station.lat}, ${station.lon})" class="flex-1 bg-[#191C21] border border-[#EA580C] hover:bg-[#EA580C] hover:text-white text-[#EA580C] font-[600] py-1.5 px-2 rounded-[6px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">Start</button>
+                                                        <button onclick="setAsRouteEndpoint('destination', '${escapedName}', ${station.lat}, ${station.lon})" class="flex-1 bg-[#191C21] border border-[#EA580C] hover:bg-[#EA580C] hover:text-white text-[#EA580C] font-[600] py-1.5 px-2 rounded-[6px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">End</button>
                                                     </div>
                                                 </div>
                                             `;
                                             const markerColor = station.gbfs_type === 'car' ? '#a855f7' : '#f59e0b';
-                                            L.circleMarker([station.lat, station.lon], {
-                                                radius: 4,
-                                                color: markerColor,
-                                                fillColor: '#fff',
-                                                fillOpacity: 1,
-                                                weight: 2
+                                            const iconClass = station.gbfs_type === 'car' ? 'fa-car' : 'fa-bicycle';
+                                            const icon = L.divIcon({
+                                                html: `<div style="background:${markerColor};color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.3);"><i class="fa-solid ${iconClass}"></i></div>`,
+                                                className: '',
+                                                iconSize: [24, 24],
+                                                iconAnchor: [12, 12]
+                                            });
+                                            L.marker([station.lat, station.lon], { icon: icon
                                             }).bindTooltip(station.name, {
                                                 sticky: true,
                                                 className: 'font-sans text-sm'
@@ -1035,6 +1072,7 @@
                                             }).addTo(territoryStopsLayer);
                                         });
                                     }
+                                    // Parking spots are now loaded separately via /api/parking-spots
                                 })
                                 .catch(err => console.error('Failed to load stops for territory:', err));
                         });
@@ -1065,13 +1103,13 @@
                     const isSelected = selectedTenantServices.has(svcKey);
 
                     return `
-                        <button type="button" class="service-toggle-single w-full text-left rounded-lg p-3 transition-colors border mb-2 ${isSelected ? 'border-red-200 bg-red-50 text-red-900' : 'border-gray-200 bg-gray-50 hover:bg-white text-gray-800'}" data-tenant-id="${service.tenant_id}" data-mode="${mode}">
+                        <button type="button" class="service-toggle-single w-full text-left rounded-[8px] p-3 transition-colors border mb-2 ${isSelected ? 'border-[#EA580C] bg-[#111827]' : 'border-[#374151] bg-[#191C21] hover:bg-[#111827]'}" data-tenant-id="${service.tenant_id}" data-mode="${mode}">
                             <div class="flex items-center justify-between gap-3">
                                 <div class="flex-1 min-w-0">
-                                    <div class="text-sm font-semibold truncate">${service.operator_name}</div>
-                                    <div class="text-[11px] font-medium mt-0.5 ${isSelected ? 'text-red-600' : 'text-gray-500'}">${service.stops_count} active stops/stations</div>
+                                    <div class="text-[13px] font-[600] truncate text-white leading-tight">${service.operator_name}</div>
+                                    <div class="text-[11px] font-[500] mt-1 ${isSelected ? 'text-[#EA580C]' : 'text-[#9CA3AF]'}">${service.stops_count} active stops/stations</div>
                                 </div>
-                                <div class="shrink-0 w-4 h-4 rounded-sm border flex items-center justify-center transition-colors ${isSelected ? 'border-red-600 bg-red-600' : 'border-gray-300 bg-white'}">
+                                <div class="shrink-0 w-4 h-4 rounded-[4px] border flex items-center justify-center transition-colors shadow-sm ${isSelected ? 'border-[#EA580C] bg-[#EA580C]' : 'border-[#6B7280] bg-[#374151]'}">
                                     ${isSelected ? '<svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>' : ''}
                                 </div>
                             </div>
@@ -1087,9 +1125,9 @@
                     const label = getModeLabel(mode);
 
                     return `
-                        <button type="button" class="service-toggle-child w-full flex items-center justify-between gap-3 px-3 py-2 rounded-md text-left transition-colors ${isSelected ? 'bg-red-50 text-red-700' : 'bg-transparent hover:bg-gray-50 text-gray-600'}" data-tenant-id="${service.tenant_id}" data-mode="${mode}">
-                            <span class="text-sm font-medium ${isSelected ? 'text-red-700' : 'text-gray-600'}">${label}</span>
-                            <div class="shrink-0 w-4 h-4 rounded-sm border flex items-center justify-center transition-colors ${isSelected ? 'border-red-600 bg-red-600' : 'border-gray-300 bg-white'}">
+                        <button type="button" class="service-toggle-child w-full flex items-center justify-between gap-3 px-3 py-2 rounded-[6px] text-left transition-colors border ${isSelected ? 'bg-[#191C21] text-[#EA580C] border-[#EA580C]' : 'bg-transparent hover:bg-[#374151] text-[#9CA3AF] border-transparent'}" data-tenant-id="${service.tenant_id}" data-mode="${mode}">
+                            <span class="text-[13px] font-[600] ${isSelected ? 'text-[#EA580C]' : 'text-[#9CA3AF]'}">${label}</span>
+                            <div class="shrink-0 w-4 h-4 rounded-[4px] border flex items-center justify-center transition-colors shadow-sm ${isSelected ? 'border-[#EA580C] bg-[#EA580C]' : 'border-[#6B7280] bg-[#374151]'}">
                                 ${isSelected ? '<svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>' : ''}
                             </div>
                         </button>
@@ -1097,17 +1135,17 @@
                 }).join('');
 
                 return `
-                    <div class="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden mb-2">
-                        <button type="button" class="tenant-accordion-toggle w-full flex items-center justify-between gap-2 px-4 py-3 bg-gray-50 hover:bg-white transition-colors" data-tenant-id="${service.tenant_id}">
+                    <div class="border rounded-[8px] overflow-hidden mb-2 shadow-sm transition-colors ${someSelected ? 'border-[#EA580C] bg-[#111827]' : 'border-[#374151] bg-[#191C21]'}">
+                        <button type="button" class="tenant-accordion-toggle w-full flex items-center justify-between gap-2 px-4 py-3 transition-colors ${someSelected ? 'bg-[#111827]' : 'bg-[#191C21] hover:bg-[#111827]'}" data-tenant-id="${service.tenant_id}">
                             <div class="flex-1 min-w-0 text-left">
-                                <div class="text-sm font-semibold ${someSelected ? 'text-red-800' : 'text-gray-800'}">${service.operator_name}</div>
-                                <div class="text-[11px] font-medium mt-0.5 ${someSelected ? 'text-red-600' : 'text-gray-500'}">Multiple services</div>
+                                <div class="text-[13px] font-[600] text-white">${service.operator_name}</div>
+                                <div class="text-[11px] font-[500] mt-1 ${someSelected ? 'text-[#EA580C]' : 'text-[#9CA3AF]'}">Multiple services</div>
                             </div>
-                            <svg class="w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-4 h-4 text-[#6B7280] transition-transform ${isExpanded ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </button>
-                        <div class="${isExpanded ? '' : 'hidden'} p-2 space-y-1 bg-white border-t border-gray-200 flex flex-col">
+                        <div class="${isExpanded ? '' : 'hidden'} p-2 space-y-1 bg-[#111827] border-t ${someSelected ? 'border-[#EA580C]' : 'border-[#374151]'} flex flex-col">
                             ${childRows}
                         </div>
                     </div>
@@ -1254,15 +1292,15 @@
                     stopsEl.innerHTML = stops.map((s, i) => `
                         <div class="flex items-start gap-2 px-3 py-1.5 ${i < stops.length - 1 ? 'border-b border-gray-50' : ''}">
                             <div class="flex flex-col items-center shrink-0 mt-1">
-                                <div class="w-2 h-2 rounded-full border-2 ${i === 0 || i === stops.length - 1 ? 'border-red-400 bg-red-400' : 'border-gray-300 bg-white'}"></div>
-                                ${i < stops.length - 1 ? '<div class="w-px h-3 bg-gray-200 mt-0.5"></div>' : ''}
+                                <div class="w-2 h-2 rounded-full border-2 ${i === 0 || i === stops.length - 1 ? 'border-[#EA580C] bg-[#EA580C]' : 'border-[#6B7280] bg-[#374151]'}"></div>
+                                ${i < stops.length - 1 ? '<div class="w-px h-3 bg-[#374151] mt-0.5"></div>' : ''}
                             </div>
-                            <span class="text-xs text-gray-600 leading-tight pb-1">${s.name}</span>
+                            <span class="text-[12px] text-[#9CA3AF] leading-tight pb-1">${s.name}</span>
                         </div>
                     `).join('');
                 } else {
                     stopsEl.innerHTML =
-                        '<div class="px-3 py-2 text-xs text-gray-400">No stop information available.</div>';
+                        '<div class="px-3 py-2 text-[12px] text-[#6B7280]">No stop information available.</div>';
                 }
             }
         }
@@ -1464,10 +1502,11 @@
                             iconAnchor: [14, 14]
                         });
 
-                        let popupHtml = `<div class="p-1">
-                            <div class="font-bold text-sm mb-1 text-gray-800">${st.name}</div>
-                            <div class="text-xs text-gray-600 mb-2">${st.operator_name}</div>
-                            <div class="text-xs font-medium text-gray-700 bg-gray-100 p-2 rounded-md">`;
+                        let popupHtml = `
+                            <div class="p-2 w-[220px]">
+                                <div class="font-[600] text-[14px] mb-1 text-white leading-tight">${st.name}</div>
+                                <div class="text-[11px] text-[#9CA3AF] mb-2">${st.operator_name}</div>
+                                <div class="text-[12px] font-[500] text-white bg-[#111827] border border-[#374151] p-3 rounded-[6px] mb-3">`;
                         if (isBike) {
                             popupHtml += `Capacity: ${st.capacity || 0}<br>`;
                             popupHtml += `Bikes: ${available} / Docks: ${st.status.num_docks_available || 0}`;
@@ -1486,8 +1525,8 @@
                         }
                         popupHtml += `</div>
                             <div class="flex gap-2 mt-3 pt-3 border-t border-[#e5e7eb]">
-                                <button onclick="setAsRouteEndpoint('origin', '${st.name.replace(/'/g, "\\'")}', ${st.lat}, ${st.lon})" class="flex-1 bg-white border border-[#333333] hover:opacity-90 text-[#333333] font-[700] py-1.5 px-2 rounded-[2px] transition-opacity text-center text-[12px]">Start here</button>
-                                <button onclick="setAsRouteEndpoint('destination', '${st.name.replace(/'/g, "\\'")}', ${st.lat}, ${st.lon})" class="flex-1 bg-white border border-[#333333] hover:opacity-90 text-[#333333] font-[700] py-1.5 px-2 rounded-[2px] transition-opacity text-center text-[12px]">End here</button>
+                                <button onclick="setAsRouteEndpoint('origin', '${st.name.replace(/'/g, "\\'")}', ${st.lat}, ${st.lon})" class="flex-1 bg-[#191C21] border border-[#EA580C] hover:bg-[#EA580C] hover:text-white text-[#EA580C] font-[600] py-1.5 px-2 rounded-[6px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">Start</button>
+                                <button onclick="setAsRouteEndpoint('destination', '${st.name.replace(/'/g, "\\'")}', ${st.lat}, ${st.lon})" class="flex-1 bg-[#191C21] border border-[#EA580C] hover:bg-[#EA580C] hover:text-white text-[#EA580C] font-[600] py-1.5 px-2 rounded-[6px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">End</button>
                             </div>
                         </div>`;
 
@@ -1622,12 +1661,12 @@
             const busCo2Label = busCo2G >= 1000 ?
                 (busCo2G / 1000).toFixed(2).replace(/\.?0+$/, '') + ' kg' :
                 Math.round(busCo2G) + ' g';
-            return `<div class="inline-flex items-center gap-1 text-green-600 text-xs font-medium" title="Trip emits ${busCo2Label} CO2 and saves ${savedLabel} vs car">
+            return `<div class="inline-flex items-center gap-1.5 text-[#34D399] text-[11px] font-[600] font-mono tracking-tight bg-[#064E3B] px-2 py-0.5 rounded-[4px] border border-[#059669]" title="Trip emits ${busCo2Label} CO2 and saves ${savedLabel} vs car">
                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" />
                     <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
                 </svg>
-                <span>Trip saves ${savedLabel} CO2 vs car</span>
+                <span>Saves ${savedLabel} CO₂</span>
             </div>`;
         }
 
@@ -1637,13 +1676,62 @@
             const savedLabel = savedG >= 1000 ?
                 (savedG / 1000).toFixed(2).replace(/\.?0+$/, '') + ' kg' :
                 savedG + ' g';
-            return `<div style="margin-top:6px;padding:4px 6px;background:#f0fdf4;border-radius:6px;border:1px solid #bbf7d0;font-size:11px;color:#16a34a">🌿 <strong>Evolity CNG</strong> · ${(distKm).toFixed(1)} km · saves <strong>${savedLabel} CO₂</strong> vs car</div>`;
+            return `<div style="margin-top:8px;padding:6px 8px;background:#064E3B;border-radius:6px;border:1px solid #059669;font-size:11px;color:#34D399;font-family:'JetBrains Mono', monospace;font-weight:600;letter-spacing:-0.5px">🌿 Evolity CNG &middot; ${(distKm).toFixed(1)} km &middot; Saves ${savedLabel} CO₂</div>`;
         }
 
         // Initialize Map & Load shapes
+        let allParkingSpots = [];
+        
+        const parkingIcon = L.divIcon({
+            html: '<div style="background:#10b981;color:#fff;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.5);"><i class="fa-solid fa-square-parking"></i></div>',
+            className: '',
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+        });
+
+        async function loadParkingSpots() {
+            try {
+                const res = await fetch('/api/parking-spots');
+                const data = await res.json();
+                if (data.parking_spots) {
+                    allParkingSpots = data.parking_spots;
+                    renderParkingSpots();
+                }
+            } catch (err) {
+                console.error('Failed to load parking spots:', err);
+            }
+        }
+
+        function renderParkingSpots() {
+            parkingLayer.clearLayers();
+            if (!allParkingSpots.length) return;
+
+            // Optional: If we have an active bounds from the current city, we could filter here.
+            // For now, render them all but with a shared icon reference to save memory/CPU.
+            allParkingSpots.forEach(spot => {
+                const escapedName = spot.name.replace(/'/g, "\\'");
+                const popupHtml = `
+                    <div class="p-2 w-[220px]">
+                        <div class="font-[600] text-[14px] mb-1 text-white leading-tight">${spot.name}</div>
+                        <div class="text-[11px] text-[#9CA3AF] mb-3 capitalize font-mono">Parking Spot</div>
+                        <div class="flex gap-2 pt-3 border-t border-[#374151]">
+                            <button onclick="setAsRouteEndpoint('origin', '${escapedName}', ${spot.lat}, ${spot.lon})" class="flex-1 bg-[#191C21] border border-[#EA580C] hover:bg-[#EA580C] hover:text-white text-[#EA580C] font-[600] py-1.5 px-2 rounded-[6px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">Start</button>
+                            <button onclick="setAsRouteEndpoint('destination', '${escapedName}', ${spot.lat}, ${spot.lon})" class="flex-1 bg-[#191C21] border border-[#EA580C] hover:bg-[#EA580C] hover:text-white text-[#EA580C] font-[600] py-1.5 px-2 rounded-[6px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">End</button>
+                        </div>
+                    </div>
+                `;
+                L.marker([spot.lat, spot.lon], { icon: parkingIcon })
+                    .bindTooltip(spot.name, { sticky: true, className: 'font-sans text-[12px] bg-[#191C21] text-white border-[#374151]' })
+                    .bindPopup(popupHtml, { className: 'rounded-[8px] bg-[#191C21] text-white border-[#374151]' })
+                    .addTo(parkingLayer);
+            });
+        }
+
+
         document.addEventListener('DOMContentLoaded', () => {
             initMap();
             loadTerritories();
+            loadParkingSpots();
 
             const clearServicesBtn = document.getElementById('clear-services');
             if (clearServicesBtn) {
@@ -1778,21 +1866,21 @@
                     return `
                         <div class="relative pl-6 py-2">
                             <div class="flex items-start gap-3">
-                                ${idx < route.legs.length - 1 ? '<div class="absolute left-[11px] top-4 bottom-[-10px] w-0.5 border-l-2 border-dotted border-[#e5e7eb]"></div>' : ''}
-                                <div class="absolute left-[-29px] top-1.5 w-[14px] h-[14px] rounded-full border-2 border-[#1a1a1a] bg-white z-10 shadow-sm"></div>
-                                <div class="font-mono text-sm font-semibold text-[#1a1a1a] w-12 pt-0.5 shrink-0">${leg.start_time || ''}</div>
+                                ${idx < route.legs.length - 1 ? '<div class="absolute left-[11px] top-4 bottom-[-10px] w-0.5 border-l-2 border-dotted border-[#374151]"></div>' : ''}
+                                <div class="absolute left-[-29px] top-1.5 w-[14px] h-[14px] rounded-full border-2 border-[#9CA3AF] bg-[#191C21] z-10 shadow-sm"></div>
+                                <div class="font-mono text-[12px] font-[600] text-white w-12 pt-0.5 shrink-0">${leg.start_time || ''}</div>
                                 <div>
-                                    <div class="font-[800] text-[#1a1a1a] leading-snug">${leg.from || 'Origin'}</div>
+                                    <div class="font-[600] text-white leading-snug text-[13px]">${leg.from || 'Origin'}</div>
                                     <div class="mt-1 flex items-center gap-2">
-                                        <span class="text-xs font-medium text-gray-500"><i class="fa-solid fa-person-walking"></i> Walk ${leg.duration} min</span>
+                                        <span class="text-[12px] font-[500] text-[#9CA3AF]"><i class="fa-solid fa-person-walking"></i> Walk ${leg.duration} min</span>
                                     </div>
                                 </div>
                             </div>
                             ${idx === route.legs.length - 1 ? `
                             <div class="relative flex items-start gap-3 mt-4">
-                                <div class="absolute left-[-29px] top-1.5 w-[14px] h-[14px] rounded-full border-2 border-[#1a1a1a] bg-white z-10 shadow-sm"></div>
-                                <div class="font-mono text-sm font-semibold text-[#1a1a1a] w-12 pt-0.5 shrink-0">${leg.end_time || ''}</div>
-                                <div class="font-[800] text-[#1a1a1a] leading-snug">${leg.to || 'Destination'}</div>
+                                <div class="absolute left-[-29px] top-1.5 w-[14px] h-[14px] rounded-full border-2 border-[#9CA3AF] bg-[#191C21] z-10 shadow-sm"></div>
+                                <div class="font-mono text-[12px] font-[600] text-white w-12 pt-0.5 shrink-0">${leg.end_time || ''}</div>
+                                <div class="font-[600] text-white leading-snug text-[13px]">${leg.to || 'Destination'}</div>
                             </div>
                             ` : ''}
                         </div>
@@ -1805,26 +1893,26 @@
                     
                     return `
                         <div class="relative pl-6 py-3">
-                            <div class="absolute left-[11px] top-4 bottom-4 w-0.5 bg-[#e5e7eb]"></div>
+                            <div class="absolute left-[11px] top-4 bottom-4 w-0.5 bg-[#374151]"></div>
                             
                             <!-- Ride Start -->
                             <div class="relative flex items-start gap-3 mb-4">
-                                <div class="absolute left-[-29px] top-1.5 w-[14px] h-[14px] rounded-full border-2 border-[#1a1a1a] bg-white z-10 shadow-sm"></div>
-                                <div class="font-mono text-sm font-semibold text-[#1a1a1a] w-12 pt-0.5 shrink-0">${leg.start_time}</div>
+                                <div class="absolute left-[-29px] top-1.5 w-[14px] h-[14px] rounded-full border-2 border-[#9CA3AF] bg-[#191C21] z-10 shadow-sm"></div>
+                                <div class="font-mono text-[12px] font-[600] text-white w-12 pt-0.5 shrink-0">${leg.start_time}</div>
                                 <div>
-                                    <div class="font-[800] text-[#1a1a1a] leading-snug">${leg.from}</div>
+                                    <div class="font-[600] text-white leading-snug text-[13px]">${leg.from}</div>
                                     <div class="mt-1 flex items-center gap-2">
-                                        <span class="inline-block px-1.5 py-0.5 text-[10px] font-bold rounded uppercase tracking-wide" style="${routeBadgeStyle}">${leg.route_name || leg.type}</span>
-                                        <span class="text-xs font-medium text-gray-500"><i class="fa-solid ${iconClass}"></i> Ride ${leg.duration} min</span>
+                                        <span class="inline-block px-1.5 py-0.5 text-[10px] font-bold rounded uppercase tracking-wide font-mono" style="${routeBadgeStyle}">${leg.route_name || leg.type}</span>
+                                        <span class="text-[12px] font-[500] text-[#9CA3AF]"><i class="fa-solid ${iconClass}"></i> Ride ${leg.duration} min</span>
                                     </div>
                                 </div>
                             </div>
                             
                             <!-- Ride End -->
                             <div class="relative flex items-start gap-3">
-                                <div class="absolute left-[-29px] top-1.5 w-[14px] h-[14px] rounded-full border-2 border-[#1a1a1a] bg-white z-10 shadow-sm"></div>
-                                <div class="font-mono text-sm font-semibold text-[#1a1a1a] w-12 pt-0.5 shrink-0">${leg.end_time}</div>
-                                <div class="font-[800] text-[#1a1a1a] leading-snug">${leg.to}</div>
+                                <div class="absolute left-[-29px] top-1.5 w-[14px] h-[14px] rounded-full border-2 border-[#9CA3AF] bg-[#191C21] z-10 shadow-sm"></div>
+                                <div class="font-mono text-[12px] font-[600] text-white w-12 pt-0.5 shrink-0">${leg.end_time}</div>
+                                <div class="font-[600] text-white leading-snug text-[13px]">${leg.to}</div>
                             </div>
                         </div>
                     `;
@@ -1836,12 +1924,12 @@
                     const midStops = leg.stops ? leg.stops.filter(s => s.is_intermediate) : [];
                     const midStopsHtml = midStops.length > 0 ? `
                         <details class="mt-1.5 overflow-hidden">
-                            <summary class="text-xs text-gray-500 cursor-pointer select-none hover:text-blue-600 flex items-center gap-1">
+                            <summary class="text-[12px] text-[#9CA3AF] cursor-pointer select-none hover:text-[#EA580C] flex items-center gap-1 font-[500]">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                                 ${midStops.length} intermediate stops
                             </summary>
-                            <div class="mt-2 ml-1 space-y-1.5 border-l-2 border-gray-200 pl-3 mb-2">
-                                ${midStops.map(s => `<div class="flex justify-between text-xs text-gray-600"><span>${s.name}</span><span class="font-mono text-gray-500">${s.arrival}</span></div>`).join('')}
+                            <div class="mt-2 ml-1 space-y-1.5 border-l-2 border-[#374151] pl-3 mb-2">
+                                ${midStops.map(s => `<div class="flex justify-between text-[12px] text-[#9CA3AF]"><span>${s.name}</span><span class="font-mono text-[#6B7280]">${s.arrival}</span></div>`).join('')}
                             </div>
                         </details>
                     ` : '';
@@ -1850,21 +1938,21 @@
                         <div class="flex items-start gap-3 py-2">
                             <div class="w-6 flex flex-col items-center mt-1">
                                 <div class="w-3 h-3 rounded-full" style="${routeBadgeStyle}"></div>
-                                ${idx < route.legs.length - 1 ? `<div class="w-0.5 h-full bg-gray-200 my-1 min-h-[20px]"></div>` : ''}
+                                ${idx < route.legs.length - 1 ? `<div class="w-0.5 h-full bg-[#374151] my-1 min-h-[20px]"></div>` : ''}
                             </div>
                             <div class="flex-1 pb-3">
                                 <div class="flex items-center gap-2">
-                                    <span class="inline-block px-2 py-0.5 text-xs font-bold rounded" style="${routeBadgeStyle}">
+                                    <span class="inline-block px-2 py-0.5 text-[11px] font-[600] rounded-[4px] font-mono shadow-sm" style="${routeBadgeStyle}">
                                         ${leg.route_name || leg.route_short_name || leg.route_long_name || 'Route'}
                                     </span>
-                                    <span class="text-sm font-semibold text-gray-900">${leg.from}</span>
+                                    <span class="text-[13px] font-[600] text-white leading-tight">${leg.from}</span>
                                 </div>
-                                <div class="text-sm text-gray-600 mt-1">
-                                    <div class="flex items-center gap-2">
-                                        <span class="font-medium text-gray-800">${leg.departure_time}</span>
+                                <div class="text-[12px] text-[#9CA3AF] mt-1">
+                                    <div class="flex items-center gap-2 font-mono">
+                                        <span class="font-[600] text-white">${leg.departure_time}</span>
                                         &rarr;
-                                        <span class="font-medium text-gray-800">${leg.arrival_time}</span> 
-                                        <span>at ${leg.to}</span>
+                                        <span class="font-[600] text-white">${leg.arrival_time}</span> 
+                                        <span class="font-sans text-[#9CA3AF]">at ${leg.to}</span>
                                     </div>
                                 </div>
                                 ${midStopsHtml}
@@ -1876,32 +1964,32 @@
             }).join('');
 
             return `
-                <div class="route-card bg-white rounded-[6px] border border-[#e5e7eb] p-4 mb-3 transition-colors hover:border-[#333333]" onclick="showRouteOnMap(${routeIndex})">
-                    <div class="flex justify-between items-center mb-2 cursor-pointer">
+                <div class="route-card bg-[#191C21] rounded-[8px] border border-[#374151] p-5 mb-3 transition-colors hover:border-[#6B7280]" onclick="showRouteOnMap(${routeIndex})">
+                    <div class="flex justify-between items-center mb-3 cursor-pointer">
                         <div class="flex items-baseline gap-2">
-                            <span class="text-xl font-bold text-gray-900">${route.leave_at || route.departure_time}</span>
-                            <span class="text-gray-400">→</span>
-                            <span class="text-xl font-bold text-gray-900">${route.arrival_time}</span>
+                            <span class="text-[22px] font-[600] text-white tracking-tight font-sans">${route.leave_at || route.departure_time}</span>
+                            <span class="text-[#6B7280]">→</span>
+                            <span class="text-[22px] font-[600] text-white tracking-tight font-sans">${route.arrival_time}</span>
                         </div>
-                        <div class="px-2.5 py-1 bg-gray-100 text-gray-600 font-medium text-xs rounded-full">
+                        <div class="px-3 py-1.5 bg-[#111827] border border-[#374151] text-[#D1D5DB] font-[600] text-[12px] rounded-full shadow-inner font-mono">
                             ${route.duration}
                         </div>
                     </div>
                     
-                    <details class="group mt-1 cursor-pointer" onclick="event.stopPropagation()">
-                        <summary class="flex items-center justify-between text-xs list-none outline-none">
-                            <div class="flex flex-col gap-1.5">
-                                <div class="flex items-center gap-1.5 flex-wrap">
+                    <details class="group mt-2 cursor-pointer" onclick="event.stopPropagation()">
+                        <summary class="flex items-center justify-between text-[13px] list-none outline-none">
+                            <div class="flex flex-col gap-2">
+                                <div class="flex items-center gap-2 flex-wrap">
                                     ${badgesHtml}
                                 </div>
-                                <div class="text-gray-500 font-medium">${totalMidStops} stops in total</div>
-                                <div class="mt-0.5">
+                                <div class="text-[#9CA3AF] font-[500] text-[12px]">${totalMidStops} stops in total</div>
+                                <div class="mt-1">
                                     ${co2Badge(transferDistKm)}
                                 </div>
                             </div>
-                            <div class="flex items-center gap-1 text-gray-500 hover:text-blue-600 transition-colors">
-                                <span class="font-medium text-xs hidden group-open:inline">Hide</span>
-                                <span class="font-medium text-xs group-open:hidden">Details</span>
+                            <div class="flex items-center gap-1 text-[#6B7280] hover:text-[#EA580C] transition-colors bg-[#111827] px-2 py-1 rounded-[6px] border border-[#374151]">
+                                <span class="font-[600] text-[11px] hidden group-open:inline uppercase tracking-wider font-mono">Hide</span>
+                                <span class="font-[600] text-[11px] group-open:hidden uppercase tracking-wider font-mono">Details</span>
                                 <svg class="w-4 h-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                             </div>
                         </summary>
@@ -2521,12 +2609,12 @@
                             const isEndpoint = stop.is_intermediate === false;
                             const escapedName = stop.name.replace(/'/g, "\\'");
                             const popupHtml = `
-                                <div class="p-1">
-                                    <div class="font-bold text-sm mb-2 text-gray-800">${stop.name}</div>
-                                    ${stop.arrival ? `<div class="text-xs text-gray-600 mb-2">${stop.arrival}</div>` : ''}
-                                    <div class="flex gap-2 mt-2 pt-2 border-t border-[#e5e7eb]">
-                                        <button onclick="setAsRouteEndpoint('origin', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-white border border-[#333333] hover:opacity-90 text-[#333333] font-[700] py-1.5 px-2 rounded-[2px] transition-opacity text-center text-[12px]">Start here</button>
-                                        <button onclick="setAsRouteEndpoint('destination', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-white border border-[#333333] hover:opacity-90 text-[#333333] font-[700] py-1.5 px-2 rounded-[2px] transition-opacity text-center text-[12px]">End here</button>
+                                <div class="p-2 w-[220px]">
+                                    <div class="font-[600] text-[14px] mb-1 text-white leading-tight">${stop.name}</div>
+                                    ${stop.arrival ? `<div class="text-[11px] text-[#9CA3AF] mb-3 font-mono">${stop.arrival}</div>` : ''}
+                                    <div class="flex gap-2 pt-3 border-t border-[#374151]">
+                                        <button onclick="setAsRouteEndpoint('origin', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-[#191C21] border border-[#EA580C] hover:bg-[#EA580C] hover:text-white text-[#EA580C] font-[600] py-1.5 px-2 rounded-[6px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">Start</button>
+                                        <button onclick="setAsRouteEndpoint('destination', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-[#191C21] border border-[#EA580C] hover:bg-[#EA580C] hover:text-white text-[#EA580C] font-[600] py-1.5 px-2 rounded-[6px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">End</button>
                                     </div>
                                 </div>
                             `;
@@ -2620,12 +2708,12 @@
                     const isMid = stop.is_intermediate === true;
                     const escapedName = stop.name.replace(/'/g, "\\'");
                     const popupHtml = `
-                        <div class="p-1">
-                            <div class="font-bold text-sm mb-2 text-gray-800">${stop.name}</div>
-                            ${stop.arrival ? `<div class="text-xs text-gray-600 mb-2">${stop.arrival}</div>` : ''}
-                            <div class="flex gap-2 mt-2 pt-2 border-t border-[#e5e7eb]">
-                                <button onclick="setAsRouteEndpoint('origin', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-white border border-[#333333] hover:opacity-90 text-[#333333] font-[700] py-1.5 px-2 rounded-[2px] transition-opacity text-center text-[12px]">Start here</button>
-                                <button onclick="setAsRouteEndpoint('destination', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-white border border-[#333333] hover:opacity-90 text-[#333333] font-[700] py-1.5 px-2 rounded-[2px] transition-opacity text-center text-[12px]">End here</button>
+                        <div class="p-2 w-[220px]">
+                            <div class="font-[600] text-[14px] mb-1 text-white leading-tight">${stop.name}</div>
+                            ${stop.arrival ? `<div class="text-[11px] text-[#9CA3AF] mb-3 font-mono">${stop.arrival}</div>` : ''}
+                            <div class="flex gap-2 pt-3 border-t border-[#374151]">
+                                <button onclick="setAsRouteEndpoint('origin', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-[#191C21] border border-[#EA580C] hover:bg-[#EA580C] hover:text-white text-[#EA580C] font-[600] py-1.5 px-2 rounded-[6px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">Start</button>
+                                <button onclick="setAsRouteEndpoint('destination', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-[#191C21] border border-[#EA580C] hover:bg-[#EA580C] hover:text-white text-[#EA580C] font-[600] py-1.5 px-2 rounded-[6px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">End</button>
                             </div>
                         </div>
                     `;

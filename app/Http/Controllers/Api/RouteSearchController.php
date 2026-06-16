@@ -2587,21 +2587,70 @@ class RouteSearchController extends Controller
         $bikeDest = $this->getNearestGbfsStation($destLat, $destLon, false, 'cycle');
         
         if ($bikeOrigin && $bikeDest && $bikeOrigin->id !== $bikeDest->id) {
-            $gbfsRoutes[] = $this->buildGbfsRoute($bikeOrigin, $bikeDest, $originLat, $originLon, $destLat, $destLon, $time, $originName, $destName, 'bike', '3b82f6');
+            $gbfsRoutes[] = $this->buildGbfsRoute($bikeOrigin, $bikeDest, $originLat, $originLon, $destLat, $destLon, $time, $originName, $destName, 'bike', '3b82f6', false);
         }
 
         // Try to find a Car route
         $carOrigin = $this->getNearestGbfsStation($originLat, $originLon, true, 'car');
-        $carDest = $this->getNearestGbfsStation($destLat, $destLon, false, 'car');
         
-        if ($carOrigin && $carDest && $carOrigin->id !== $carDest->id) {
-            $gbfsRoutes[] = $this->buildGbfsRoute($carOrigin, $carDest, $originLat, $originLon, $destLat, $destLon, $time, $originName, $destName, 'car', 'ef4444');
+        if ($carOrigin) {
+            $carDest = $this->getNearestGbfsStation($destLat, $destLon, false, 'car');
+            $parkingDest = $this->getNearestParkingSpot($destLat, $destLon);
+
+            // Determine the closest drop-off point (GBFS station or Parking Spot)
+            $bestDest = null;
+            $bestDist = PHP_FLOAT_MAX;
+            $isParkingDest = false;
+
+            if ($carDest) {
+                $dist = $this->haversineDistance($destLat, $destLon, $carDest->lat, $carDest->lon);
+                if ($dist < $bestDist) {
+                    $bestDist = $dist;
+                    $bestDest = $carDest;
+                    $isParkingDest = false;
+                }
+            }
+
+            if ($parkingDest) {
+                $dist = $this->haversineDistance($destLat, $destLon, $parkingDest->lat, $parkingDest->lon);
+                if ($dist < $bestDist) {
+                    $bestDist = $dist;
+                    $bestDest = $parkingDest;
+                    $isParkingDest = true;
+                }
+            }
+
+            if ($bestDest && ($isParkingDest || $carOrigin->id !== $bestDest->id)) {
+                $gbfsRoutes[] = $this->buildGbfsRoute($carOrigin, $bestDest, $originLat, $originLon, $destLat, $destLon, $time, $originName, $destName, 'car', 'ef4444', $isParkingDest);
+            }
         }
 
         return $gbfsRoutes;
     }
 
-    private function buildGbfsRoute($stationA, $stationB, $originLat, $originLon, $destLat, $destLon, $time, $originName, $destName, $type, $color)
+    private function getNearestParkingSpot(?float $lat, ?float $lon)
+    {
+        if (!$lat || !$lon) {
+            return null;
+        }
+
+        // Within 2km radius
+        $parkingSpots = \App\Models\ParkingSpot::all();
+        $bestSpot = null;
+        $minDist = 2.0;
+
+        foreach ($parkingSpots as $spot) {
+            $dist = $this->haversineDistance($lat, $lon, $spot->lat, $spot->lon);
+            if ($dist <= $minDist) {
+                $minDist = $dist;
+                $bestSpot = $spot;
+            }
+        }
+
+        return $bestSpot;
+    }
+
+    private function buildGbfsRoute($stationA, $stationB, $originLat, $originLon, $destLat, $destLon, $time, $originName, $destName, $type, $color, $isParkingDest)
     {
         $walkDistA = $this->haversineDistance($originLat, $originLon, $stationA->lat, $stationA->lon);
         $walkDurA = (int) round(($walkDistA / 5.0) * 60);
@@ -2615,7 +2664,7 @@ class RouteSearchController extends Controller
         $walkDurB = (int) round(($walkDistB / 5.0) * 60);
 
         $totalDuration = $walkDurA + $rideDur + $walkDurB;
-        $departureTimeObj = Carbon::createFromFormat('H:i', substr($time, 0, 5));
+        $departureTimeObj = \Carbon\Carbon::createFromFormat('H:i', substr($time, 0, 5));
         
         $legs = [];
         $currentTimeObj = clone $departureTimeObj;
@@ -2642,7 +2691,7 @@ class RouteSearchController extends Controller
         $legs[] = [
             'type' => $type,
             'from' => $stationA->name,
-            'to' => $stationB->name,
+            'to' => $isParkingDest ? $stationB->name . ' (Parking)' : $stationB->name,
             'from_lat' => $stationA->lat,
             'from_lon' => $stationA->lon,
             'to_lat' => $stationB->lat,
@@ -2660,7 +2709,7 @@ class RouteSearchController extends Controller
             $endTimeObj = (clone $currentTimeObj)->addMinutes($walkDurB);
             $legs[] = [
                 'type' => 'walk',
-                'from' => $stationB->name,
+                'from' => $isParkingDest ? $stationB->name . ' (Parking)' : $stationB->name,
                 'to' => $destName,
                 'from_lat' => $stationB->lat,
                 'from_lon' => $stationB->lon,
@@ -2761,7 +2810,9 @@ class RouteSearchController extends Controller
             ->whereNotNull('stop_lat')
             ->whereNotNull('stop_lon')
             ->select('id', 'stop_name as name', 'stop_lat as lat', 'stop_lon as lon')
-            ->get();
+            ->get()
+            ->unique('name')
+            ->values();
 
         $gbfsStations = DB::table('gbfs_stations as gs')
             ->join('gbfs_sources as src', 'gs.gbfs_source_id', '=', 'src.id')
@@ -2773,6 +2824,17 @@ class RouteSearchController extends Controller
         return response()->json([
             'stops' => $stops,
             'gbfs_stations' => $gbfsStations
+        ]);
+    }
+
+    public function getParkingSpots()
+    {
+        $parkingSpots = DB::table('parking_spots')
+            ->select('name', 'lat', 'lon')
+            ->get();
+
+        return response()->json([
+            'parking_spots' => $parkingSpots
         ]);
     }
 }
