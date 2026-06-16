@@ -40,7 +40,8 @@
             max-height: 300px;
             overflow-y: auto;
             width: 100%;
-            margin-top: 0.25rem;
+            bottom: 100%;
+            margin-bottom: 0.5rem;
         }
 
         .autocomplete-item {
@@ -133,28 +134,52 @@
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
+
+        /* Custom Scrollbar */
+        .custom-scrollbar {
+            scrollbar-gutter: stable;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #374151;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background-color: #4B5563;
+        }
     </style>
 </head>
 
-<body class="bg-[#FFFFFF] h-screen overflow-hidden flex flex-col md:flex-row text-[#111827]">
+<body class="bg-[#191C21] h-screen w-screen overflow-hidden text-[#111827] relative font-sans">
 
-    <!-- Left Pane: Search & Results -->
-    <div style="-webkit-overflow-scrolling: touch;"
-        class="w-full md:w-[450px] lg:w-[500px] flex-shrink-0 h-[50vh] md:h-full overflow-y-auto block bg-[#191C21] text-white z-20 relative border-b md:border-b-0 md:border-r border-[#374151]">
-        <div id="loading-overlay">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[#EA580C]"></div>
-        </div>
+    <!-- Map Container -->
+    <div id="map" class="absolute inset-0 z-0 bg-[#191C21]"></div>
 
-        <div class="p-6 bg-[#191C21] border-b border-[#374151]">
-            <div class="flex items-center gap-3 mb-6">
-                <div class="w-10 h-10 bg-[#EA580C] rounded-[8px] flex items-center justify-center shrink-0 shadow-lg shadow-[#EA580C]/20">
-                    <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-[#191C21]/80 z-[2000] hidden items-center justify-center backdrop-blur-sm">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[#EA580C]"></div>
+    </div>
+
+    <!-- Unified Collapsible Left Sidebar -->
+    <aside id="sidebar" class="fixed top-4 left-4 bottom-[160px] w-auto z-[1000] flex flex-col gap-4 pointer-events-none transition-transform duration-300">
+        
+        <!-- Header & Auth -->
+        <div class="pointer-events-auto bg-[#191C21]/95 backdrop-blur-md shadow-2xl rounded-[12px] border border-[#374151] p-4 flex-shrink-0 flex items-center justify-between w-[350px]">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-[#EA580C] rounded-[8px] flex items-center justify-center shrink-0 shadow-lg shadow-[#EA580C]/20">
+                    <svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                 </div>
-                <h1 class="text-[24px] font-[600] tracking-tight text-white flex-1 font-sans">
-                    Transit Finder</h1>
-
+                <h1 class="text-[18px] font-[600] tracking-tight text-white font-sans">Transit Finder</h1>
+            </div>
+            
+            <div class="flex items-center gap-3">
                 @auth
                     @php
                         $dashboardUrl = match (auth()->user()->role) {
@@ -163,198 +188,158 @@
                             default => '/portal',
                         };
                     @endphp
-                    <div class="flex items-center gap-2">
-                        <a href="{{ $dashboardUrl }}"
-                            class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-[8px] bg-[#EA580C] hover:bg-[#FDBA74] hover:text-[#191C21] text-white text-[14px] font-[600] transition-colors shadow-sm"
-                            title="Go to dashboard">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                            </svg>
-                            Dashboard
-                        </a>
-                        <form method="POST" action="{{ $dashboardUrl }}/logout" class="inline">
-                            @csrf
-                            <button type="submit"
-                                class="inline-flex items-center justify-center w-9 h-9 rounded-[8px] bg-[#191C21] border border-[#374151] hover:bg-[#374151] text-[#D1D5DB] hover:text-white transition-colors"
-                                title="Sign out">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                                </svg>
-                            </button>
-                        </form>
-                    </div>
+                    <a href="{{ $dashboardUrl }}" class="text-[#D1D5DB] hover:text-white transition-colors" title="Dashboard">
+                        <i class="fa-solid fa-chart-line"></i>
+                    </a>
                 @else
                     <div class="flex items-center gap-2">
-                        <a href="/user/login"
-                            class="px-3 py-1.5 rounded-[8px] bg-[#191C21] border border-[#374151] hover:bg-[#374151] text-[#D1D5DB] hover:text-white text-[14px] font-[600] transition-colors text-center shadow-sm">
-                            Sign In
-                        </a>
-                        <a href="/user/register"
-                            class="px-3 py-1.5 rounded-[8px] bg-[#EA580C] hover:bg-[#FDBA74] hover:text-[#191C21] text-white text-[14px] font-[600] transition-colors text-center shadow-sm">
-                            Sign Up
-                        </a>
+                        <a href="/user/login" class="text-[#D1D5DB] hover:text-white text-[13px] font-[500] transition-colors">Sign In</a>
+                        <a href="/user/register" class="bg-[#EA580C] hover:bg-[#FDBA74] hover:text-[#191C21] text-white px-3 py-1.5 rounded-[6px] text-[12px] font-[600] transition-colors shadow-sm">Sign Up</a>
                     </div>
                 @endauth
-            </div>
-
-            <form id="route-search-form" class="space-y-3">
-                <div class="relative">
-                    <label class="hidden text-[12px] font-[600] text-[#9CA3AF] uppercase tracking-wider mb-1 font-mono">Starting Point</label>
-                    <input type="text" id="origin" required
-                        class="w-full px-4 py-2 bg-[#111827] border border-[#374151] rounded-[8px] focus:ring-0 focus:border-[#EA580C] outline-none transition-colors text-white placeholder-[#6B7280] text-[14px] shadow-inner"
-                        placeholder="Starting Point" autocomplete="off">
-                    <div id="origin-autocomplete" class="autocomplete-dropdown hidden"></div>
-                </div>
-
-                <div class="flex justify-center -my-3.5 relative z-10">
-                    <button type="button" id="swap-locations"
-                        class="w-8 h-8 bg-[#1F2937] border border-[#374151] hover:bg-[#374151] rounded-full flex items-center justify-center transition-colors group shadow-md shadow-[#111827]/50">
-                        <svg class="w-4 h-4 text-[#9CA3AF] group-hover:text-white transition-colors rotate-90" fill="none" stroke="currentColor"
-                            viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                        </svg>
-                    </button>
-                </div>
-
-                <div class="relative mt-2">
-                    <div class="hidden justify-between items-center mb-1">
-                        <label class="block text-[12px] font-[600] text-[#9CA3AF] uppercase tracking-wider font-mono">Destination</label>
-                    </div>
-                    <input type="text" id="destination" required
-                        class="w-full px-4 py-2 bg-[#111827] border border-[#374151] rounded-[8px] focus:ring-0 focus:border-[#EA580C] outline-none transition-colors text-white placeholder-[#6B7280] text-[14px] shadow-inner"
-                        placeholder="Destination" autocomplete="off">
-                    <div id="destination-autocomplete" class="autocomplete-dropdown hidden"></div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3 pt-2">
-                    <div>
-                        <label class="hidden text-[12px] font-[600] text-[#9CA3AF] uppercase tracking-wider mb-1 font-mono">Date</label>
-                        <input type="date" id="date" required
-                            class="w-full px-4 py-2 bg-[#111827] border border-[#374151] rounded-[8px] focus:ring-0 focus:border-[#EA580C] outline-none cursor-pointer text-[14px] text-white [color-scheme:dark] shadow-inner"
-                            value="{{ date('Y-m-d') }}" onclick="try{this.showPicker()}catch(e){}"
-                            onfocus="try{this.showPicker()}catch(e){}">
-                    </div>
-                    <div>
-                        <label class="hidden text-[12px] font-[600] text-[#9CA3AF] uppercase tracking-wider mb-1 font-mono">Time</label>
-                        <input type="time" id="time" required
-                            class="w-full px-4 py-2 bg-[#111827] border border-[#374151] rounded-[8px] focus:ring-0 focus:border-[#EA580C] outline-none cursor-pointer text-[14px] text-white [color-scheme:dark] shadow-inner"
-                            value="{{ date('H:i') }}" onclick="try{this.showPicker()}catch(e){}"
-                            onfocus="try{this.showPicker()}catch(e){}">
-                    </div>
-                </div>
-
-                <button type="submit"
-                    class="w-full mt-4 px-4 py-3 bg-[#EA580C] hover:bg-[#FDBA74] hover:text-[#191C21] text-white rounded-[8px] font-[600] text-[15px] transition-colors flex justify-center items-center gap-2 shadow-lg shadow-[#EA580C]/20">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                    </svg>
-                    Search Routes
-                </button>
-                <div class="text-center pt-3">
-                    <button type="button" id="reset-search"
-                        class="text-[13px] text-[#6B7280] hover:text-[#EA580C] hover:underline font-[500] transition-colors">Reset Search</button>
-                </div>
-            </form>
-        </div>
-
-        <div id="results-wrapper" class="p-6 bg-[#191C21]">
-            <div id="initial-state">
-                <div class="mb-6">
-                    <h2 class="text-[18px] font-[600] text-white">Service Explorer</h2>
-                    <p class="text-[13px] text-[#9CA3AF] mt-1">Select a location to discover transit options.</p>
-                </div>
-
-                <div class="space-y-6">
-                    <!-- Locations Section -->
-                    <div>
-                        <label class="block text-[12px] font-[600] text-[#6B7280] uppercase tracking-wider mb-3 font-mono">Locations</label>
-                        <div id="territory-tree" class="space-y-2 pr-1 flex flex-col">
-                            <div class="text-center py-6 text-[#6B7280] text-[13px]">Loading locations&hellip;</div>
-                        </div>
-                    </div>
-
-                    <!-- Services Section -->
-                    <div>
-                        <div class="flex items-center justify-between mb-3">
-                            <label class="block text-[12px] font-[600] text-[#6B7280] uppercase tracking-wider font-mono">Available Services</label>
-                            <button type="button" id="clear-services"
-                                class="text-[12px] text-[#9CA3AF] hover:text-[#EA580C] hover:underline transition-colors">Clear all</button>
-                        </div>
-                        <div id="service-list" class="space-y-2 pr-1 flex flex-col">
-                            <div class="text-center py-6 text-[#6B7280] text-[13px]">Select a city to load services.</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div> <!-- Close Left Pane -->
-
-    <!-- Search Results Pane (Initially Hidden) -->
-    <aside id="search-results-pane"
-        class="hidden w-full md:w-[350px] lg:w-[380px] xl:w-[400px] flex-shrink-0 h-[45vh] md:h-full bg-[#191C21] border-b md:border-b-0 md:border-r border-[#374151] z-10 transition-all duration-300 relative shadow-lg flex flex-col p-6 overflow-hidden">
-        <div class="mb-4">
-            <div class="flex justify-between items-center mb-1">
-                <h3 class="text-[14px] font-[600] text-white uppercase tracking-wider font-mono">Search Results</h3>
-                <button type="button" id="close-search-results"
-                    class="p-1.5 hover:bg-[#374151] rounded-[8px] text-[#9CA3AF] hover:text-white transition-colors">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
+                
+                <div class="w-[1px] h-4 bg-[#374151] hidden"></div>
+                
+                <!-- Toggle Sidebar Button (Legacy) -->
+                <button id="toggle-left-sidebar" class="text-[#9CA3AF] hover:text-white transition-colors hidden" title="Toggle Sidebar">
+                    <i class="fa-solid fa-chevron-left transition-transform" id="left-sidebar-chevron"></i>
                 </button>
             </div>
-            <p class="text-[12px] text-[#6B7280] mt-1">Select a route for detailed stops and connections on the
-                map.</p>
         </div>
 
-        <div id="no-results"
-            class="hidden text-center py-12 bg-[#111827] rounded-[8px] shadow-sm border border-[#374151] p-8 mt-4">
-            <svg class="h-12 w-12 text-[#EA580C] mx-auto mb-3" fill="none" stroke="currentColor"
-                viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            <h3 class="text-[15px] font-[600] mb-1 text-white">No Routes Found</h3>
-            <p class="text-[12px] text-[#9CA3AF]">Try adjusting your search or times.</p>
-        </div>
-
-        <div id="routes-list" class="flex-1 space-y-4 overflow-y-auto pr-1 pb-6 hidden relative custom-scrollbar"></div>
-    </aside>
-
-    <!-- Middle Pane: Service Lines (Collapsible) -->
-    <aside id="middle-pane"
-        class="hidden w-full md:w-[350px] lg:w-[380px] xl:w-[400px] flex-shrink-0 h-[45vh] md:h-full bg-[#191C21] border-b md:border-b-0 md:border-r border-[#374151] z-10 transition-all duration-300 relative shadow-lg">
-
-        <!-- Collapse Toggle Button (Outside Edge) -->
-        <button type="button" id="toggle-service-lines"
-            class="absolute -right-7 top-1/2 -translate-y-1/2 w-7 h-14 bg-[#191C21] border border-l-0 border-[#374151] rounded-r-[8px] shadow-sm flex items-center justify-center text-[#9CA3AF] hover:text-white z-[1000] focus:outline-none transition-colors">
-            <svg id="service-lines-chevron" class="w-5 h-5 transition-transform" fill="none"
-                stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-            </svg>
-        </button>
-
-        <div id="service-lines-content"
-            class="h-full flex flex-col p-6 w-full overflow-hidden transition-opacity duration-300">
-            <div class="mb-5">
-                <h3 class="text-[14px] font-[600] text-white uppercase tracking-wider font-mono">Service Lines</h3>
-                <p class="text-[12px] text-[#6B7280] mt-1">Explore active routes for your selected services.</p>
+        <!-- Sidebar Content Panels -->
+        <div id="sidebar-content" class="flex flex-row gap-4 flex-1 pointer-events-none transition-all duration-300 items-start min-h-0">
+            
+            <!-- Left Column -->
+            <div class="flex flex-col w-[350px] gap-4 pointer-events-none max-h-full min-h-0">
+                <!-- Territory Explorer -->
+                <div id="territory-wrapper" class="pointer-events-auto bg-[#191C21]/95 backdrop-blur-md shadow-2xl rounded-[12px] border border-[#374151] p-5 flex flex-col shrink min-h-0 transition-all duration-300">
+                    <div class="flex items-center justify-between cursor-pointer mb-2 shrink-0" id="toggle-territory">
+                        <div>
+                            <h2 class="text-[15px] font-[600] text-white">Service Explorer</h2>
+                            <p class="text-[11px] text-[#9CA3AF] mt-0.5" id="territory-desc">Select a location to view options.</p>
+                        </div>
+                        <button type="button" class="text-[#9CA3AF] hover:text-white transition-colors">
+                            <i class="fa-solid fa-chevron-up transition-transform" id="territory-chevron"></i>
+                        </button>
+                    </div>
+                    
+                    <div id="territory-content" class="transition-all duration-300 overflow-hidden flex flex-col shrink min-h-0">
+                        <div class="space-y-4 pt-2 overflow-y-auto custom-scrollbar shrink min-h-0">
+                            <div>
+                                <label class="block text-[11px] font-[600] text-[#6B7280] uppercase tracking-wider mb-2 font-mono">Locations</label>
+                                <div id="territory-tree" class="space-y-1 flex flex-col">
+                                    <div class="text-center py-4 text-[#6B7280] text-[12px]">Loading locations&hellip;</div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <label class="block text-[11px] font-[600] text-[#6B7280] uppercase tracking-wider font-mono">Services</label>
+                                    <button type="button" id="clear-services" class="text-[11px] text-[#9CA3AF] hover:text-[#EA580C] hover:underline transition-colors">Clear</button>
+                                </div>
+                                <div id="service-list" class="space-y-1 flex flex-col">
+                                    <div class="text-center py-4 text-[#6B7280] text-[12px]">Select a city to load.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div id="route-cards-list" class="flex-1 space-y-4 overflow-y-auto pr-1 pb-6 relative">
+            <!-- Right Column -->
+            <div class="flex flex-col w-[350px] gap-4 pointer-events-none max-h-full min-h-0">
+                <!-- Middle Pane (Service Lines) -->
+                <div id="middle-pane" class="hidden pointer-events-auto bg-[#191C21]/95 backdrop-blur-md shadow-2xl rounded-[12px] border border-[#374151] p-5 flex flex-col shrink min-h-0 transition-all duration-300">
+                    <div class="flex items-center justify-between cursor-pointer mb-2 shrink-0" id="toggle-middle-pane">
+                        <div>
+                            <h3 class="text-[14px] font-[600] text-white uppercase tracking-wider font-mono">Service Lines</h3>
+                            <p class="text-[11px] text-[#6B7280] mt-0.5">Active routes for selected services.</p>
+                        </div>
+                        <button type="button" class="text-[#9CA3AF] hover:text-white transition-colors">
+                            <i class="fa-solid fa-chevron-up transition-transform" id="middle-pane-chevron"></i>
+                        </button>
+                    </div>
+                    <div id="middle-pane-content" class="transition-all duration-300 overflow-hidden flex flex-col shrink min-h-0">
+                        <div id="route-cards-list" class="space-y-3 overflow-y-auto pr-1 pb-2 pt-2 relative custom-scrollbar shrink min-h-0"></div>
+                    </div>
+                </div>
+
+                <!-- Search Results Pane -->
+                <div id="search-results-pane" class="hidden pointer-events-auto bg-[#191C21]/95 backdrop-blur-md shadow-2xl rounded-[12px] border border-[#374151] p-5 flex flex-col shrink min-h-0 transition-all duration-300 relative">
+                    <div class="flex justify-between items-center cursor-pointer mb-2 shrink-0" id="toggle-search-results">
+                        <div>
+                            <h3 class="text-[14px] font-[600] text-white uppercase tracking-wider font-mono">Search Results</h3>
+                            <p class="text-[11px] text-[#6B7280] mt-1">Select a route for details.</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" class="text-[#9CA3AF] hover:text-white transition-colors">
+                                <i class="fa-solid fa-chevron-up transition-transform" id="search-results-chevron"></i>
+                            </button>
+                            <button type="button" id="close-search-results" class="p-1.5 hover:bg-[#374151] rounded-[6px] text-[#9CA3AF] hover:text-white transition-colors ml-2">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="search-results-content" class="transition-all duration-300 overflow-hidden flex flex-col shrink min-h-0">
+                        <div id="no-results" class="hidden text-center py-8 bg-[#111827] rounded-[8px] shadow-sm border border-[#374151] p-6 mt-2 shrink-0">
+                            <i class="fa-solid fa-route text-[32px] text-[#EA580C] mb-3"></i>
+                            <h3 class="text-[14px] font-[600] mb-1 text-white">No Routes Found</h3>
+                            <p class="text-[11px] text-[#9CA3AF]">Try adjusting your search.</p>
+                        </div>
+
+                        <div id="routes-list" class="space-y-3 overflow-y-auto pr-1 pb-2 pt-2 relative custom-scrollbar shrink min-h-0 hidden"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </aside>
 
-    <!-- Right Pane: Map -->
-    <div class="flex-1 h-full relative z-0 bg-gray-200">
-        <div id="map" class="absolute inset-0"></div>
+    <!-- Floating Bottom Bar (Search Form) -->
+    <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[95%] max-w-[900px] bg-[#191C21]/95 backdrop-blur-md shadow-2xl rounded-[16px] border border-[#374151] p-4 pointer-events-auto">
+        <form id="route-search-form" class="flex flex-col md:flex-row items-end gap-3 w-full mb-0">
+            
+            <!-- Origin -->
+            <div class="relative flex-1 w-full">
+                <label class="block text-[10px] font-[600] text-[#9CA3AF] uppercase tracking-wider mb-1.5 font-mono">From</label>
+                <input type="text" id="origin" required class="w-full px-3 py-2.5 bg-[#111827] border border-[#374151] rounded-[8px] focus:ring-0 focus:border-[#EA580C] outline-none transition-colors text-white placeholder-[#6B7280] text-[13px] shadow-inner" placeholder="Starting Point" autocomplete="off">
+                <div id="origin-autocomplete" class="autocomplete-dropdown hidden"></div>
+            </div>
 
+            <!-- Swap -->
+            <button type="button" id="swap-locations" class="w-9 h-9 shrink-0 bg-[#1F2937] border border-[#374151] hover:bg-[#374151] rounded-[8px] flex items-center justify-center transition-colors mb-[1px]">
+                <i class="fa-solid fa-arrow-right-arrow-left text-[#9CA3AF] text-[12px]"></i>
+            </button>
 
+            <!-- Destination -->
+            <div class="relative flex-1 w-full">
+                <label class="block text-[10px] font-[600] text-[#9CA3AF] uppercase tracking-wider mb-1.5 font-mono">To</label>
+                <input type="text" id="destination" required class="w-full px-3 py-2.5 bg-[#111827] border border-[#374151] rounded-[8px] focus:ring-0 focus:border-[#EA580C] outline-none transition-colors text-white placeholder-[#6B7280] text-[13px] shadow-inner" placeholder="Destination" autocomplete="off">
+                <div id="destination-autocomplete" class="autocomplete-dropdown hidden"></div>
+            </div>
+
+            <!-- Date/Time combined -->
+            <div class="flex gap-2 shrink-0">
+                <div class="w-[130px]">
+                    <label class="block text-[10px] font-[600] text-[#9CA3AF] uppercase tracking-wider mb-1.5 font-mono">Date</label>
+                    <input type="date" id="date" required class="w-full px-3 py-2.5 bg-[#111827] border border-[#374151] rounded-[8px] focus:ring-0 focus:border-[#EA580C] outline-none text-white text-[13px] shadow-inner cursor-pointer [color-scheme:dark]" value="{{ date('Y-m-d') }}" onclick="try{this.showPicker()}catch(e){}" onfocus="try{this.showPicker()}catch(e){}">
+                </div>
+                <div class="w-[120px]">
+                    <label class="block text-[10px] font-[600] text-[#9CA3AF] uppercase tracking-wider mb-1.5 font-mono">Time</label>
+                    <input type="time" id="time" required class="w-full px-3 py-2.5 bg-[#111827] border border-[#374151] rounded-[8px] focus:ring-0 focus:border-[#EA580C] outline-none text-white text-[13px] shadow-inner cursor-pointer [color-scheme:dark]" value="{{ date('H:i') }}" onclick="try{this.showPicker()}catch(e){}" onfocus="try{this.showPicker()}catch(e){}">
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex gap-2 shrink-0 mb-[1px]">
+                <button type="submit" class="px-5 h-[42px] bg-[#EA580C] hover:bg-[#FDBA74] hover:text-[#191C21] text-white rounded-[8px] font-[600] text-[13px] transition-colors flex items-center justify-center gap-2 shadow-lg shadow-[#EA580C]/20">
+                    <i class="fa-solid fa-magnifying-glass"></i> Search
+                </button>
+                <button type="button" id="reset-search" class="w-[42px] h-[42px] bg-[#191C21] border border-[#374151] rounded-[8px] flex items-center justify-center text-[#9CA3AF] hover:text-[#EA580C] hover:bg-[#374151] transition-colors" title="Reset">
+                    <i class="fa-solid fa-rotate-left text-[13px]"></i>
+                </button>
+            </div>
+        </form>
     </div>
 
     <script>
@@ -587,9 +572,17 @@
                         <div class="flex items-center gap-3 mb-2"><div class="w-6 h-6 flex items-center justify-center rounded-full bg-[#374151] text-white shadow-sm border border-[#6B7280]"><i class="fa-solid fa-bus text-[10px]"></i></div> Bus Station</div>
                         <div class="flex items-center gap-3 mb-2"><div class="w-6 h-6 flex items-center justify-center rounded-full bg-[#374151] text-[#f59e0b] shadow-sm border border-[#6B7280]"><i class="fa-solid fa-bicycle text-[10px]"></i></div> Cycle Station</div>
                         <div class="flex items-center gap-3 mb-2"><div class="w-6 h-6 flex items-center justify-center rounded-full bg-[#374151] text-[#a855f7] shadow-sm border border-[#6B7280]"><i class="fa-solid fa-car text-[10px]"></i></div> Car Station</div>
-                        <label class="flex items-center gap-3 cursor-pointer select-none mt-3 pt-2 border-t border-[#374151]">
-                            <input type="checkbox" id="toggle-parking" class="rounded border-[#374151] bg-[#111827] text-[#EA580C] shadow-sm focus:ring-[#EA580C]">
-                            <div class="w-6 h-6 flex items-center justify-center rounded-full bg-[#374151] text-[#10b981] shadow-sm border border-[#6B7280]"><i class="fa-solid fa-square-parking text-[10px]"></i></div> Parking Spot
+                        <label class="flex items-center gap-3 cursor-pointer select-none mt-4 pt-3 border-t border-[#374151] group">
+                            <div class="relative flex items-center justify-center">
+                                <input type="checkbox" id="toggle-parking" class="peer sr-only">
+                                <div class="w-[18px] h-[18px] bg-[#111827] border border-[#4B5563] rounded-[4px] peer-checked:bg-[#EA580C] peer-checked:border-[#EA580C] transition-colors flex items-center justify-center shadow-sm">
+                                    <svg class="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 text-[#D1D5DB] group-hover:text-white transition-colors text-[12px]">
+                                <div class="w-6 h-6 flex items-center justify-center rounded-full bg-[#374151] text-[#10b981] shadow-sm border border-[#6B7280]"><i class="fa-solid fa-square-parking text-[10px]"></i></div>
+                                Show Parking
+                            </div>
                         </label>
                     `;
 
@@ -680,6 +673,10 @@
                 return;
             } else {
                 middlePane.classList.remove('hidden');
+                const middlePaneContent = document.getElementById('middle-pane-content');
+                if (middlePaneContent && middlePaneContent.classList.contains('h-0')) {
+                    document.getElementById('toggle-middle-pane').click();
+                }
             }
 
             container.innerHTML = '';
@@ -701,21 +698,26 @@
                 container.innerHTML =
                     '<div class="text-center py-10 bg-[#191C21] rounded-[8px] border border-dashed border-[#374151] mt-4"><div class="text-[13px] text-[#9CA3AF] font-[500]">No services found.</div><div class="text-[11px] text-[#6B7280] mt-1">Try selecting different services.</div></div>';
 
-                document.querySelector('#service-lines-content h3').innerText = 'Services';
-                document.querySelector('#service-lines-content p').innerText = 'Explore routes and available vehicles.';
+                const toggleHeader = document.getElementById('toggle-middle-pane');
+                if (toggleHeader) {
+                    toggleHeader.querySelector('h3').innerText = 'Services';
+                    toggleHeader.querySelector('p').innerText = 'Explore routes and available vehicles.';
+                }
                 return;
             }
 
-            if (routeNames.length > 0 && activeStations.length === 0) {
-                document.querySelector('#service-lines-content h3').innerText = 'Service Lines';
-                document.querySelector('#service-lines-content p').innerText =
-                    'Explore active routes for your selected services.';
-            } else if (routeNames.length === 0 && activeStations.length > 0) {
-                document.querySelector('#service-lines-content h3').innerText = 'Available Vehicles';
-                document.querySelector('#service-lines-content p').innerText = 'Explore stations and available vehicles.';
-            } else {
-                document.querySelector('#service-lines-content h3').innerText = 'Services';
-                document.querySelector('#service-lines-content p').innerText = 'Explore routes and available vehicles.';
+            const toggleHeader = document.getElementById('toggle-middle-pane');
+            if (toggleHeader) {
+                if (routeNames.length > 0 && activeStations.length === 0) {
+                    toggleHeader.querySelector('h3').innerText = 'Service Lines';
+                    toggleHeader.querySelector('p').innerText = 'Explore active routes for your selected services.';
+                } else if (routeNames.length === 0 && activeStations.length > 0) {
+                    toggleHeader.querySelector('h3').innerText = 'Available Vehicles';
+                    toggleHeader.querySelector('p').innerText = 'Explore stations and available vehicles.';
+                } else {
+                    toggleHeader.querySelector('h3').innerText = 'Services';
+                    toggleHeader.querySelector('p').innerText = 'Explore routes and available vehicles.';
+                }
             }
 
             const groupedRoutes = {};
@@ -1743,37 +1745,41 @@
             }
         });
 
-        // Toggle Service Lines menu collapse
-        document.getElementById('toggle-service-lines').addEventListener('click', () => {
-            const pane = document.getElementById('middle-pane');
-            const chevron = document.getElementById('service-lines-chevron');
-            const content = document.getElementById('service-lines-content');
+        // Accordion Toggles
+        function setupAccordion(toggleId, contentId, chevronId) {
+            const toggle = document.getElementById(toggleId);
+            if (!toggle) return;
+            toggle.addEventListener('click', () => {
+                const content = document.getElementById(contentId);
+                const chevron = document.getElementById(chevronId);
+                if (content.classList.contains('h-0')) {
+                    // Expand
+                    content.classList.remove('h-0', 'opacity-0');
+                    chevron.style.transform = 'rotate(0deg)';
+                } else {
+                    // Collapse
+                    content.classList.add('h-0', 'opacity-0');
+                    chevron.style.transform = 'rotate(180deg)';
+                }
+                setTimeout(() => map.invalidateSize(), 300);
+            });
+        }
 
-            // if collapsed
-            if (pane.classList.contains('w-0')) {
-                pane.classList.remove('w-0', 'md:w-0', 'border-r-0');
-                pane.classList.add('w-full', 'md:w-[350px]', 'lg:w-[380px]', 'xl:w-[400px]', 'border-r');
-                chevron.style.transform = 'rotate(0deg)';
-                content.classList.remove('opacity-0');
-                setTimeout(() => {
-                    content.classList.remove('hidden');
-                }, 10);
-            } else { // if expanded
-                pane.classList.remove('w-full', 'md:w-[350px]', 'lg:w-[380px]', 'xl:w-[400px]', 'border-r');
-                pane.classList.add('w-0', 'md:w-0', 'border-r-0');
-                chevron.style.transform = 'rotate(180deg)';
-                content.classList.add('opacity-0');
-                setTimeout(() => {
-                    content.classList.add('hidden');
-                }, 300);
-            }
-        });
+        setupAccordion('toggle-territory', 'territory-content', 'territory-chevron');
+        setupAccordion('toggle-middle-pane', 'middle-pane-content', 'middle-pane-chevron');
+        setupAccordion('toggle-search-results', 'search-results-content', 'search-results-chevron');
 
         // Toggle Search Results pane
         document.getElementById('close-search-results').addEventListener('click', () => {
             const searchPane = document.getElementById('search-results-pane');
             searchPane.classList.add('hidden');
             searchPane.classList.remove('flex');
+
+            // Expand middle-pane accordion
+            const middlePaneContent = document.getElementById('middle-pane-content');
+            if (middlePaneContent && middlePaneContent.classList.contains('h-0')) {
+                document.getElementById('toggle-middle-pane').click();
+            }
 
             // clear map layers related to search
             searchResultsLayer.clearLayers();
@@ -2010,9 +2016,18 @@
             const overlay = document.getElementById('loading-overlay');
             const noResults = document.getElementById('no-results');
 
-            // Open the new search results pane
+            // Collapse middle-pane accordion if it's open (to make room for search results in the right column)
+            const middlePaneContent = document.getElementById('middle-pane-content');
+            if (!middlePaneContent.classList.contains('h-0')) {
+                document.getElementById('toggle-middle-pane').click();
+            }
+
+            // Open the search results pane accordion
             searchPane.classList.remove('hidden');
-            searchPane.classList.add('flex');
+            const searchContent = document.getElementById('search-results-content');
+            if (searchContent.classList.contains('h-0')) {
+                document.getElementById('toggle-search-results').click();
+            }
 
             overlay.classList.add('active');
             noResults.classList.add('hidden');
