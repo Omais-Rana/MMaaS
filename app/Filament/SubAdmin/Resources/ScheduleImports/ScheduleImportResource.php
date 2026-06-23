@@ -24,7 +24,7 @@ class ScheduleImportResource extends Resource
 
     public static function getGlobalSearchResultTitle($record): string
     {
-        return $record->filename ?? 'Schedule #' . $record->id;
+        return $record->filename ?? 'Schedule #'.$record->id;
     }
 
     public static function getGloballySearchableAttributes(): array

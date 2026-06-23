@@ -42,7 +42,7 @@ class StopTimesRelationManager extends RelationManager
                     ->searchable()
                     ->preload()
                     ->required()
-                    ->getOptionLabelFromRecordUsing(fn(Trip $record) => "{$record->trip_headsign} ({$record->trip_id})")
+                    ->getOptionLabelFromRecordUsing(fn (Trip $record) => "{$record->trip_headsign} ({$record->trip_id})")
                     ->columnSpanFull(),
 
                 Select::make('stop_id')
@@ -57,7 +57,7 @@ class StopTimesRelationManager extends RelationManager
                     ->searchable()
                     ->preload()
                     ->required()
-                    ->getOptionLabelFromRecordUsing(fn(Stop $record) => "{$record->stop_name} ({$record->stop_id})")
+                    ->getOptionLabelFromRecordUsing(fn (Stop $record) => "{$record->stop_name} ({$record->stop_id})")
                     ->columnSpanFull(),
 
                 TextInput::make('arrival_time')
@@ -173,14 +173,14 @@ class StopTimesRelationManager extends RelationManager
                 TextColumn::make('pickup_type')
                     ->label('Pickup')
                     ->badge()
-                    ->formatStateUsing(fn(?int $state): string => match ($state) {
+                    ->formatStateUsing(fn (?int $state): string => match ($state) {
                         0 => 'Regular',
                         1 => 'No pickup',
                         2 => 'Phone',
                         3 => 'Coordinate',
                         default => 'Regular',
                     })
-                    ->color(fn(?int $state): string => match ($state) {
+                    ->color(fn (?int $state): string => match ($state) {
                         0 => 'success',
                         1 => 'danger',
                         2 => 'warning',
@@ -192,14 +192,14 @@ class StopTimesRelationManager extends RelationManager
                 TextColumn::make('drop_off_type')
                     ->label('Drop Off')
                     ->badge()
-                    ->formatStateUsing(fn(?int $state): string => match ($state) {
+                    ->formatStateUsing(fn (?int $state): string => match ($state) {
                         0 => 'Regular',
                         1 => 'No drop off',
                         2 => 'Phone',
                         3 => 'Coordinate',
                         default => 'Regular',
                     })
-                    ->color(fn(?int $state): string => match ($state) {
+                    ->color(fn (?int $state): string => match ($state) {
                         0 => 'success',
                         1 => 'danger',
                         2 => 'warning',

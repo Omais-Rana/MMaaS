@@ -2,10 +2,10 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\ParkingSpot;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 
 class ImportParkingSpotsCommand extends Command
 {
@@ -33,8 +33,9 @@ class ImportParkingSpotsCommand extends Command
         // Calculate bounding box for all stops in the DB to fetch parking spots in our active regions
         $stats = DB::table('stops')->selectRaw('MIN(stop_lat) as min_lat, MAX(stop_lat) as max_lat, MIN(stop_lon) as min_lon, MAX(stop_lon) as max_lon')->first();
 
-        if (!$stats || !$stats->min_lat) {
+        if (! $stats || ! $stats->min_lat) {
             $this->error('No stops found to calculate bounding box.');
+
             return;
         }
 
@@ -59,23 +60,23 @@ class ImportParkingSpotsCommand extends Command
         QL;
 
         $this->info('Fetching data from Overpass API...');
-        
+
         try {
             $response = Http::timeout(180)
                 ->withUserAgent('TransitFinder/1.0 (contact@example.com)')
                 ->get('https://overpass.kumi.systems/api/interpreter', [
-                    'data' => $query
+                    'data' => $query,
                 ]);
 
             if ($response->failed()) {
-                throw new \Exception('API Error: ' . $response->status() . ' - ' . $response->body());
+                throw new \Exception('API Error: '.$response->status().' - '.$response->body());
             }
 
             $data = $response->json();
         } catch (\Exception $e) {
-            $this->error('Failed to fetch from Overpass API: ' . $e->getMessage());
+            $this->error('Failed to fetch from Overpass API: '.$e->getMessage());
             $this->info('Falling back to mock parking spots for demonstration...');
-            
+
             $mockSpots = [
                 ['name' => 'Parking du Château (Belfort)', 'lat' => 47.6385, 'lon' => 6.8640, 'osm_id' => 'mock/1', 'capacity' => 150],
                 ['name' => 'Parking de la Gare (Belfort)', 'lat' => 47.6343, 'lon' => 6.8533, 'osm_id' => 'mock/2', 'capacity' => 80],
@@ -91,17 +92,19 @@ class ImportParkingSpotsCommand extends Command
                 );
             }
             $this->info('Successfully seeded mock parking spots!');
+
             return;
         }
-        
-        if (!isset($data['elements'])) {
+
+        if (! isset($data['elements'])) {
             $this->error('Unexpected response format.');
+
             return;
         }
 
         $elements = $data['elements'];
         $count = 0;
-        
+
         $bar = $this->output->createProgressBar(count($elements));
         $bar->start();
 
@@ -109,12 +112,12 @@ class ImportParkingSpotsCommand extends Command
             // Overpass can return nodes (which have lat/lon directly) or ways/relations (which have center lat/lon)
             $lat = $element['lat'] ?? $element['center']['lat'] ?? null;
             $lon = $element['lon'] ?? $element['center']['lon'] ?? null;
-            
-            if (!$lat || !$lon) {
+
+            if (! $lat || ! $lon) {
                 continue;
             }
 
-            $id = $element['type'] . '/' . $element['id'];
+            $id = $element['type'].'/'.$element['id'];
             $tags = $element['tags'] ?? [];
             $name = $tags['name'] ?? 'Public Parking';
             $capacity = isset($tags['capacity']) && is_numeric($tags['capacity']) ? (int) $tags['capacity'] : null;

@@ -21,12 +21,12 @@ class GbfsSourcesTable
                     ->sortable(),
                 TextColumn::make('type')
                     ->badge()
-                    ->color(fn(string $state): string => match ($state) {
+                    ->color(fn (string $state): string => match ($state) {
                         'cycle' => 'warning',
                         'car' => 'info',
                         default => 'gray',
                     })
-                    ->icon(fn(string $state): \BackedEnum => match ($state) {
+                    ->icon(fn (string $state): \BackedEnum => match ($state) {
                         'car' => Heroicon::Truck,
                         default => Heroicon::Sun,
                     })

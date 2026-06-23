@@ -72,19 +72,19 @@ class SubAdminStatsOverview extends BaseWidget
 
             $activeServiceIds = array_values(array_unique(array_merge($activeServiceIds, $addedServiceIds)));
             if (! empty($removedServiceIds)) {
-                $activeServiceIds = array_values(array_filter($activeServiceIds, fn($serviceId) => ! in_array($serviceId, $removedServiceIds)));
+                $activeServiceIds = array_values(array_filter($activeServiceIds, fn ($serviceId) => ! in_array($serviceId, $removedServiceIds)));
             }
 
             $tripsToday = empty($activeServiceIds)
                 ? 0
                 : DB::table('trips')
-                ->join('schedule_imports', 'trips.schedule_import_id', '=', 'schedule_imports.id')
-                ->where('schedule_imports.tenant_id', $tenantId)
-                ->where('schedule_imports.status', 'completed')
-                ->whereIn('schedule_imports.id', $completedImportIds)
-                ->whereIn('trips.service_id', $activeServiceIds)
-                ->distinct('trips.id')
-                ->count('trips.id');
+                    ->join('schedule_imports', 'trips.schedule_import_id', '=', 'schedule_imports.id')
+                    ->where('schedule_imports.tenant_id', $tenantId)
+                    ->where('schedule_imports.status', 'completed')
+                    ->whereIn('schedule_imports.id', $completedImportIds)
+                    ->whereIn('trips.service_id', $activeServiceIds)
+                    ->distinct('trips.id')
+                    ->count('trips.id');
         }
 
         return [

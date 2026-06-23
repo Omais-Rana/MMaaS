@@ -36,10 +36,11 @@ class PopulateStopCities implements ShouldQueue
 
             if ($stops->isEmpty()) {
                 Log::info('No stops need city information');
+
                 return;
             }
 
-            $populator = new StopCityPopulatorService();
+            $populator = new StopCityPopulatorService;
             $updated = $populator->populateCitiesForStops($stops);
 
             Log::info('Background city population completed', [

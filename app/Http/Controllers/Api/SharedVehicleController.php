@@ -40,18 +40,19 @@ class SharedVehicleController extends Controller
                 'operator_name' => $station->source->tenant->name ?? 'Service',
                 'status' => [
                     'num_bikes_available' => $status['num_bikes_available'] ?? 0,
+                    'num_vehicles_available' => $status['num_bikes_available'] ?? 0,
                     'num_docks_available' => $status['num_docks_available'] ?? 0,
                     'is_installed' => $status['is_installed'] ?? false,
                     'is_renting' => $status['is_renting'] ?? false,
                     'is_returning' => $status['is_returning'] ?? false,
                     'vehicle_types_available' => $status['vehicle_types_available'] ?? [],
                     'last_reported' => $status['last_reported'] ?? null,
-                ]
+                ],
             ];
         });
 
         return response()->json([
-            'data' => $mergedStations
+            'data' => $mergedStations,
         ]);
     }
 }

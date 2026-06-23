@@ -30,7 +30,8 @@ class StopCityPopulatorService
             ->get();
 
         if ($remainingStops->isEmpty()) {
-            Log::info("All stops populated from existing data. No API calls needed.");
+            Log::info('All stops populated from existing data. No API calls needed.');
+
             return $updated;
         }
 
@@ -168,7 +169,7 @@ class StopCityPopulatorService
     private function getCityFromCoordinates($lat, $lon): ?string
     {
         // Round coordinates to 3 decimal places (~100m precision) for caching
-        $cacheKey = 'geocode_' . round($lat, 3) . '_' . round($lon, 3);
+        $cacheKey = 'geocode_'.round($lat, 3).'_'.round($lon, 3);
 
         // Check memory cache first (for this batch)
         if (isset($this->cityCache[$cacheKey])) {
@@ -180,6 +181,7 @@ class StopCityPopulatorService
         if ($cachedCity !== null) {
             $this->cityCache[$cacheKey] = $cachedCity;
             Log::info("Using cached city: {$cachedCity} for coordinates ({$lat}, {$lon})");
+
             return $cachedCity;
         }
 
@@ -220,9 +222,11 @@ class StopCityPopulatorService
             }
 
             Log::warning("Geocoding API returned non-successful status for ({$lat}, {$lon})");
+
             return null;
         } catch (\Exception $e) {
             Log::error("Failed to geocode coordinates ({$lat}, {$lon}): {$e->getMessage()}");
+
             return null;
         }
     }

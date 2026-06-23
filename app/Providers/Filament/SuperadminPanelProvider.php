@@ -2,8 +2,8 @@
 
 namespace App\Providers\Filament;
 
-use App\Filament\Superadmin\Pages\Auth\Login;
 use App\Filament\Customer\Pages\Auth\Register;
+use App\Filament\Superadmin\Pages\Auth\Login;
 use App\Filament\Superadmin\Widgets\SuperadminStatsOverview;
 use App\Http\Middleware\RedirectNonSuperadmin;
 use App\Http\Middleware\SetLocale;
@@ -49,13 +49,13 @@ class SuperadminPanelProvider extends PanelProvider
             ])
             ->userMenuItems([
                 Action::make('switch-language')
-                    ->label(fn(): string => (Auth::user()?->locale ?? 'en') === 'en' ? 'Switch to French' : 'Passer en anglais')
+                    ->label(fn (): string => (Auth::user()?->locale ?? 'en') === 'en' ? 'Switch to French' : 'Passer en anglais')
                     ->icon('heroicon-o-language')
-                    ->url(fn(): string => route('locale.toggle')),
+                    ->url(fn (): string => route('locale.toggle')),
             ])
             ->renderHook(
                 PanelsRenderHook::SIDEBAR_NAV_START,
-                fn(): string => view('filament.components.return-to-map-button')->render()
+                fn (): string => view('filament.components.return-to-map-button')->render()
             )
             ->discoverResources(in: app_path('Filament/Superadmin/Resources'), for: 'App\Filament\Superadmin\Resources')
             ->discoverPages(in: app_path('Filament/Superadmin/Pages'), for: 'App\Filament\Superadmin\Pages')

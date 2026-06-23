@@ -2,6 +2,8 @@
 
 namespace App\Jobs;
 
+use App\Models\GbfsSource;
+use App\Services\GbfsIntegrationService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
@@ -13,14 +15,13 @@ class SyncSingleGbfsSourceJob implements ShouldQueue
      * Create a new job instance.
      */
     public function __construct(
-        public \App\Models\GbfsSource $source
-    ) {
-    }
+        public GbfsSource $source
+    ) {}
 
     /**
      * Execute the job.
      */
-    public function handle(\App\Services\GbfsIntegrationService $service): void
+    public function handle(GbfsIntegrationService $service): void
     {
         if ($this->source->is_active) {
             $service->syncSingleSource($this->source);

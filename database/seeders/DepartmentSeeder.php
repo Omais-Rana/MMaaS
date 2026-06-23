@@ -2,6 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Models\Department;
+use App\Models\Region;
 use Illuminate\Database\Seeder;
 
 class DepartmentSeeder extends Seeder
@@ -23,7 +25,7 @@ class DepartmentSeeder extends Seeder
         ];
 
         foreach ($departments as $departmentName) {
-            \App\Models\Department::updateOrCreate(
+            Department::updateOrCreate(
                 ['name' => $departmentName]
             );
         }
@@ -47,9 +49,9 @@ class DepartmentSeeder extends Seeder
         ];
 
         foreach ($regionDepartments as $cityName => $departmentName) {
-            $department = \App\Models\Department::where('name', $departmentName)->first();
+            $department = Department::where('name', $departmentName)->first();
             if ($department) {
-                \App\Models\Region::where('name', $cityName)
+                Region::where('name', $cityName)
                     ->update(['department_id' => $department->id]);
             }
         }

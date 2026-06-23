@@ -2,15 +2,15 @@
 
 namespace App\Http\Responses;
 
+use App\Models\User;
 use Filament\Auth\Http\Responses\Contracts\LoginResponse as LoginResponseContract;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 
 class LoginResponse implements LoginResponseContract
 {
     public function toResponse($request)
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         // Redirect based on user role

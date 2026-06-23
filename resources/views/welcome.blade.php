@@ -32,11 +32,11 @@
         .autocomplete-dropdown {
             position: absolute;
             z-index: 1000;
-            background: #191C21;
-            color: #FFFFFF;
-            border: 1px solid #374151;
+            background: #FFFFFF;
+            color: #111827;
+            border: 1px solid #D8DADF;
             border-radius: 8px;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
             max-height: 300px;
             overflow-y: auto;
             width: 100%;
@@ -47,7 +47,7 @@
         .autocomplete-item {
             padding: 0.75rem 1rem;
             cursor: pointer;
-            border-bottom: 1px solid #374151;
+            border-bottom: 1px solid #D8DADF;
         }
         
         .autocomplete-item:last-child {
@@ -55,38 +55,44 @@
         }
 
         .autocomplete-item:hover {
-            background-color: #374151;
+            background-color: #F3F4F6;
         }
 
         .route-card {
             transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s, background-color 0.2s;
             cursor: pointer;
+            background-color: #53617A;
+            border-color: #53617A;
         }
 
         .route-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            background-color: #6B7B98;
+            border-color: #6B7B98;
         }
 
         .route-card.is-selected {
-            border-color: #EA580C !important;
-            box-shadow: 0 0 0 1px #EA580C;
-            background-color: #111827 !important;
+            border-color: #E48B59 !important;
+            box-shadow: 0 0 0 1px #E48B59;
+            background-color: #6B7B98 !important;
         }
 
         .leaflet-popup-content-wrapper {
-            border-radius: 8px;
-            background: #191C21;
-            color: #FFFFFF;
+            border-radius: 16px;
+            background: #FFFFFF;
+            color: #111827;
+            border: 1px solid #D8DADF;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
         }
 
         .leaflet-popup-tip {
-            background: #191C21;
+            background: #FFFFFF;
         }
 
         .leaflet-popup-content {
             margin: 0.75rem;
-            font-family: 'Geist', sans-serif;
+            font-family: 'Inter', sans-serif;
         }
 
         /* Loading overlay for the whole app */
@@ -94,7 +100,7 @@
             display: none;
             position: absolute;
             inset: 0;
-            background: rgba(25, 28, 33, 0.8);
+            background: rgba(255, 255, 255, 0.8);
             z-index: 50;
             align-items: center;
             justify-content: center;
@@ -107,17 +113,18 @@
         /* Bus info cards */
         .bus-card {
             transition: background-color 0.15s, border-color 0.15s;
-            background-color: #191C21;
-            border-color: #374151;
+            background-color: #53617A;
+            border-color: #53617A;
+            color: #FFFFFF;
         }
 
         .bus-card:hover {
-            background-color: #111827;
+            background-color: #6B7B98;
         }
 
         .bus-card.bus-card-selected {
-            border-color: #EA580C !important;
-            background-color: #111827;
+            border-color: #E48B59 !important;
+            background-color: #6B7B98;
         }
 
         .bus-card-chevron {
@@ -126,6 +133,23 @@
 
         .bus-card.bus-card-selected .bus-card-chevron {
             transform: rotate(180deg);
+        }
+
+        /* Route Result Cards (Search) */
+        .route-card {
+            transition: background-color 0.15s, border-color 0.15s;
+            background-color: #53617A;
+            border: 1px solid #53617A;
+            color: #FFFFFF;
+        }
+
+        .route-card:hover {
+            background-color: #6B7B98;
+        }
+
+        .route-card.is-selected {
+            border-color: #E48B59 !important;
+            background-color: #6B7B98;
         }
 
         .line-clamp-2 {
@@ -146,37 +170,46 @@
             background: transparent;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-            background-color: #374151;
+            background-color: #D8DADF;
             border-radius: 10px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background-color: #4B5563;
+            background-color: #9CA3AF;
+        }
+
+        /* Hide scrollbar completely for specific elements */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
         }
     </style>
 </head>
 
-<body class="bg-[#191C21] h-screen w-screen overflow-hidden text-[#111827] relative font-sans">
+<body class="bg-[#FFFFFF] h-screen w-screen overflow-hidden text-[#111827] relative font-sans">
 
     <!-- Map Container -->
-    <div id="map" class="absolute inset-0 z-0 bg-[#191C21]"></div>
+    <div id="map" class="absolute inset-0 z-0 bg-[#FFFFFF]"></div>
 
     <!-- Loading Overlay -->
-    <div id="loading-overlay" class="fixed inset-0 bg-[#191C21]/80 z-[2000] hidden items-center justify-center backdrop-blur-sm">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[#EA580C]"></div>
+    <div id="loading-overlay" class="fixed inset-0 bg-[#FFFFFF]/80 z-[2000] hidden items-center justify-center backdrop-blur-sm">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[#E48B59]"></div>
     </div>
 
     <!-- Unified Collapsible Left Sidebar -->
     <aside id="sidebar" class="fixed top-4 left-4 bottom-[160px] w-auto z-[1000] flex flex-col gap-4 pointer-events-none transition-transform duration-300">
         
         <!-- Header & Auth -->
-        <div class="pointer-events-auto bg-[#191C21]/95 backdrop-blur-md shadow-2xl rounded-[12px] border border-[#374151] p-4 flex-shrink-0 flex items-center justify-between w-[350px]">
+        <div class="pointer-events-auto bg-[#FFFFFF]/95 backdrop-blur-md shadow-2xl rounded-[16px] border border-[#D8DADF] p-4 flex-shrink-0 flex items-center justify-between w-[350px]">
             <div class="flex items-center gap-3">
-                <div class="w-8 h-8 bg-[#EA580C] rounded-[8px] flex items-center justify-center shrink-0 shadow-lg shadow-[#EA580C]/20">
-                    <svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="w-8 h-8 bg-[#E48B59] rounded-[8px] flex items-center justify-center shrink-0 shadow-lg shadow-[#E48B59]/20">
+                    <svg class="h-5 w-5 text-[#FFFFFF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                 </div>
-                <h1 class="text-[18px] font-[600] tracking-tight text-white font-sans">Transit Finder</h1>
+                <h1 class="text-[18px] font-[600] tracking-tight text-[#111827] font-sans">Transit Finder</h1>
             </div>
             
             <div class="flex items-center gap-3">
@@ -188,38 +221,38 @@
                             default => '/portal',
                         };
                     @endphp
-                    <a href="{{ $dashboardUrl }}" class="text-[#D1D5DB] hover:text-white transition-colors" title="Dashboard">
+                    <a href="{{ $dashboardUrl }}" class="text-[#4B5563] hover:text-[#111827] transition-colors" title="Dashboard">
                         <i class="fa-solid fa-chart-line"></i>
                     </a>
                 @else
                     <div class="flex items-center gap-2">
-                        <a href="/user/login" class="text-[#D1D5DB] hover:text-white text-[13px] font-[500] transition-colors">Sign In</a>
-                        <a href="/user/register" class="bg-[#EA580C] hover:bg-[#FDBA74] hover:text-[#191C21] text-white px-3 py-1.5 rounded-[6px] text-[12px] font-[600] transition-colors shadow-sm">Sign Up</a>
+                        <a href="/user/login" class="text-[#4B5563] hover:text-[#111827] text-[13px] font-[500] transition-colors">Sign In</a>
+                        <a href="/user/register" class="bg-[#E48B59] hover:bg-[#ED7B46] hover:text-[#FFFFFF] text-[#FFFFFF] px-3 py-1.5 rounded-[8px] text-[12px] font-[600] transition-colors shadow-sm">Sign Up</a>
                     </div>
                 @endauth
                 
-                <div class="w-[1px] h-4 bg-[#374151] hidden"></div>
+                <div class="w-[1px] h-4 bg-[#D8DADF] hidden"></div>
                 
                 <!-- Toggle Sidebar Button (Legacy) -->
-                <button id="toggle-left-sidebar" class="text-[#9CA3AF] hover:text-white transition-colors hidden" title="Toggle Sidebar">
+                <button id="toggle-left-sidebar" class="text-[#4B5563] hover:text-[#111827] transition-colors hidden" title="Toggle Sidebar">
                     <i class="fa-solid fa-chevron-left transition-transform" id="left-sidebar-chevron"></i>
                 </button>
             </div>
         </div>
 
         <!-- Sidebar Content Panels -->
-        <div id="sidebar-content" class="flex flex-row gap-4 flex-1 pointer-events-none transition-all duration-300 items-start min-h-0">
+        <div id="sidebar-content" class="flex flex-row gap-4 flex-1 pointer-events-none transition-all duration-300 items-stretch min-h-0">
             
             <!-- Left Column -->
             <div class="flex flex-col w-[350px] gap-4 pointer-events-none max-h-full min-h-0">
                 <!-- Territory Explorer -->
-                <div id="territory-wrapper" class="pointer-events-auto bg-[#191C21]/95 backdrop-blur-md shadow-2xl rounded-[12px] border border-[#374151] p-5 flex flex-col shrink min-h-0 transition-all duration-300">
+                <div id="territory-wrapper" class="pointer-events-auto bg-[#FFFFFF]/95 backdrop-blur-md shadow-2xl rounded-[16px] border border-[#D8DADF] p-5 flex flex-col shrink min-h-0 transition-all duration-300">
                     <div class="flex items-center justify-between cursor-pointer mb-2 shrink-0" id="toggle-territory">
                         <div>
-                            <h2 class="text-[15px] font-[600] text-white">Service Explorer</h2>
-                            <p class="text-[11px] text-[#9CA3AF] mt-0.5" id="territory-desc">Select a location to view options.</p>
+                            <h2 class="text-[15px] font-[600] text-[#111827]">Service Explorer</h2>
+                            <p class="text-[11px] text-[#4B5563] mt-0.5" id="territory-desc">Select a location to view options.</p>
                         </div>
-                        <button type="button" class="text-[#9CA3AF] hover:text-white transition-colors">
+                        <button type="button" class="text-[#4B5563] hover:text-[#111827] transition-colors">
                             <i class="fa-solid fa-chevron-up transition-transform" id="territory-chevron"></i>
                         </button>
                     </div>
@@ -227,18 +260,18 @@
                     <div id="territory-content" class="transition-all duration-300 overflow-hidden flex flex-col shrink min-h-0">
                         <div class="space-y-4 pt-2 overflow-y-auto custom-scrollbar shrink min-h-0">
                             <div>
-                                <label class="block text-[11px] font-[600] text-[#6B7280] uppercase tracking-wider mb-2 font-mono">Locations</label>
+                                <label class="block text-[11px] font-[600] text-[#4B5563] uppercase tracking-wider mb-2 font-mono">Locations</label>
                                 <div id="territory-tree" class="space-y-1 flex flex-col">
-                                    <div class="text-center py-4 text-[#6B7280] text-[12px]">Loading locations&hellip;</div>
+                                    <div class="text-center py-4 text-[#4B5563] text-[12px]">Loading locations&hellip;</div>
                                 </div>
                             </div>
                             <div>
                                 <div class="flex items-center justify-between mb-2">
-                                    <label class="block text-[11px] font-[600] text-[#6B7280] uppercase tracking-wider font-mono">Services</label>
-                                    <button type="button" id="clear-services" class="text-[11px] text-[#9CA3AF] hover:text-[#EA580C] hover:underline transition-colors">Clear</button>
+                                    <label class="block text-[11px] font-[600] text-[#4B5563] uppercase tracking-wider font-mono">Services</label>
+                                    <button type="button" id="clear-services" class="text-[11px] text-[#4B5563] hover:text-[#E48B59] hover:underline transition-colors">Clear</button>
                                 </div>
                                 <div id="service-list" class="space-y-1 flex flex-col">
-                                    <div class="text-center py-4 text-[#6B7280] text-[12px]">Select a city to load.</div>
+                                    <div class="text-center py-4 text-[#4B5563] text-[12px]">Select a city to load.</div>
                                 </div>
                             </div>
                         </div>
@@ -249,46 +282,46 @@
             <!-- Right Column -->
             <div class="flex flex-col w-[350px] gap-4 pointer-events-none max-h-full min-h-0">
                 <!-- Middle Pane (Service Lines) -->
-                <div id="middle-pane" class="hidden pointer-events-auto bg-[#191C21]/95 backdrop-blur-md shadow-2xl rounded-[12px] border border-[#374151] p-5 flex flex-col shrink min-h-0 transition-all duration-300">
+                <div id="middle-pane" class="hidden pointer-events-auto bg-[#FFFFFF]/95 backdrop-blur-md shadow-2xl rounded-[16px] border border-[#D8DADF] p-5 flex flex-col shrink min-h-0 max-h-full transition-all duration-300">
                     <div class="flex items-center justify-between cursor-pointer mb-2 shrink-0" id="toggle-middle-pane">
                         <div>
-                            <h3 class="text-[14px] font-[600] text-white uppercase tracking-wider font-mono">Service Lines</h3>
-                            <p class="text-[11px] text-[#6B7280] mt-0.5">Active routes for selected services.</p>
+                            <h3 class="text-[14px] font-[600] text-[#111827] uppercase tracking-wider font-mono">Service Lines</h3>
+                            <p class="text-[11px] text-[#4B5563] mt-0.5">Active routes for selected services.</p>
                         </div>
-                        <button type="button" class="text-[#9CA3AF] hover:text-white transition-colors">
+                        <button type="button" class="text-[#4B5563] hover:text-[#111827] transition-colors">
                             <i class="fa-solid fa-chevron-up transition-transform" id="middle-pane-chevron"></i>
                         </button>
                     </div>
-                    <div id="middle-pane-content" class="transition-all duration-300 overflow-hidden flex flex-col shrink min-h-0">
-                        <div id="route-cards-list" class="space-y-3 overflow-y-auto pr-1 pb-2 pt-2 relative custom-scrollbar shrink min-h-0"></div>
+                    <div id="middle-pane-content" class="transition-all duration-300 overflow-hidden flex flex-col shrink min-h-0 flex-1">
+                        <div id="route-cards-list" class="space-y-3 overflow-y-auto pr-1 pb-2 pt-2 relative custom-scrollbar shrink min-h-0 flex-1"></div>
                     </div>
                 </div>
 
                 <!-- Search Results Pane -->
-                <div id="search-results-pane" class="hidden pointer-events-auto bg-[#191C21]/95 backdrop-blur-md shadow-2xl rounded-[12px] border border-[#374151] p-5 flex flex-col shrink min-h-0 transition-all duration-300 relative">
+                <div id="search-results-pane" class="hidden pointer-events-auto bg-[#FFFFFF]/95 backdrop-blur-md shadow-2xl rounded-[16px] border border-[#D8DADF] p-5 flex flex-col shrink min-h-0 max-h-full transition-all duration-300 relative">
                     <div class="flex justify-between items-center cursor-pointer mb-2 shrink-0" id="toggle-search-results">
                         <div>
-                            <h3 class="text-[14px] font-[600] text-white uppercase tracking-wider font-mono">Search Results</h3>
-                            <p class="text-[11px] text-[#6B7280] mt-1">Select a route for details.</p>
+                            <h3 class="text-[14px] font-[600] text-[#111827] uppercase tracking-wider font-mono">Search Results</h3>
+                            <p class="text-[11px] text-[#4B5563] mt-1">Select a route for details.</p>
                         </div>
                         <div class="flex items-center gap-2">
-                            <button type="button" class="text-[#9CA3AF] hover:text-white transition-colors">
+                            <button type="button" class="text-[#4B5563] hover:text-[#111827] transition-colors">
                                 <i class="fa-solid fa-chevron-up transition-transform" id="search-results-chevron"></i>
                             </button>
-                            <button type="button" id="close-search-results" class="p-1.5 hover:bg-[#374151] rounded-[6px] text-[#9CA3AF] hover:text-white transition-colors ml-2">
+                            <button type="button" id="close-search-results" class="p-1.5 hover:bg-[#F3F4F6] rounded-[8px] text-[#4B5563] hover:text-[#111827] transition-colors ml-2">
                                 <i class="fa-solid fa-xmark"></i>
                             </button>
                         </div>
                     </div>
                     
-                    <div id="search-results-content" class="transition-all duration-300 overflow-hidden flex flex-col shrink min-h-0">
-                        <div id="no-results" class="hidden text-center py-8 bg-[#111827] rounded-[8px] shadow-sm border border-[#374151] p-6 mt-2 shrink-0">
-                            <i class="fa-solid fa-route text-[32px] text-[#EA580C] mb-3"></i>
-                            <h3 class="text-[14px] font-[600] mb-1 text-white">No Routes Found</h3>
-                            <p class="text-[11px] text-[#9CA3AF]">Try adjusting your search.</p>
+                    <div id="search-results-content" class="transition-all duration-300 overflow-hidden flex flex-col shrink min-h-0 flex-1">
+                        <div id="no-results" class="hidden text-center py-8 bg-[#FFFFFF] rounded-[8px] shadow-sm border border-[#D8DADF] p-6 mt-2 shrink-0">
+                            <i class="fa-solid fa-route text-[32px] text-[#E48B59] mb-3"></i>
+                            <h3 class="text-[14px] font-[600] mb-1 text-[#111827]">No Routes Found</h3>
+                            <p class="text-[11px] text-[#4B5563]">Try adjusting your search.</p>
                         </div>
 
-                        <div id="routes-list" class="space-y-3 overflow-y-auto pr-1 pb-2 pt-2 relative custom-scrollbar shrink min-h-0 hidden"></div>
+                        <div id="routes-list" class="space-y-3 overflow-y-auto pr-1 pb-2 pt-2 relative custom-scrollbar shrink min-h-0 flex-1 hidden"></div>
                     </div>
                 </div>
             </div>
@@ -296,46 +329,45 @@
     </aside>
 
     <!-- Floating Bottom Bar (Search Form) -->
-    <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[95%] max-w-[900px] bg-[#191C21]/95 backdrop-blur-md shadow-2xl rounded-[16px] border border-[#374151] p-4 pointer-events-auto">
+    <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[95%] max-w-[900px] bg-[#FFFFFF]/95 backdrop-blur-md shadow-2xl rounded-[16px] border border-[#D8DADF] p-4 pointer-events-auto">
         <form id="route-search-form" class="flex flex-col md:flex-row items-end gap-3 w-full mb-0">
             
-            <!-- Origin -->
             <div class="relative flex-1 w-full">
-                <label class="block text-[10px] font-[600] text-[#9CA3AF] uppercase tracking-wider mb-1.5 font-mono">From</label>
-                <input type="text" id="origin" required class="w-full px-3 py-2.5 bg-[#111827] border border-[#374151] rounded-[8px] focus:ring-0 focus:border-[#EA580C] outline-none transition-colors text-white placeholder-[#6B7280] text-[13px] shadow-inner" placeholder="Starting Point" autocomplete="off">
+                <label class="block text-[10px] font-[600] text-[#4B5563] uppercase tracking-wider mb-1.5 font-mono">From</label>
+                <input type="text" id="origin" required class="w-full px-3 py-2.5 bg-[#FFFFFF] border border-[#D8DADF] rounded-[8px] focus:ring-0 focus:border-[#E48B59] outline-none transition-colors text-[#111827] placeholder-[#6B7280] text-[13px] shadow-sm" placeholder="Starting Point" autocomplete="off">
                 <div id="origin-autocomplete" class="autocomplete-dropdown hidden"></div>
             </div>
 
             <!-- Swap -->
-            <button type="button" id="swap-locations" class="w-9 h-9 shrink-0 bg-[#1F2937] border border-[#374151] hover:bg-[#374151] rounded-[8px] flex items-center justify-center transition-colors mb-[1px]">
-                <i class="fa-solid fa-arrow-right-arrow-left text-[#9CA3AF] text-[12px]"></i>
+            <button type="button" id="swap-locations" class="w-9 h-9 shrink-0 bg-[#FFFFFF] border border-[#D8DADF] hover:bg-[#F3F4F6] rounded-[8px] flex items-center justify-center transition-colors mb-[1px]">
+                <i class="fa-solid fa-arrow-right-arrow-left text-[#4B5563] text-[12px]"></i>
             </button>
 
             <!-- Destination -->
             <div class="relative flex-1 w-full">
-                <label class="block text-[10px] font-[600] text-[#9CA3AF] uppercase tracking-wider mb-1.5 font-mono">To</label>
-                <input type="text" id="destination" required class="w-full px-3 py-2.5 bg-[#111827] border border-[#374151] rounded-[8px] focus:ring-0 focus:border-[#EA580C] outline-none transition-colors text-white placeholder-[#6B7280] text-[13px] shadow-inner" placeholder="Destination" autocomplete="off">
+                <label class="block text-[10px] font-[600] text-[#4B5563] uppercase tracking-wider mb-1.5 font-mono">To</label>
+                <input type="text" id="destination" required class="w-full px-3 py-2.5 bg-[#FFFFFF] border border-[#D8DADF] rounded-[8px] focus:ring-0 focus:border-[#E48B59] outline-none transition-colors text-[#111827] placeholder-[#6B7280] text-[13px] shadow-sm" placeholder="Destination" autocomplete="off">
                 <div id="destination-autocomplete" class="autocomplete-dropdown hidden"></div>
             </div>
 
             <!-- Date/Time combined -->
             <div class="flex gap-2 shrink-0">
                 <div class="w-[130px]">
-                    <label class="block text-[10px] font-[600] text-[#9CA3AF] uppercase tracking-wider mb-1.5 font-mono">Date</label>
-                    <input type="date" id="date" required class="w-full px-3 py-2.5 bg-[#111827] border border-[#374151] rounded-[8px] focus:ring-0 focus:border-[#EA580C] outline-none text-white text-[13px] shadow-inner cursor-pointer [color-scheme:dark]" value="{{ date('Y-m-d') }}" onclick="try{this.showPicker()}catch(e){}" onfocus="try{this.showPicker()}catch(e){}">
+                    <label class="block text-[10px] font-[600] text-[#4B5563] uppercase tracking-wider mb-1.5 font-mono">Date</label>
+                    <input type="date" id="date" required class="w-full px-3 py-2.5 bg-[#FFFFFF] border border-[#D8DADF] rounded-[8px] focus:ring-0 focus:border-[#E48B59] outline-none text-[#111827] text-[13px] shadow-sm cursor-pointer [color-scheme:light]" value="{{ date('Y-m-d') }}" onclick="try{this.showPicker()}catch(e){}" onfocus="try{this.showPicker()}catch(e){}">
                 </div>
                 <div class="w-[120px]">
-                    <label class="block text-[10px] font-[600] text-[#9CA3AF] uppercase tracking-wider mb-1.5 font-mono">Time</label>
-                    <input type="time" id="time" required class="w-full px-3 py-2.5 bg-[#111827] border border-[#374151] rounded-[8px] focus:ring-0 focus:border-[#EA580C] outline-none text-white text-[13px] shadow-inner cursor-pointer [color-scheme:dark]" value="{{ date('H:i') }}" onclick="try{this.showPicker()}catch(e){}" onfocus="try{this.showPicker()}catch(e){}">
+                    <label class="block text-[10px] font-[600] text-[#4B5563] uppercase tracking-wider mb-1.5 font-mono">Time</label>
+                    <input type="time" id="time" required class="w-full px-3 py-2.5 bg-[#FFFFFF] border border-[#D8DADF] rounded-[8px] focus:ring-0 focus:border-[#E48B59] outline-none text-[#111827] text-[13px] shadow-sm cursor-pointer [color-scheme:light]" value="{{ date('H:i') }}" onclick="try{this.showPicker()}catch(e){}" onfocus="try{this.showPicker()}catch(e){}">
                 </div>
             </div>
 
             <!-- Actions -->
             <div class="flex gap-2 shrink-0 mb-[1px]">
-                <button type="submit" class="px-5 h-[42px] bg-[#EA580C] hover:bg-[#FDBA74] hover:text-[#191C21] text-white rounded-[8px] font-[600] text-[13px] transition-colors flex items-center justify-center gap-2 shadow-lg shadow-[#EA580C]/20">
+                <button type="submit" class="px-5 h-[42px] bg-[#E48B59] hover:bg-[#ED7B46] hover:text-[#FFFFFF] text-[#FFFFFF] rounded-[8px] font-[600] text-[13px] transition-colors flex items-center justify-center gap-2 shadow-lg shadow-[#E48B59]/20">
                     <i class="fa-solid fa-magnifying-glass"></i> Search
                 </button>
-                <button type="button" id="reset-search" class="w-[42px] h-[42px] bg-[#191C21] border border-[#374151] rounded-[8px] flex items-center justify-center text-[#9CA3AF] hover:text-[#EA580C] hover:bg-[#374151] transition-colors" title="Reset">
+                <button type="button" id="reset-search" class="w-[42px] h-[42px] bg-[#FFFFFF] border border-[#D8DADF] rounded-[8px] flex items-center justify-center text-[#4B5563] hover:text-[#E48B59] hover:bg-[#F3F4F6] transition-colors" title="Reset">
                     <i class="fa-solid fa-rotate-left text-[13px]"></i>
                 </button>
             </div>
@@ -362,12 +394,12 @@
                         return;
                     }
                     dropdown.innerHTML = stops.map(s => {
-                        const cityTag = s.city ? '<div class="text-[10px] text-[#9CA3AF] mt-0.5 font-mono">' +
+                        const cityTag = s.city ? '<div class="text-[10px] text-[#4B5563] mt-0.5 font-mono">' +
                             s.city + '</div>' : '';
-                        return '<div class="autocomplete-item p-3 hover:bg-[#111827] cursor-pointer border-b border-[#374151] last:border-0 transition-colors" data-name="' +
+                        return '<div class="autocomplete-item p-3 hover:bg-[#FFFFFF] cursor-pointer border-b border-[#D8DADF] last:border-0 transition-colors" data-name="' +
                             s.stop_name + '" data-lat="' + (s.stop_lat || '') + '" data-lon="' + (s
                                 .stop_lon || '') + '">' +
-                            '<div class="font-[500] text-[13px] text-white">' + s.stop_name +
+                            '<div class="font-[500] text-[13px] text-[#111827]">' + s.stop_name +
                             '</div>' + cityTag +
                             '</div>';
                     }).join('');
@@ -422,7 +454,7 @@
                     let iconText = type === 'origin' ? 'A' : (type === 'destination' ? 'B' : 'V');
 
                     const endpointIcon = L.divIcon({
-                        html: `<div class="w-8 h-8 rounded-full border-2 border-white shadow-md flex items-center justify-center text-white font-[800] text-[14px]" style="background-color: ${iconColor};">${iconText}</div>`,
+                        html: `<div class="w-8 h-8 rounded-full border-2 border-white shadow-md flex items-center justify-center text-[#111827] font-[800] text-[14px]" style="background-color: ${iconColor};">${iconText}</div>`,
                         className: 'bg-transparent',
                         iconSize: [32, 32],
                         iconAnchor: [16, 16]
@@ -500,7 +532,9 @@
         let gbfsStationsLayer = L.layerGroup();
         let searchResultsLayer = L.layerGroup();
         let defaultRouteStopsLayer = L.layerGroup();
-        let territoryStopsLayer = L.layerGroup();
+        let territoryBusStopsLayer = L.layerGroup();
+        let territoryTrainStationsLayer = L.layerGroup();
+        let territoryGbfsStationsLayer = L.layerGroup();
         let parkingLayer = L.layerGroup();
         let currentRouteData = null;
         let allRoutesShapes = {}; // Cache: route_short_name -> full shape_pts array
@@ -517,6 +551,7 @@
         let activeCityKey = null;
         let selectedTenantServices = new Set(); // Stores "tenantId:service"
         let tenantRoutesCache = {};
+        let allTrainStations = []; // Stores train stations
         let allGbfsStations = []; // Stores all fetched stations
         let gbfsMarkers = {}; // Cache: station_id -> L.marker
         let expandedTenants = new Set();
@@ -525,9 +560,18 @@
 
         function getModeLabel(mode) {
             if (mode === 'bus') return 'Buses';
+            if (mode === 'train') return 'Trains';
             if (mode === 'cycle') return 'Bikes';
             if (mode === 'car') return 'Cars';
             return mode;
+        }
+
+        function getModeIcon(mode) {
+            if (mode === 'bus') return 'fa-bus';
+            if (mode === 'train') return 'fa-train';
+            if (mode === 'cycle') return 'fa-bicycle';
+            if (mode === 'car') return 'fa-car';
+            return 'fa-bus';
         }
 
         function initMap() {
@@ -562,25 +606,28 @@
                 gbfsStationsLayer.addTo(map);
                 searchResultsLayer.addTo(map);
                 defaultRouteStopsLayer.addTo(map);
-                territoryStopsLayer.addTo(map);
+                territoryBusStopsLayer.addTo(map);
+                territoryTrainStationsLayer.addTo(map);
+                territoryGbfsStationsLayer.addTo(map);
 
                 const legend = L.control({ position: 'bottomright' });
                 legend.onAdd = function() {
-                    const div = L.DomUtil.create('div', 'bg-[#191C21] p-3 rounded-[8px] shadow-md border border-[#374151] text-[13px] text-white font-mono uppercase tracking-wider');
+                    const div = L.DomUtil.create('div', 'bg-[#FFFFFF] p-3 rounded-[8px] shadow-md border border-[#D8DADF] text-[13px] text-[#111827] font-mono uppercase tracking-wider');
                     div.innerHTML = `
-                        <div class="font-[600] mb-3 text-[#EA580C]">Legend</div>
-                        <div class="flex items-center gap-3 mb-2"><div class="w-6 h-6 flex items-center justify-center rounded-full bg-[#374151] text-white shadow-sm border border-[#6B7280]"><i class="fa-solid fa-bus text-[10px]"></i></div> Bus Station</div>
-                        <div class="flex items-center gap-3 mb-2"><div class="w-6 h-6 flex items-center justify-center rounded-full bg-[#374151] text-[#f59e0b] shadow-sm border border-[#6B7280]"><i class="fa-solid fa-bicycle text-[10px]"></i></div> Cycle Station</div>
-                        <div class="flex items-center gap-3 mb-2"><div class="w-6 h-6 flex items-center justify-center rounded-full bg-[#374151] text-[#a855f7] shadow-sm border border-[#6B7280]"><i class="fa-solid fa-car text-[10px]"></i></div> Car Station</div>
-                        <label class="flex items-center gap-3 cursor-pointer select-none mt-4 pt-3 border-t border-[#374151] group">
+                        <div class="font-[600] mb-3 text-[#E48B59]">Legend</div>
+                        <div class="flex items-center gap-3 mb-2"><div class="w-[28px] h-[28px] flex items-center justify-center rounded-full bg-[#3b82f6] text-[#FFFFFF] shadow-md border-2 border-[#FFFFFF]"><i class="fa-solid fa-bus text-[12px]"></i></div> Bus Station</div>
+                        <div class="flex items-center gap-3 mb-2"><div class="w-[28px] h-[28px] flex items-center justify-center rounded-full bg-[#cd0037] text-[#FFFFFF] shadow-md border-2 border-[#FFFFFF]"><i class="fa-solid fa-train text-[12px]"></i></div> Train Station</div>
+                        <div class="flex items-center gap-3 mb-2"><div class="w-[28px] h-[28px] flex items-center justify-center rounded-full bg-[#22c55e] text-[#FFFFFF] shadow-md border-2 border-[#FFFFFF]"><i class="fa-solid fa-bicycle text-[12px]"></i></div> Cycle Station</div>
+                        <div class="flex items-center gap-3 mb-2"><div class="w-[28px] h-[28px] flex items-center justify-center rounded-full bg-[#a855f7] text-[#FFFFFF] shadow-md border-2 border-[#FFFFFF]"><i class="fa-solid fa-car text-[12px]"></i></div> Car Station</div>
+                        <label class="flex items-center gap-3 cursor-pointer select-none mt-4 pt-3 border-t border-[#D8DADF] group">
                             <div class="relative flex items-center justify-center">
                                 <input type="checkbox" id="toggle-parking" class="peer sr-only">
-                                <div class="w-[18px] h-[18px] bg-[#111827] border border-[#4B5563] rounded-[4px] peer-checked:bg-[#EA580C] peer-checked:border-[#EA580C] transition-colors flex items-center justify-center shadow-sm">
-                                    <svg class="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                                <div class="w-[18px] h-[18px] bg-[#FFFFFF] border border-[#4B5563] rounded-[4px] peer-checked:bg-[#E48B59] peer-checked:border-[#E48B59] transition-colors flex items-center justify-center shadow-sm">
+                                    <svg class="w-3 h-3 text-[#111827] opacity-0 peer-checked:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
                                 </div>
                             </div>
-                            <div class="flex items-center gap-2 text-[#D1D5DB] group-hover:text-white transition-colors text-[12px]">
-                                <div class="w-6 h-6 flex items-center justify-center rounded-full bg-[#374151] text-[#10b981] shadow-sm border border-[#6B7280]"><i class="fa-solid fa-square-parking text-[10px]"></i></div>
+                            <div class="flex items-center gap-2 text-[#4B5563] group-hover:text-[#111827] transition-colors text-[12px]">
+                                <div class="w-6 h-6 flex items-center justify-center rounded-full bg-[#D8DADF] text-[#10b981] shadow-sm border border-[#4B5563]"><i class="fa-solid fa-square-parking text-[10px]"></i></div>
                                 Show Parking
                             </div>
                         </label>
@@ -639,9 +686,9 @@
                 const popupHtml = `
                     <div class="p-1">
                         <div class="font-bold text-sm mb-2 text-gray-800">${stop.name}</div>
-                        <div class="flex gap-2 mt-2 pt-2 border-t border-[#e5e7eb]">
-                            <button onclick="setAsRouteEndpoint('origin', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-[#191C21] border border-[#EA580C] hover:bg-[#EA580C] hover:text-white text-[#EA580C] font-[600] py-1.5 px-2 rounded-[6px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">Start</button>
-                            <button onclick="setAsRouteEndpoint('destination', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-[#191C21] border border-[#EA580C] hover:bg-[#EA580C] hover:text-white text-[#EA580C] font-[600] py-1.5 px-2 rounded-[6px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">End</button>
+                        <div class="flex gap-2 mt-2 pt-2 border-t border-[#D8DADF]">
+                            <button onclick="setAsRouteEndpoint('origin', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-[#FFFFFF] border border-[#E48B59] hover:bg-[#E48B59] hover:text-[#FFFFFF] text-[#E48B59] font-[600] py-1.5 px-2 rounded-[8px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">Start</button>
+                            <button onclick="setAsRouteEndpoint('destination', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-[#FFFFFF] border border-[#E48B59] hover:bg-[#E48B59] hover:text-[#FFFFFF] text-[#E48B59] font-[600] py-1.5 px-2 rounded-[8px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">End</button>
                         </div>
                     </div>
                 `;
@@ -688,21 +735,31 @@
                 const [tId, mode] = svcKey.split(':');
                 if (mode !== 'bus') selectedGbfsTenantModes.add(svcKey);
             }
-            const activeStations = allGbfsStations.filter(st => {
+            const activeGbfsStations = allGbfsStations.filter(st => {
                 const isSelected = selectedGbfsTenantModes.has(`${st.tenant_id}:${st.source_type}`);
-                const available = st.status.num_bikes_available || 0;
-                return isSelected && available > 0;
+                return isSelected;
             });
 
-            if (routeNames.length === 0 && activeStations.length === 0) {
-                container.innerHTML =
-                    '<div class="text-center py-10 bg-[#191C21] rounded-[8px] border border-dashed border-[#374151] mt-4"><div class="text-[13px] text-[#9CA3AF] font-[500]">No services found.</div><div class="text-[11px] text-[#6B7280] mt-1">Try selecting different services.</div></div>';
+            let hasTrain = false;
+            for (const svcKey of selectedTenantServices) {
+                if (svcKey.split(':')[1] === 'train') hasTrain = true;
+            }
 
-                const toggleHeader = document.getElementById('toggle-middle-pane');
-                if (toggleHeader) {
-                    toggleHeader.querySelector('h3').innerText = 'Services';
-                    toggleHeader.querySelector('p').innerText = 'Explore routes and available vehicles.';
-                }
+            const activeTrainStations = hasTrain ? allTrainStations.filter(st => {
+                return selectedTenantServices.has(`${st.tenant_id}:train`);
+            }) : [];
+
+            const activeStations = [...activeGbfsStations, ...activeTrainStations];
+
+            if (routeNames.length === 0 && activeStations.length === 0) {
+                    container.innerHTML =
+                        '<div class="text-center py-10 bg-[#FFFFFF] rounded-[8px] border border-dashed border-[#D8DADF] mt-4"><div class="text-[13px] text-[#4B5563] font-[500]">No services found.</div><div class="text-[11px] text-[#4B5563] mt-1">Try selecting different services.</div></div>';
+
+                    const toggleHeader = document.getElementById('toggle-middle-pane');
+                    if (toggleHeader) {
+                        toggleHeader.querySelector('h3').innerText = 'Services';
+                        toggleHeader.querySelector('p').innerText = 'Explore routes and available vehicles.';
+                    }
                 return;
             }
 
@@ -734,7 +791,7 @@
 
             Object.keys(groupedRoutes).sort((a, b) => a.localeCompare(b)).forEach(operatorName => {
                 const section = document.createElement('div');
-                section.className = 'bg-[#111827] rounded-[8px] border border-[#374151] shadow-sm overflow-hidden mb-4';
+                section.className = 'bg-[#FFFFFF] rounded-[8px] border border-[#D8DADF] shadow-sm overflow-hidden mb-4';
 
                 const routes = groupedRoutes[operatorName].sort((a, b) => {
                     const numA = parseInt(a, 10);
@@ -746,9 +803,9 @@
                 });
 
                 section.innerHTML = `
-                    <div class="sticky top-0 z-10 px-4 py-3 bg-[#191C21] border-b border-[#374151] flex justify-between items-center backdrop-blur-md bg-opacity-90">
-                        <div class="text-[11px] font-[600] text-white uppercase tracking-wider font-mono">${operatorName.replace(/</g, '&lt;')}</div>
-                        <div class="text-[10px] font-[600] bg-[#111827] border border-[#374151] px-2 py-0.5 rounded-full text-[#9CA3AF] shadow-inner font-mono">${routes.length} line${routes.length > 1 ? 's' : ''}</div>
+                    <div class="sticky top-0 z-10 px-4 py-3 bg-[#FFFFFF] border-b border-[#D8DADF] flex justify-between items-center backdrop-blur-md bg-opacity-90">
+                        <div class="text-[11px] font-[600] text-[#111827] uppercase tracking-wider font-mono">${operatorName.replace(/</g, '&lt;')}</div>
+                        <div class="text-[10px] font-[600] bg-[#FFFFFF] border border-[#D8DADF] px-2 py-0.5 rounded-full text-[#4B5563] shadow-inner font-mono">${routes.length} line${routes.length > 1 ? 's' : ''}</div>
                     </div>
                     <div class="p-2 space-y-2"></div>
                 `;
@@ -758,20 +815,20 @@
                     const meta = allRoutesMetaData[routeName];
                     const card = document.createElement('div');
                     card.className =
-                        'bus-card bg-[#191C21] rounded-[8px] border border-[#374151] hover:border-[#6B7280] transition-colors shadow-sm';
+                        'bus-card text-white rounded-[16px] transition-colors shadow-sm';
                     card.dataset.route = routeName;
 
                     card.innerHTML = `
                         <div class="bus-card-header flex items-center gap-3 p-3 cursor-pointer">
-                            <span class="inline-flex items-center justify-center min-w-[2.75rem] h-8 px-2 rounded-[6px] text-white text-[12px] font-[600] shrink-0 shadow-md font-mono" style="background:${meta.color}">${routeName}</span>
+                            <span class="inline-flex items-center justify-center min-w-[2.75rem] h-8 px-2 rounded-[8px] text-white text-[12px] font-[600] shrink-0 shadow-md font-mono" style="background:${meta.color}">${routeName}</span>
                             <div class="min-w-0 flex-1">
                                 <div class="text-[13px] font-[500] text-white leading-tight line-clamp-2">${meta.longName}</div>
                             </div>
-                            <svg class="bus-card-chevron w-4 h-4 text-[#6B7280] shrink-0 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="bus-card-chevron w-4 h-4 text-[#D8DADF] shrink-0 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </div>
-                        <div class="bus-card-stops hidden border-t border-[#374151] max-h-60 overflow-y-auto bg-[#111827] rounded-b-[8px]"></div>
+                        <div class="bus-card-stops hidden border-t border-[#D8DADF] max-h-60 overflow-y-auto rounded-b-[16px]"></div>
                     `;
 
                     routesContainer.appendChild(card);
@@ -791,13 +848,13 @@
 
                 Object.keys(groupedStations).sort((a, b) => a.localeCompare(b)).forEach(operatorName => {
                     const section = document.createElement('div');
-                    section.className = 'bg-[#111827] rounded-[8px] border border-[#374151] shadow-sm overflow-hidden mb-4';
+                    section.className = 'bg-[#FFFFFF] rounded-[8px] border border-[#D8DADF] shadow-sm overflow-hidden mb-4';
 
                     const stations = groupedStations[operatorName];
                     section.innerHTML = `
-                        <div class="sticky top-0 z-10 px-4 py-3 bg-[#191C21] border-b border-[#374151] flex justify-between items-center backdrop-blur-md bg-opacity-90">
-                            <div class="text-[11px] font-[600] text-white uppercase tracking-wider font-mono">${operatorName.replace(/</g, '&lt;')}</div>
-                            <div class="text-[10px] font-[600] bg-[#111827] border border-[#374151] px-2 py-0.5 rounded-full text-[#9CA3AF] shadow-inner font-mono">${stations.length} station${stations.length > 1 ? 's' : ''}</div>
+                        <div class="sticky top-0 z-10 px-4 py-3 bg-[#FFFFFF] border-b border-[#D8DADF] flex justify-between items-center backdrop-blur-md bg-opacity-90">
+                            <div class="text-[11px] font-[600] text-[#111827] uppercase tracking-wider font-mono">${operatorName.replace(/</g, '&lt;')}</div>
+                            <div class="text-[10px] font-[600] bg-[#FFFFFF] border border-[#D8DADF] px-2 py-0.5 rounded-full text-[#4B5563] shadow-inner font-mono">${stations.length} station${stations.length > 1 ? 's' : ''}</div>
                         </div>
                         <div class="p-2 space-y-2"></div>
                     `;
@@ -805,11 +862,13 @@
                     const stationsContainer = section.querySelector('.space-y-2');
                     stations.forEach(st => {
                         const isCar = st.source_type === 'car';
-                        const available = st.status.num_bikes_available || 0;
+                        const available = !isCar ? (st.status.num_bikes_available || 0) : (st.status.num_vehicles_available || 0);
                         const hasAvail = available > 0;
-                        const badgeColor = hasAvail ? '#28a745' : '#25282b';
-                        const iconHtml = isCar ? '<i class="fa-solid fa-car text-[12px]"></i>' :
-                            '<i class="fa-solid fa-bicycle text-[12px]"></i>';
+                        const availableColor = !isCar ? '#22c55e' : '#a855f7';
+                        const badgeColor = hasAvail ? availableColor : '#D8DADF';
+                        const iconColorClass = hasAvail ? 'text-[#FFFFFF]' : 'text-[#4B5563]';
+                        const iconHtml = isCar ? `<i class="fa-solid fa-car ${iconColorClass} text-[12px]"></i>` :
+                            `<i class="fa-solid fa-bicycle ${iconColorClass} text-[12px]"></i>`;
 
                         let detailsHtml = `Capacity: ${st.capacity || 0}`;
                         if (!isCar) {
@@ -827,13 +886,13 @@
 
                         const card = document.createElement('div');
                         card.className =
-                            'bus-card bg-[#191C21] rounded-[8px] border border-[#374151] hover:border-[#6B7280] transition-colors shadow-sm cursor-pointer';
+                            'bus-card text-white rounded-[16px] transition-colors shadow-sm cursor-pointer';
                         card.innerHTML = `
                             <div class="flex items-center gap-3 p-3">
-                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-full text-white text-[12px] shadow-md shrink-0" style="background:${badgeColor}">${iconHtml}</span>
+                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#FFFFFF]/20 text-[12px] shadow-md shrink-0" style="background:${badgeColor}">${iconHtml}</span>
                                 <div class="min-w-0 flex-1">
                                     <div class="text-[13px] font-[600] text-white leading-tight line-clamp-1">${st.name}</div>
-                                    <div class="text-[11px] text-[#9CA3AF] mt-1 font-mono">${detailsHtml}</div>
+                                    <div class="text-[11px] text-[#D8DADF] mt-1 font-mono">${detailsHtml}</div>
                                 </div>
                             </div>
                         `;
@@ -940,21 +999,21 @@
                     const cKey = cityKey(country, city);
                     const isActive = activeCityKey === cKey;
                     return `
-                        <button type="button" class="city-select-btn w-full flex items-center justify-between gap-3 px-3 py-2 rounded-[6px] text-left transition-colors ${isActive ? 'bg-[#111827] text-[#EA580C] border border-[#EA580C]' : 'bg-transparent hover:bg-[#374151] text-[#9CA3AF] border border-transparent'}" data-country="${country.replace(/"/g, '&quot;')}" data-city="${city.replace(/"/g, '&quot;')}">
-                            <span class="text-[13px] font-[600] ${isActive ? 'text-[#EA580C]' : 'text-[#9CA3AF]'}">${city}</span>
+                        <button type="button" class="city-select-btn w-full flex items-center justify-between gap-3 px-3 py-2 rounded-[8px] text-left transition-colors ${isActive ? 'bg-[#FFFFFF] text-[#E48B59] border border-[#E48B59]' : 'bg-transparent hover:bg-[#D8DADF] text-[#4B5563] border border-transparent'}" data-country="${country.replace(/"/g, '&quot;')}" data-city="${city.replace(/"/g, '&quot;')}">
+                            <span class="text-[13px] font-[600] ${isActive ? 'text-[#E48B59]' : 'text-[#4B5563]'}">${city}</span>
                         </button>
                     `;
                 }).join('');
 
                 return `
-                    <div class="bg-[#191C21] border border-[#374151] rounded-[8px] overflow-hidden mb-3">
-                        <button type="button" class="country-toggle w-full flex items-center justify-between gap-2 px-4 py-2.5 bg-[#191C21] hover:bg-[#111827] transition-colors" data-country="${country.replace(/"/g, '&quot;')}">
-                            <span class="text-[14px] font-[600] text-white uppercase tracking-wider font-mono">${country}</span>
-                            <svg class="country-chevron w-4 h-4 text-[#6B7280] transition-transform ${isExpanded ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="bg-[#FFFFFF] border border-[#D8DADF] rounded-[8px] overflow-hidden mb-3">
+                        <button type="button" class="country-toggle w-full flex items-center justify-between gap-2 px-4 py-2.5 bg-[#FFFFFF] hover:bg-[#FFFFFF] transition-colors" data-country="${country.replace(/"/g, '&quot;')}">
+                            <span class="text-[14px] font-[600] text-[#111827] uppercase tracking-wider font-mono">${country}</span>
+                            <svg class="country-chevron w-4 h-4 text-[#4B5563] transition-transform ${isExpanded ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </button>
-                        <div class="country-cities ${isExpanded ? '' : 'hidden'} p-2 space-y-1 bg-[#111827] border-t border-[#374151] flex flex-col">
+                        <div class="country-cities ${isExpanded ? '' : 'hidden'} p-2 space-y-1 bg-[#FFFFFF] border-t border-[#D8DADF] flex flex-col">
                             ${cityButtonsHtml}
                         </div>
                     </div>
@@ -1010,7 +1069,10 @@
                             ], { padding: [20, 20], maxZoom: 14 });
                         }
 
-                        territoryStopsLayer.clearLayers();
+                        territoryBusStopsLayer.clearLayers();
+                        territoryTrainStationsLayer.clearLayers();
+                        territoryGbfsStationsLayer.clearLayers();
+                        allTrainStations = [];
                         
                         services.forEach(svc => {
                             fetch('/api/territories/' + svc.tenant_id + '/stops')
@@ -1019,29 +1081,47 @@
                                     if (data.stops) {
                                         data.stops.forEach(stop => {
                                             const escapedName = stop.name.replace(/'/g, "\\'");
+                                            
+                                            // Determine icon/color based on svc.services
+                                            const isTrain = svc.services && svc.services.includes('train');
+                                            if (isTrain) {
+                                                stop.isTrain = true;
+                                                stop.tenant_id = svc.tenant_id;
+                                                stop.operator_name = stop.operator_name || 'Train Services';
+                                                allTrainStations.push(stop);
+                                            }
+                                            const bgColor = isTrain ? '#cd0037' : '#3b82f6';
+                                            const faIcon = isTrain ? 'fa-train' : 'fa-bus';
+                                            
                                             const popupHtml = `
-                                                <div class="p-2 w-[220px]">
-                                                    <div class="font-[600] text-[14px] mb-1 text-white leading-tight">${stop.name}</div>
-                                                    <div class="text-[11px] text-[#9CA3AF] mb-3 capitalize font-mono">Bus Station</div>
-                                                    <div class="flex gap-2 pt-3 border-t border-[#374151]">
-                                                        <button onclick="setAsRouteEndpoint('origin', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-[#191C21] border border-[#EA580C] hover:bg-[#EA580C] hover:text-white text-[#EA580C] font-[600] py-1.5 px-2 rounded-[6px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">Start</button>
-                                                        <button onclick="setAsRouteEndpoint('destination', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-[#191C21] border border-[#EA580C] hover:bg-[#EA580C] hover:text-white text-[#EA580C] font-[600] py-1.5 px-2 rounded-[6px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">End</button>
+                                                <div class="p-3 text-center min-w-[200px]">
+                                                    <div class="w-12 h-12 rounded-full bg-[${bgColor}] flex items-center justify-center text-white mx-auto mb-3 shadow-md">
+                                                        <i class="fa-solid ${faIcon} text-xl"></i>
                                                     </div>
+                                                    <div class="font-sans font-bold text-gray-800 text-lg mb-1 leading-tight">${stop.name}</div>
+                                                    <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Transit Station</div>
+                                                    <button onclick="setAsRouteEndpoint('origin', '${escapedName}', ${stop.lat}, ${stop.lon})" class="w-full mb-2 bg-[#f8fafc] hover:bg-[#E48B59] hover:text-white text-gray-700 font-semibold py-2 px-4 border border-gray-200 hover:border-transparent rounded-lg transition-all text-sm shadow-sm flex items-center justify-center gap-2">
+                                                        <i class="fa-solid fa-location-dot"></i> Directions from here
+                                                    </button>
+                                                    <button onclick="setAsRouteEndpoint('destination', '${escapedName}', ${stop.lat}, ${stop.lon})" class="w-full bg-[#f8fafc] hover:bg-[#E48B59] hover:text-white text-gray-700 font-semibold py-2 px-4 border border-gray-200 hover:border-transparent rounded-lg transition-all text-sm shadow-sm flex items-center justify-center gap-2">
+                                                        <i class="fa-solid fa-flag-checkered"></i> Directions to here
+                                                    </button>
                                                 </div>
                                             `;
                                             const icon = L.divIcon({
-                                                html: '<div style="background:#3b82f6;color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.3);"><i class="fa-solid fa-bus"></i></div>',
-                                                className: '',
-                                                iconSize: [24, 24],
-                                                iconAnchor: [12, 12]
+                                                html: `<div class="bg-[${bgColor}] text-[#FFFFFF] w-[28px] h-[28px] rounded-full flex items-center justify-center text-[12px] border-2 border-[#FFFFFF] shadow-md transition-colors"><i class="fa-solid ${faIcon}"></i></div>`,
+                                                className: 'bg-transparent',
+                                                iconSize: [28, 28],
+                                                iconAnchor: [14, 14]
                                             });
                                             L.marker([stop.lat, stop.lon], { icon: icon
                                             }).bindTooltip(stop.name, {
-                                                sticky: true,
+                                                direction: 'top',
+                                                offset: [0, -10],
                                                 className: 'font-sans text-sm'
                                             }).bindPopup(popupHtml, {
                                                 className: 'rounded-xl'
-                                            }).addTo(territoryStopsLayer);
+                                            }).addTo(isTrain ? territoryTrainStationsLayer : territoryBusStopsLayer);
                                         });
                                     }
                                     if (data.gbfs_stations) {
@@ -1049,21 +1129,21 @@
                                             const escapedName = station.name.replace(/'/g, "\\'");
                                             const popupHtml = `
                                                 <div class="p-2 w-[220px]">
-                                                    <div class="font-[600] text-[14px] mb-1 text-white leading-tight">${station.name}</div>
-                                                    <div class="text-[11px] text-[#9CA3AF] mb-3 capitalize font-mono">${station.gbfs_type} Station</div>
-                                                    <div class="flex gap-2 pt-3 border-t border-[#374151]">
-                                                        <button onclick="setAsRouteEndpoint('origin', '${escapedName}', ${station.lat}, ${station.lon})" class="flex-1 bg-[#191C21] border border-[#EA580C] hover:bg-[#EA580C] hover:text-white text-[#EA580C] font-[600] py-1.5 px-2 rounded-[6px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">Start</button>
-                                                        <button onclick="setAsRouteEndpoint('destination', '${escapedName}', ${station.lat}, ${station.lon})" class="flex-1 bg-[#191C21] border border-[#EA580C] hover:bg-[#EA580C] hover:text-white text-[#EA580C] font-[600] py-1.5 px-2 rounded-[6px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">End</button>
+                                                    <div class="font-[600] text-[14px] mb-1 text-[#111827] leading-tight">${station.name}</div>
+                                                    <div class="text-[11px] text-[#4B5563] mb-3 capitalize font-mono">${station.gbfs_type} Station</div>
+                                                    <div class="flex gap-2 pt-3 border-t border-[#D8DADF]">
+                                                        <button onclick="setAsRouteEndpoint('origin', '${escapedName}', ${station.lat}, ${station.lon})" class="flex-1 bg-[#FFFFFF] border border-[#E48B59] hover:bg-[#E48B59] hover:text-[#FFFFFF] text-[#E48B59] font-[600] py-1.5 px-2 rounded-[8px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">Start</button>
+                                                        <button onclick="setAsRouteEndpoint('destination', '${escapedName}', ${station.lat}, ${station.lon})" class="flex-1 bg-[#FFFFFF] border border-[#E48B59] hover:bg-[#E48B59] hover:text-[#FFFFFF] text-[#E48B59] font-[600] py-1.5 px-2 rounded-[8px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">End</button>
                                                     </div>
                                                 </div>
                                             `;
-                                            const markerColor = station.gbfs_type === 'car' ? '#a855f7' : '#f59e0b';
+                                            const markerColorClass = station.gbfs_type === 'car' ? 'bg-[#a855f7]' : 'bg-[#22c55e]';
                                             const iconClass = station.gbfs_type === 'car' ? 'fa-car' : 'fa-bicycle';
                                             const icon = L.divIcon({
-                                                html: `<div style="background:${markerColor};color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.3);"><i class="fa-solid ${iconClass}"></i></div>`,
-                                                className: '',
-                                                iconSize: [24, 24],
-                                                iconAnchor: [12, 12]
+                                                html: `<div class="${markerColorClass} text-[#FFFFFF] w-[28px] h-[28px] rounded-full flex items-center justify-center text-[12px] border-2 border-[#FFFFFF] shadow-md transition-colors"><i class="fa-solid ${iconClass}"></i></div>`,
+                                                className: 'bg-transparent',
+                                                iconSize: [28, 28],
+                                                iconAnchor: [14, 14]
                                             });
                                             L.marker([station.lat, station.lon], { icon: icon
                                             }).bindTooltip(station.name, {
@@ -1071,7 +1151,7 @@
                                                 className: 'font-sans text-sm'
                                             }).bindPopup(popupHtml, {
                                                 className: 'rounded-xl'
-                                            }).addTo(territoryStopsLayer);
+                                            }).addTo(territoryGbfsStationsLayer);
                                         });
                                     }
                                     // Parking spots are now loaded separately via /api/parking-spots
@@ -1105,15 +1185,13 @@
                     const isSelected = selectedTenantServices.has(svcKey);
 
                     return `
-                        <button type="button" class="service-toggle-single w-full text-left rounded-[8px] p-3 transition-colors border mb-2 ${isSelected ? 'border-[#EA580C] bg-[#111827]' : 'border-[#374151] bg-[#191C21] hover:bg-[#111827]'}" data-tenant-id="${service.tenant_id}" data-mode="${mode}">
-                            <div class="flex items-center justify-between gap-3">
-                                <div class="flex-1 min-w-0">
-                                    <div class="text-[13px] font-[600] truncate text-white leading-tight">${service.operator_name}</div>
-                                    <div class="text-[11px] font-[500] mt-1 ${isSelected ? 'text-[#EA580C]' : 'text-[#9CA3AF]'}">${service.stops_count} active stops/stations</div>
-                                </div>
-                                <div class="shrink-0 w-4 h-4 rounded-[4px] border flex items-center justify-center transition-colors shadow-sm ${isSelected ? 'border-[#EA580C] bg-[#EA580C]' : 'border-[#6B7280] bg-[#374151]'}">
-                                    ${isSelected ? '<svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>' : ''}
-                                </div>
+                        <button type="button" class="service-toggle-single w-full flex items-center justify-between gap-3 px-4 py-3 rounded-[8px] text-left transition-colors border mb-2 shadow-sm ${isSelected ? 'bg-[#FFFFFF] text-[#E48B59] border-[#E48B59]' : 'bg-[#FFFFFF] hover:bg-[#f9fafb] text-[#111827] border-[#D8DADF]'}" data-tenant-id="${service.tenant_id}" data-mode="${mode}">
+                            <div class="flex items-center gap-3">
+                                <i class="fa-solid ${getModeIcon(mode)} w-4 text-center ${isSelected ? 'text-[#E48B59]' : 'text-[#4B5563]'}"></i>
+                                <span class="text-[13px] font-[600]">${service.operator_name}</span>
+                            </div>
+                            <div class="shrink-0 w-4 h-4 rounded-[4px] border flex items-center justify-center transition-colors shadow-sm ${isSelected ? 'border-[#E48B59] bg-[#E48B59]' : 'border-[#4B5563] bg-[#D8DADF]'}">
+                                ${isSelected ? '<svg class="w-3 h-3 text-[#FFFFFF]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>' : ''}
                             </div>
                         </button>
                     `;
@@ -1127,27 +1205,30 @@
                     const label = getModeLabel(mode);
 
                     return `
-                        <button type="button" class="service-toggle-child w-full flex items-center justify-between gap-3 px-3 py-2 rounded-[6px] text-left transition-colors border ${isSelected ? 'bg-[#191C21] text-[#EA580C] border-[#EA580C]' : 'bg-transparent hover:bg-[#374151] text-[#9CA3AF] border-transparent'}" data-tenant-id="${service.tenant_id}" data-mode="${mode}">
-                            <span class="text-[13px] font-[600] ${isSelected ? 'text-[#EA580C]' : 'text-[#9CA3AF]'}">${label}</span>
-                            <div class="shrink-0 w-4 h-4 rounded-[4px] border flex items-center justify-center transition-colors shadow-sm ${isSelected ? 'border-[#EA580C] bg-[#EA580C]' : 'border-[#6B7280] bg-[#374151]'}">
-                                ${isSelected ? '<svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>' : ''}
+                        <button type="button" class="service-toggle-child w-full flex items-center justify-between gap-3 px-3 py-2 rounded-[8px] text-left transition-colors border ${isSelected ? 'bg-[#FFFFFF] text-[#E48B59] border-[#E48B59]' : 'bg-transparent hover:bg-[#D8DADF] text-[#4B5563] border-transparent'}" data-tenant-id="${service.tenant_id}" data-mode="${mode}">
+                            <div class="flex items-center gap-3">
+                                <i class="fa-solid ${getModeIcon(mode)} w-4 text-center"></i>
+                                <span class="text-[13px] font-[600]">${label}</span>
+                            </div>
+                            <div class="shrink-0 w-4 h-4 rounded-[4px] border flex items-center justify-center transition-colors shadow-sm ${isSelected ? 'border-[#E48B59] bg-[#E48B59]' : 'border-[#4B5563] bg-[#D8DADF]'}">
+                                ${isSelected ? '<svg class="w-3 h-3 text-[#FFFFFF]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>' : ''}
                             </div>
                         </button>
                     `;
                 }).join('');
 
                 return `
-                    <div class="border rounded-[8px] overflow-hidden mb-2 shadow-sm transition-colors ${someSelected ? 'border-[#EA580C] bg-[#111827]' : 'border-[#374151] bg-[#191C21]'}">
-                        <button type="button" class="tenant-accordion-toggle w-full flex items-center justify-between gap-2 px-4 py-3 transition-colors ${someSelected ? 'bg-[#111827]' : 'bg-[#191C21] hover:bg-[#111827]'}" data-tenant-id="${service.tenant_id}">
+                    <div class="border rounded-[8px] overflow-hidden mb-2 shadow-sm transition-colors ${someSelected ? 'border-[#E48B59] bg-[#FFFFFF]' : 'border-[#D8DADF] bg-[#FFFFFF]'}">
+                        <button type="button" class="tenant-accordion-toggle w-full flex items-center justify-between gap-2 px-4 py-3 transition-colors ${someSelected ? 'bg-[#FFFFFF]' : 'bg-[#FFFFFF] hover:bg-[#FFFFFF]'}" data-tenant-id="${service.tenant_id}">
                             <div class="flex-1 min-w-0 text-left">
-                                <div class="text-[13px] font-[600] text-white">${service.operator_name}</div>
-                                <div class="text-[11px] font-[500] mt-1 ${someSelected ? 'text-[#EA580C]' : 'text-[#9CA3AF]'}">Multiple services</div>
+                                <div class="text-[13px] font-[600] text-[#111827]">${service.operator_name}</div>
+                                <div class="text-[11px] font-[500] mt-1 ${someSelected ? 'text-[#E48B59]' : 'text-[#4B5563]'}">Multiple services</div>
                             </div>
-                            <svg class="w-4 h-4 text-[#6B7280] transition-transform ${isExpanded ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-4 h-4 text-[#4B5563] transition-transform ${isExpanded ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </button>
-                        <div class="${isExpanded ? '' : 'hidden'} p-2 space-y-1 bg-[#111827] border-t ${someSelected ? 'border-[#EA580C]' : 'border-[#374151]'} flex flex-col">
+                        <div class="${isExpanded ? '' : 'hidden'} p-2 space-y-1 bg-[#FFFFFF] border-t ${someSelected ? 'border-[#E48B59]' : 'border-[#D8DADF]'} flex flex-col">
                             ${childRows}
                         </div>
                     </div>
@@ -1202,17 +1283,7 @@
                 }
             }
 
-            if (!activeCityKey) {
-                const countries = Object.keys(serviceHierarchy).sort((a, b) => a.localeCompare(b));
-                if (countries.length) {
-                    const firstCountry = countries[0];
-                    const firstCity = Object.keys(serviceHierarchy[firstCountry]).sort((a, b) => a.localeCompare(b))[0];
-                    if (firstCity) {
-                        activeCityKey = cityKey(firstCountry, firstCity);
-                        expandedCountries.add(firstCountry);
-                    }
-                }
-            }
+            // Removed automatic city selection
 
             renderTerritoryTree();
             renderServiceList();
@@ -1282,7 +1353,7 @@
             // Fetch and display stops in the card
             const stopsEl = cardEl.querySelector('.bus-card-stops');
             if (stopsEl) {
-                stopsEl.innerHTML = '<div class="px-3 py-2 text-xs text-gray-400">Loading stops&hellip;</div>';
+                stopsEl.innerHTML = '<div class="px-3 py-2 text-xs text-[#D8DADF]">Loading stops&hellip;</div>';
                 stopsEl.classList.remove('hidden');
 
                 const stops = await fetchRouteStops(routeName);
@@ -1292,17 +1363,17 @@
                     showDefaultRouteStops(stops, meta ? meta.color : '#9CA3AF');
 
                     stopsEl.innerHTML = stops.map((s, i) => `
-                        <div class="flex items-start gap-2 px-3 py-1.5 ${i < stops.length - 1 ? 'border-b border-gray-50' : ''}">
+                        <div class="flex items-start gap-2 px-3 py-1.5 ${i < stops.length - 1 ? 'border-b border-[#FFFFFF]/20' : ''}">
                             <div class="flex flex-col items-center shrink-0 mt-1">
-                                <div class="w-2 h-2 rounded-full border-2 ${i === 0 || i === stops.length - 1 ? 'border-[#EA580C] bg-[#EA580C]' : 'border-[#6B7280] bg-[#374151]'}"></div>
-                                ${i < stops.length - 1 ? '<div class="w-px h-3 bg-[#374151] mt-0.5"></div>' : ''}
+                                <div class="w-2 h-2 rounded-full border-2 ${i === 0 || i === stops.length - 1 ? 'border-[#E48B59] bg-[#E48B59]' : 'border-[#D8DADF] bg-[#FFFFFF]/20'}"></div>
+                                ${i < stops.length - 1 ? '<div class="w-px h-3 bg-[#FFFFFF]/20 mt-0.5"></div>' : ''}
                             </div>
-                            <span class="text-[12px] text-[#9CA3AF] leading-tight pb-1">${s.name}</span>
+                            <span class="text-[12px] text-[#D8DADF] leading-tight pb-1">${s.name}</span>
                         </div>
                     `).join('');
                 } else {
                     stopsEl.innerHTML =
-                        '<div class="px-3 py-2 text-[12px] text-[#6B7280]">No stop information available.</div>';
+                        '<div class="px-3 py-2 text-[12px] text-[#4B5563]">No stop information available.</div>';
                 }
             }
         }
@@ -1450,9 +1521,38 @@
                 selectedDefaultPolyline = null;
                 defaultRouteStopsLayer.clearLayers();
 
+                let hasBus = false;
+                let hasTrain = false;
+                for (const svcKey of selectedTenantServices) {
+                    if (svcKey.split(':')[1] === 'bus') hasBus = true;
+                    if (svcKey.split(':')[1] === 'train') hasTrain = true;
+                }
+
                 if (selectedTenantServices.size === 0) {
+                    if (!map.hasLayer(territoryBusStopsLayer)) map.addLayer(territoryBusStopsLayer);
+                    if (!map.hasLayer(territoryTrainStationsLayer)) map.addLayer(territoryTrainStationsLayer);
+                    if (!map.hasLayer(territoryGbfsStationsLayer)) map.addLayer(territoryGbfsStationsLayer);
                     renderBusInfoPanel();
                     return;
+                }
+
+                // Hide GBFS overview always since filtered GBFS is shown
+                if (map.hasLayer(territoryGbfsStationsLayer)) {
+                    map.removeLayer(territoryGbfsStationsLayer);
+                }
+                
+                // Show bus overview only if bus is selected
+                if (hasBus) {
+                    if (!map.hasLayer(territoryBusStopsLayer)) map.addLayer(territoryBusStopsLayer);
+                } else {
+                    if (map.hasLayer(territoryBusStopsLayer)) map.removeLayer(territoryBusStopsLayer);
+                }
+
+                // Show train overview only if train is selected
+                if (hasTrain) {
+                    if (!map.hasLayer(territoryTrainStationsLayer)) map.addLayer(territoryTrainStationsLayer);
+                } else {
+                    if (map.hasLayer(territoryTrainStationsLayer)) map.removeLayer(territoryTrainStationsLayer);
                 }
 
                 // 1. Handle GTFS (bus)
@@ -1489,10 +1589,13 @@
                     filteredStations.forEach(st => {
                         const isCar = st.source_type === 'car';
                         const isBike = st.source_type === 'cycle';
-                        const available = st.status.num_bikes_available || 0;
-                        const color = available > 0 ? '#28a745' : '#25282b'; // Green if >0, Charcoal if 0
-                        const carIcon = `<i class="fa-solid fa-car text-white text-[12px]"></i>`;
-                        const bikeIcon = `<i class="fa-solid fa-bicycle text-white text-[12px]"></i>`;
+                        const available = isBike ? (st.status.num_bikes_available || 0) : (st.status.num_vehicles_available || 0);
+                        const isAvailable = available > 0;
+                        const availableColor = isBike ? '#22c55e' : '#a855f7';
+                        const color = isAvailable ? availableColor : '#D8DADF';
+                        const iconColorClass = isAvailable ? 'text-[#FFFFFF]' : 'text-[#4B5563]';
+                        const carIcon = `<i class="fa-solid fa-car ${iconColorClass} text-[12px]"></i>`;
+                        const bikeIcon = `<i class="fa-solid fa-bicycle ${iconColorClass} text-[12px]"></i>`;
                         const iconHtml = `<div class="w-7 h-7 rounded-full border border-white flex items-center justify-center" style="background-color: ${color};">
                             ${isCar ? carIcon : bikeIcon}
                         </div>`;
@@ -1506,9 +1609,9 @@
 
                         let popupHtml = `
                             <div class="p-2 w-[220px]">
-                                <div class="font-[600] text-[14px] mb-1 text-white leading-tight">${st.name}</div>
-                                <div class="text-[11px] text-[#9CA3AF] mb-2">${st.operator_name}</div>
-                                <div class="text-[12px] font-[500] text-white bg-[#111827] border border-[#374151] p-3 rounded-[6px] mb-3">`;
+                                <div class="font-[600] text-[14px] mb-1 text-[#111827] leading-tight">${st.name}</div>
+                                <div class="text-[11px] text-[#4B5563] mb-2">${st.operator_name}</div>
+                                <div class="text-[12px] font-[500] text-[#111827] bg-[#FFFFFF] border border-[#D8DADF] p-3 rounded-[8px] mb-3">`;
                         if (isBike) {
                             popupHtml += `Capacity: ${st.capacity || 0}<br>`;
                             popupHtml += `Bikes: ${available} / Docks: ${st.status.num_docks_available || 0}`;
@@ -1526,9 +1629,9 @@
                             }
                         }
                         popupHtml += `</div>
-                            <div class="flex gap-2 mt-3 pt-3 border-t border-[#e5e7eb]">
-                                <button onclick="setAsRouteEndpoint('origin', '${st.name.replace(/'/g, "\\'")}', ${st.lat}, ${st.lon})" class="flex-1 bg-[#191C21] border border-[#EA580C] hover:bg-[#EA580C] hover:text-white text-[#EA580C] font-[600] py-1.5 px-2 rounded-[6px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">Start</button>
-                                <button onclick="setAsRouteEndpoint('destination', '${st.name.replace(/'/g, "\\'")}', ${st.lat}, ${st.lon})" class="flex-1 bg-[#191C21] border border-[#EA580C] hover:bg-[#EA580C] hover:text-white text-[#EA580C] font-[600] py-1.5 px-2 rounded-[6px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">End</button>
+                            <div class="flex gap-2 mt-3 pt-3 border-t border-[#D8DADF]">
+                                <button onclick="setAsRouteEndpoint('origin', '${st.name.replace(/'/g, "\\'")}', ${st.lat}, ${st.lon})" class="flex-1 bg-[#FFFFFF] border border-[#E48B59] hover:bg-[#E48B59] hover:text-[#FFFFFF] text-[#E48B59] font-[600] py-1.5 px-2 rounded-[8px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">Start</button>
+                                <button onclick="setAsRouteEndpoint('destination', '${st.name.replace(/'/g, "\\'")}', ${st.lat}, ${st.lon})" class="flex-1 bg-[#FFFFFF] border border-[#E48B59] hover:bg-[#E48B59] hover:text-[#FFFFFF] text-[#E48B59] font-[600] py-1.5 px-2 rounded-[8px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">End</button>
                             </div>
                         </div>`;
 
@@ -1579,7 +1682,7 @@
 
         async function loadTerritories() {
             try {
-                const res = await fetch('/api/territories');
+                const res = await fetch('/api/territories?t=' + Date.now(), { cache: 'no-store' });
                 if (!res.ok) {
                     throw new Error(`Territories request failed with status ${res.status}`);
                 }
@@ -1714,17 +1817,17 @@
                 const escapedName = spot.name.replace(/'/g, "\\'");
                 const popupHtml = `
                     <div class="p-2 w-[220px]">
-                        <div class="font-[600] text-[14px] mb-1 text-white leading-tight">${spot.name}</div>
-                        <div class="text-[11px] text-[#9CA3AF] mb-3 capitalize font-mono">Parking Spot</div>
-                        <div class="flex gap-2 pt-3 border-t border-[#374151]">
-                            <button onclick="setAsRouteEndpoint('origin', '${escapedName}', ${spot.lat}, ${spot.lon})" class="flex-1 bg-[#191C21] border border-[#EA580C] hover:bg-[#EA580C] hover:text-white text-[#EA580C] font-[600] py-1.5 px-2 rounded-[6px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">Start</button>
-                            <button onclick="setAsRouteEndpoint('destination', '${escapedName}', ${spot.lat}, ${spot.lon})" class="flex-1 bg-[#191C21] border border-[#EA580C] hover:bg-[#EA580C] hover:text-white text-[#EA580C] font-[600] py-1.5 px-2 rounded-[6px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">End</button>
+                        <div class="font-[600] text-[14px] mb-1 text-[#111827] leading-tight">${spot.name}</div>
+                        <div class="text-[11px] text-[#4B5563] mb-3 capitalize font-mono">Parking Spot</div>
+                        <div class="flex gap-2 pt-3 border-t border-[#D8DADF]">
+                            <button onclick="setAsRouteEndpoint('origin', '${escapedName}', ${spot.lat}, ${spot.lon})" class="flex-1 bg-[#FFFFFF] border border-[#E48B59] hover:bg-[#E48B59] hover:text-[#FFFFFF] text-[#E48B59] font-[600] py-1.5 px-2 rounded-[8px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">Start</button>
+                            <button onclick="setAsRouteEndpoint('destination', '${escapedName}', ${spot.lat}, ${spot.lon})" class="flex-1 bg-[#FFFFFF] border border-[#E48B59] hover:bg-[#E48B59] hover:text-[#FFFFFF] text-[#E48B59] font-[600] py-1.5 px-2 rounded-[8px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">End</button>
                         </div>
                     </div>
                 `;
                 L.marker([spot.lat, spot.lon], { icon: parkingIcon })
-                    .bindTooltip(spot.name, { sticky: true, className: 'font-sans text-[12px] bg-[#191C21] text-white border-[#374151]' })
-                    .bindPopup(popupHtml, { className: 'rounded-[8px] bg-[#191C21] text-white border-[#374151]' })
+                    .bindTooltip(spot.name, { sticky: true, className: 'font-sans text-[12px] bg-[#FFFFFF] text-[#111827] border-[#D8DADF]' })
+                    .bindPopup(popupHtml, { className: 'rounded-[8px] bg-[#FFFFFF] text-[#111827] border-[#D8DADF]' })
                     .addTo(parkingLayer);
             });
         }
@@ -1752,13 +1855,23 @@
             toggle.addEventListener('click', () => {
                 const content = document.getElementById(contentId);
                 const chevron = document.getElementById(chevronId);
-                if (content.classList.contains('h-0')) {
+                if (content.classList.contains('opacity-0')) {
                     // Expand
-                    content.classList.remove('h-0', 'opacity-0');
+                    content.classList.remove('hidden');
+                    setTimeout(() => {
+                        content.classList.remove('h-0', 'opacity-0');
+                        if (contentId !== 'territory-content') {
+                            content.classList.add('flex-1');
+                        }
+                    }, 10);
                     chevron.style.transform = 'rotate(0deg)';
                 } else {
                     // Collapse
                     content.classList.add('h-0', 'opacity-0');
+                    content.classList.remove('flex-1');
+                    setTimeout(() => {
+                        content.classList.add('hidden');
+                    }, 300);
                     chevron.style.transform = 'rotate(180deg)';
                 }
                 setTimeout(() => map.invalidateSize(), 300);
@@ -1826,6 +1939,13 @@
             expandedTenants.clear();
             selectedGbfsTenantModes.clear();
 
+            if (!map.hasLayer(territoryBusStopsLayer)) map.addLayer(territoryBusStopsLayer);
+            if (!map.hasLayer(territoryTrainStationsLayer)) map.addLayer(territoryTrainStationsLayer);
+            if (!map.hasLayer(territoryGbfsStationsLayer)) map.addLayer(territoryGbfsStationsLayer);
+            
+            allRoutesLayer.clearLayers();
+            gbfsStationsLayer.clearLayers();
+
             renderTerritoryTree();
             renderBusInfoPanel();
         });
@@ -1858,35 +1978,44 @@
 
             const badgesHtml = route.legs.map(leg => {
                 if (leg.type === 'walk') {
-                    return `<span class="text-[#7e7e7e]"><i class="fa-solid fa-person-walking"></i></span>`;
+                    return `<span class="text-[#D8DADF]"><i class="fa-solid fa-person-walking"></i></span>`;
                 } else {
+                    let iconClass = 'fa-bus';
+                    if (leg.type === 'bike') iconClass = 'fa-bicycle';
+                    else if (leg.type === 'car') iconClass = 'fa-car';
+                    else if (leg.type === 'train' || leg.route_type == 2) iconClass = 'fa-train';
+                    
                     const style = leg.route_color ?
                         `background-color: #${leg.route_color}; color: ${leg.route_text_color ? '#' + leg.route_text_color : '#FFFFFF'};` :
                         'background-color: #6B7280; color: #FFFFFF;';
-                    return `<span class="inline-block px-2 py-0.5 text-xs font-bold rounded" style="${style}">${leg.route_name || leg.route_short_name || leg.route_long_name || 'Route'}</span>`;
+                    
+                    const routeName = leg.route_name || leg.route_short_name || leg.route_long_name || 'Route';
+                    const displayName = leg.operator_name ? `${leg.operator_name} ${routeName}` : routeName;
+                    
+                    return `<span class="inline-block px-2 py-0.5 text-xs font-bold rounded shrink-0" style="${style}"><i class="fa-solid ${iconClass} mr-1"></i>${displayName}</span>`;
                 }
-            }).join('<span class="text-gray-300 mx-1">›</span>');
+            }).join('<span class="text-[#9CA3AF] shrink-0">›</span>');
 
             const legsHtml = route.legs.map((leg, idx) => {
                 if (leg.type === 'walk') {
                     return `
                         <div class="relative pl-6 py-2">
                             <div class="flex items-start gap-3">
-                                ${idx < route.legs.length - 1 ? '<div class="absolute left-[11px] top-4 bottom-[-10px] w-0.5 border-l-2 border-dotted border-[#374151]"></div>' : ''}
-                                <div class="absolute left-[-29px] top-1.5 w-[14px] h-[14px] rounded-full border-2 border-[#9CA3AF] bg-[#191C21] z-10 shadow-sm"></div>
-                                <div class="font-mono text-[12px] font-[600] text-white w-12 pt-0.5 shrink-0">${leg.start_time || ''}</div>
+                                ${idx < route.legs.length - 1 ? '<div class="absolute left-[11px] top-4 bottom-[-10px] w-0.5 border-l-2 border-dotted border-[#9CA3AF]"></div>' : ''}
+                                <div class="absolute left-[-29px] top-1.5 w-[14px] h-[14px] rounded-full border-2 border-[#D8DADF] bg-[#53617A] z-10 shadow-sm"></div>
+                                <div class="font-mono text-[12px] font-[600] text-[#FFFFFF] w-12 pt-0.5 shrink-0">${leg.start_time || ''}</div>
                                 <div>
-                                    <div class="font-[600] text-white leading-snug text-[13px]">${leg.from || 'Origin'}</div>
+                                    <div class="font-[600] text-[#FFFFFF] leading-snug text-[13px]">${leg.from || 'Origin'}</div>
                                     <div class="mt-1 flex items-center gap-2">
-                                        <span class="text-[12px] font-[500] text-[#9CA3AF]"><i class="fa-solid fa-person-walking"></i> Walk ${leg.duration} min</span>
+                                        <span class="text-[12px] font-[500] text-[#D8DADF]"><i class="fa-solid fa-person-walking"></i> Walk ${leg.duration} min</span>
                                     </div>
                                 </div>
                             </div>
                             ${idx === route.legs.length - 1 ? `
-                            <div class="relative flex items-start gap-3 mt-4">
-                                <div class="absolute left-[-29px] top-1.5 w-[14px] h-[14px] rounded-full border-2 border-[#9CA3AF] bg-[#191C21] z-10 shadow-sm"></div>
-                                <div class="font-mono text-[12px] font-[600] text-white w-12 pt-0.5 shrink-0">${leg.end_time || ''}</div>
-                                <div class="font-[600] text-white leading-snug text-[13px]">${leg.to || 'Destination'}</div>
+                            <div class="relative flex items-start gap-3 mt-3">
+                                <div class="absolute left-[-29px] top-1.5 w-[14px] h-[14px] rounded-full border-2 border-[#D8DADF] bg-[#53617A] z-10 shadow-sm"></div>
+                                <div class="font-mono text-[12px] font-[600] text-[#FFFFFF] w-12 pt-0.5 shrink-0">${leg.end_time || ''}</div>
+                                <div class="font-[600] text-[#FFFFFF] leading-snug text-[13px]">${leg.to || 'Destination'}</div>
                             </div>
                             ` : ''}
                         </div>
@@ -1898,31 +2027,32 @@
                         'background-color: #3b82f6; color: #FFFFFF;';
                     
                     return `
-                        <div class="relative pl-6 py-3">
-                            <div class="absolute left-[11px] top-4 bottom-4 w-0.5 bg-[#374151]"></div>
+                        <div class="relative pl-6 py-2">
+                            <div class="absolute left-[11px] top-4 bottom-4 w-0.5 bg-[#9CA3AF]"></div>
                             
                             <!-- Ride Start -->
-                            <div class="relative flex items-start gap-3 mb-4">
-                                <div class="absolute left-[-29px] top-1.5 w-[14px] h-[14px] rounded-full border-2 border-[#9CA3AF] bg-[#191C21] z-10 shadow-sm"></div>
-                                <div class="font-mono text-[12px] font-[600] text-white w-12 pt-0.5 shrink-0">${leg.start_time}</div>
+                            <div class="relative flex items-start gap-3 mb-3">
+                                <div class="absolute left-[-29px] top-1.5 w-[14px] h-[14px] rounded-full border-2 border-[#D8DADF] bg-[#53617A] z-10 shadow-sm"></div>
+                                <div class="font-mono text-[12px] font-[600] text-[#FFFFFF] w-12 pt-0.5 shrink-0">${leg.start_time}</div>
                                 <div>
-                                    <div class="font-[600] text-white leading-snug text-[13px]">${leg.from}</div>
+                                    <div class="font-[600] text-[#FFFFFF] leading-snug text-[13px]">${leg.from}</div>
                                     <div class="mt-1 flex items-center gap-2">
-                                        <span class="inline-block px-1.5 py-0.5 text-[10px] font-bold rounded uppercase tracking-wide font-mono" style="${routeBadgeStyle}">${leg.route_name || leg.type}</span>
-                                        <span class="text-[12px] font-[500] text-[#9CA3AF]"><i class="fa-solid ${iconClass}"></i> Ride ${leg.duration} min</span>
+                                        <span class="inline-block px-1.5 py-0.5 text-[10px] font-bold rounded uppercase tracking-wide font-mono shrink-0" style="${routeBadgeStyle}"><i class="fa-solid ${iconClass} mr-1"></i>${leg.operator_name ? leg.operator_name + ' ' : ''}${leg.route_name || leg.type}</span>
+                                        <span class="text-[12px] font-[500] text-[#D8DADF] shrink-0"><i class="fa-solid ${iconClass}"></i> Ride ${leg.duration} min</span>
                                     </div>
                                 </div>
                             </div>
                             
                             <!-- Ride End -->
                             <div class="relative flex items-start gap-3">
-                                <div class="absolute left-[-29px] top-1.5 w-[14px] h-[14px] rounded-full border-2 border-[#9CA3AF] bg-[#191C21] z-10 shadow-sm"></div>
-                                <div class="font-mono text-[12px] font-[600] text-white w-12 pt-0.5 shrink-0">${leg.end_time}</div>
-                                <div class="font-[600] text-white leading-snug text-[13px]">${leg.to}</div>
+                                <div class="absolute left-[-29px] top-1.5 w-[14px] h-[14px] rounded-full border-2 border-[#D8DADF] bg-[#53617A] z-10 shadow-sm"></div>
+                                <div class="font-mono text-[12px] font-[600] text-[#FFFFFF] w-12 pt-0.5 shrink-0">${leg.end_time}</div>
+                                <div class="font-[600] text-[#FFFFFF] leading-snug text-[13px]">${leg.to}</div>
                             </div>
                         </div>
                     `;
-                } else if (leg.type === 'transit') {
+                } else if (leg.type === 'transit' || leg.type === 'train') {
+                    const iconClass = (leg.type === 'train' || leg.route_type == 2) ? 'fa-train' : 'fa-bus';
                     const routeBadgeStyle = leg.route_color ?
                         `background-color: #${leg.route_color}; color: ${leg.route_text_color ? '#' + leg.route_text_color : '#FFFFFF'};` :
                         'background-color: #6B7280; color: #FFFFFF;';
@@ -1930,35 +2060,38 @@
                     const midStops = leg.stops ? leg.stops.filter(s => s.is_intermediate) : [];
                     const midStopsHtml = midStops.length > 0 ? `
                         <details class="mt-1.5 overflow-hidden">
-                            <summary class="text-[12px] text-[#9CA3AF] cursor-pointer select-none hover:text-[#EA580C] flex items-center gap-1 font-[500]">
+                            <summary class="text-[12px] text-[#D8DADF] cursor-pointer select-none hover:text-[#FFFFFF] flex items-center gap-1 font-[500]">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                                 ${midStops.length} intermediate stops
                             </summary>
-                            <div class="mt-2 ml-1 space-y-1.5 border-l-2 border-[#374151] pl-3 mb-2">
-                                ${midStops.map(s => `<div class="flex justify-between text-[12px] text-[#9CA3AF]"><span>${s.name}</span><span class="font-mono text-[#6B7280]">${s.arrival}</span></div>`).join('')}
+                            <div class="mt-2 ml-1 space-y-1.5 border-l-2 border-[#9CA3AF] pl-3 mb-2">
+                                ${midStops.map(s => `<div class="flex justify-between text-[12px] text-[#D8DADF]"><span>${s.name}</span><span class="font-mono text-[#D8DADF]">${s.arrival}</span></div>`).join('')}
                             </div>
                         </details>
                     ` : '';
 
+                    const routeName = leg.route_name || leg.route_short_name || leg.route_long_name || 'Route';
+                    const displayName = leg.operator_name ? `${leg.operator_name} ${routeName}` : routeName;
+
                     return `
                         <div class="flex items-start gap-3 py-2">
                             <div class="w-6 flex flex-col items-center mt-1">
-                                <div class="w-3 h-3 rounded-full" style="${routeBadgeStyle}"></div>
-                                ${idx < route.legs.length - 1 ? `<div class="w-0.5 h-full bg-[#374151] my-1 min-h-[20px]"></div>` : ''}
+                                <div class="w-3 h-3 rounded-full shrink-0" style="${routeBadgeStyle}"></div>
+                                ${idx < route.legs.length - 1 ? `<div class="w-0.5 h-full bg-[#9CA3AF] my-1 min-h-[20px]"></div>` : ''}
                             </div>
-                            <div class="flex-1 pb-3">
+                            <div class="flex-1 pb-2">
                                 <div class="flex items-center gap-2">
-                                    <span class="inline-block px-2 py-0.5 text-[11px] font-[600] rounded-[4px] font-mono shadow-sm" style="${routeBadgeStyle}">
-                                        ${leg.route_name || leg.route_short_name || leg.route_long_name || 'Route'}
+                                    <span class="inline-block px-2 py-0.5 text-[11px] font-[600] rounded-[4px] font-mono shadow-sm shrink-0" style="${routeBadgeStyle}">
+                                        <i class="fa-solid ${iconClass} mr-1"></i>${displayName}
                                     </span>
-                                    <span class="text-[13px] font-[600] text-white leading-tight">${leg.from}</span>
+                                    <span class="text-[13px] font-[600] text-[#FFFFFF] leading-tight">${leg.from}</span>
                                 </div>
-                                <div class="text-[12px] text-[#9CA3AF] mt-1">
+                                <div class="text-[12px] text-[#D8DADF] mt-1">
                                     <div class="flex items-center gap-2 font-mono">
-                                        <span class="font-[600] text-white">${leg.departure_time}</span>
+                                        <span class="font-[600] text-[#FFFFFF]">${leg.departure_time}</span>
                                         &rarr;
-                                        <span class="font-[600] text-white">${leg.arrival_time}</span> 
-                                        <span class="font-sans text-[#9CA3AF]">at ${leg.to}</span>
+                                        <span class="font-[600] text-[#FFFFFF]">${leg.arrival_time}</span> 
+                                        <span class="font-sans text-[#D8DADF]">at ${leg.to}</span>
                                     </div>
                                 </div>
                                 ${midStopsHtml}
@@ -1970,36 +2103,36 @@
             }).join('');
 
             return `
-                <div class="route-card bg-[#191C21] rounded-[8px] border border-[#374151] p-5 mb-3 transition-colors hover:border-[#6B7280]" onclick="showRouteOnMap(${routeIndex})">
-                    <div class="flex justify-between items-center mb-3 cursor-pointer">
+                <div class="route-card rounded-[12px] p-4 mb-2 cursor-pointer" onclick="showRouteOnMap(${routeIndex})">
+                    <div class="flex justify-between items-center mb-2 cursor-pointer">
                         <div class="flex items-baseline gap-2">
-                            <span class="text-[22px] font-[600] text-white tracking-tight font-sans">${route.leave_at || route.departure_time}</span>
-                            <span class="text-[#6B7280]">→</span>
-                            <span class="text-[22px] font-[600] text-white tracking-tight font-sans">${route.arrival_time}</span>
+                            <span class="text-[20px] font-[600] text-[#FFFFFF] tracking-tight font-sans">${route.leave_at || route.departure_time}</span>
+                            <span class="text-[#D8DADF]">→</span>
+                            <span class="text-[20px] font-[600] text-[#FFFFFF] tracking-tight font-sans">${route.arrival_time}</span>
                         </div>
-                        <div class="px-3 py-1.5 bg-[#111827] border border-[#374151] text-[#D1D5DB] font-[600] text-[12px] rounded-full shadow-inner font-mono">
+                        <div class="px-3 py-1.5 bg-[#FFFFFF]/20 border border-[#FFFFFF]/30 text-[#FFFFFF] font-[600] text-[12px] rounded-full shadow-inner font-mono">
                             ${route.duration}
                         </div>
                     </div>
                     
-                    <details class="group mt-2 cursor-pointer" onclick="event.stopPropagation()">
+                    <details class="group mt-1 cursor-pointer" onclick="event.stopPropagation()">
                         <summary class="flex items-center justify-between text-[13px] list-none outline-none">
-                            <div class="flex flex-col gap-2">
-                                <div class="flex items-center gap-2 flex-wrap">
+                            <div class="flex flex-col gap-1 flex-1 min-w-0 pr-3">
+                                <div class="flex items-center gap-1.5 flex-wrap pb-1 w-full">
                                     ${badgesHtml}
                                 </div>
-                                <div class="text-[#9CA3AF] font-[500] text-[12px]">${totalMidStops} stops in total</div>
-                                <div class="mt-1">
+                                <div class="flex items-center gap-2 mt-0.5 flex-wrap">
+                                    <div class="text-[#D8DADF] font-[500] text-[12px] shrink-0">${totalMidStops} stops in total</div>
                                     ${co2Badge(transferDistKm)}
                                 </div>
                             </div>
-                            <div class="flex items-center gap-1 text-[#6B7280] hover:text-[#EA580C] transition-colors bg-[#111827] px-2 py-1 rounded-[6px] border border-[#374151]">
+                            <div class="flex items-center gap-1 text-[#D8DADF] hover:text-[#FFFFFF] transition-colors bg-[#FFFFFF]/10 px-2 py-1 rounded-[8px] border border-[#FFFFFF]/20 shrink-0">
                                 <span class="font-[600] text-[11px] hidden group-open:inline uppercase tracking-wider font-mono">Hide</span>
                                 <span class="font-[600] text-[11px] group-open:hidden uppercase tracking-wider font-mono">Details</span>
                                 <svg class="w-4 h-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                             </div>
                         </summary>
-                        <div class="mt-4 pt-4 border-t border-gray-100">
+                        <div class="mt-3 pt-3 border-t border-[#FFFFFF]/20">
                             ${legsHtml}
                         </div>
                     </details>
@@ -2625,11 +2758,11 @@
                             const escapedName = stop.name.replace(/'/g, "\\'");
                             const popupHtml = `
                                 <div class="p-2 w-[220px]">
-                                    <div class="font-[600] text-[14px] mb-1 text-white leading-tight">${stop.name}</div>
-                                    ${stop.arrival ? `<div class="text-[11px] text-[#9CA3AF] mb-3 font-mono">${stop.arrival}</div>` : ''}
-                                    <div class="flex gap-2 pt-3 border-t border-[#374151]">
-                                        <button onclick="setAsRouteEndpoint('origin', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-[#191C21] border border-[#EA580C] hover:bg-[#EA580C] hover:text-white text-[#EA580C] font-[600] py-1.5 px-2 rounded-[6px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">Start</button>
-                                        <button onclick="setAsRouteEndpoint('destination', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-[#191C21] border border-[#EA580C] hover:bg-[#EA580C] hover:text-white text-[#EA580C] font-[600] py-1.5 px-2 rounded-[6px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">End</button>
+                                    <div class="font-[600] text-[14px] mb-1 text-[#111827] leading-tight">${stop.name}</div>
+                                    ${stop.arrival ? `<div class="text-[11px] text-[#4B5563] mb-3 font-mono">${stop.arrival}</div>` : ''}
+                                    <div class="flex gap-2 pt-3 border-t border-[#D8DADF]">
+                                        <button onclick="setAsRouteEndpoint('origin', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-[#FFFFFF] border border-[#E48B59] hover:bg-[#E48B59] hover:text-[#FFFFFF] text-[#E48B59] font-[600] py-1.5 px-2 rounded-[8px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">Start</button>
+                                        <button onclick="setAsRouteEndpoint('destination', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-[#FFFFFF] border border-[#E48B59] hover:bg-[#E48B59] hover:text-[#FFFFFF] text-[#E48B59] font-[600] py-1.5 px-2 rounded-[8px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">End</button>
                                     </div>
                                 </div>
                             `;
@@ -2724,11 +2857,11 @@
                     const escapedName = stop.name.replace(/'/g, "\\'");
                     const popupHtml = `
                         <div class="p-2 w-[220px]">
-                            <div class="font-[600] text-[14px] mb-1 text-white leading-tight">${stop.name}</div>
-                            ${stop.arrival ? `<div class="text-[11px] text-[#9CA3AF] mb-3 font-mono">${stop.arrival}</div>` : ''}
-                            <div class="flex gap-2 pt-3 border-t border-[#374151]">
-                                <button onclick="setAsRouteEndpoint('origin', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-[#191C21] border border-[#EA580C] hover:bg-[#EA580C] hover:text-white text-[#EA580C] font-[600] py-1.5 px-2 rounded-[6px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">Start</button>
-                                <button onclick="setAsRouteEndpoint('destination', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-[#191C21] border border-[#EA580C] hover:bg-[#EA580C] hover:text-white text-[#EA580C] font-[600] py-1.5 px-2 rounded-[6px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">End</button>
+                            <div class="font-[600] text-[14px] mb-1 text-[#111827] leading-tight">${stop.name}</div>
+                            ${stop.arrival ? `<div class="text-[11px] text-[#4B5563] mb-3 font-mono">${stop.arrival}</div>` : ''}
+                            <div class="flex gap-2 pt-3 border-t border-[#D8DADF]">
+                                <button onclick="setAsRouteEndpoint('origin', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-[#FFFFFF] border border-[#E48B59] hover:bg-[#E48B59] hover:text-[#FFFFFF] text-[#E48B59] font-[600] py-1.5 px-2 rounded-[8px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">Start</button>
+                                <button onclick="setAsRouteEndpoint('destination', '${escapedName}', ${stop.lat}, ${stop.lon})" class="flex-1 bg-[#FFFFFF] border border-[#E48B59] hover:bg-[#E48B59] hover:text-[#FFFFFF] text-[#E48B59] font-[600] py-1.5 px-2 rounded-[8px] transition-colors text-center text-[11px] uppercase tracking-wider font-mono shadow-sm">End</button>
                             </div>
                         </div>
                     `;
@@ -2832,3 +2965,7 @@
 </body>
 
 </html>
+
+
+
+

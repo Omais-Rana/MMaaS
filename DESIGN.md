@@ -1,25 +1,25 @@
 ---
 version: "neuform-top-creators-featured"
-name: "Auralis - Neural Audio Engine"
-description: "Auralis Neural Login Section is designed for authenticating users through a focused access flow. Key features include reusable structure, responsive behavior, and production-ready presentation. It is suitable for authentication screens in web products."
+name: "Ecosystem Visualization"
+description: "Ecosystem Visualization Feature Section is designed for highlighting product capabilities and value points. Key features include reusable structure, responsive behavior, and production-ready presentation. It is suitable for component libraries and responsive product interfaces."
 colors:
-  primary: "#EA580C"
-  secondary: "#FFFFFF"
-  accent: "#FDBA74"
+  primary: "#E48B59"
+  secondary: "#ED7B46"
+  accent: "#ED7B46"
   background: "#FFFFFF"
-  surface: "#191C21"
+  surface: "#53617A"
   text-primary: "#111827"
   text-secondary: "#4B5563"
-  border: "#E5E7EB"
+  border: "#D8DADF"
 typography:
   display-lg:
-    fontFamily: "Geist"
+    fontFamily: "Inter"
     fontSize: "64px"
     fontWeight: 500
     lineHeight: "1.04"
     letterSpacing: "0"
   body-md:
-    fontFamily: "Geist"
+    fontFamily: "Inter"
     fontSize: "16px"
     fontWeight: 400
     lineHeight: "1.6"
@@ -34,7 +34,7 @@ spacing:
   card-padding: "24px"
   section-padding: "80px"
 rounded:
-  card: "8px"
+  card: "16px"
   control: "8px"
   pill: "9999px"
 components:
@@ -45,24 +45,24 @@ components:
     background: "Use primary or accent colors for the main action"
     radius: "Use the control or pill radius based on the source HTML"
 ---
-# Auralis - Neural Audio Engine
-Source: Neuform Featured templates from top creators. Author: Meng To (@mengto). Views: 1554; favorites: 43; remixes: 22.
-Tags: login, animated, webgl, threejs, security, input, validation, effect.
+# Ecosystem Visualization
+Source: Neuform Featured templates from top creators. Author: Vanh DesignCode (@vanh). Views: 600; favorites: 75; remixes: 22.
+Tags: feature, section, animated, bento, charts.
 ## Overview
-Auralis Neural Login Section is designed for authenticating users through a focused access flow. Key features include reusable structure, responsive behavior, and production-ready presentation. It is suitable for authentication screens in web products.
+Ecosystem Visualization Feature Section is designed for highlighting product capabilities and value points. Key features include reusable structure, responsive behavior, and production-ready presentation. It is suitable for component libraries and responsive product interfaces.
 
-AURALIS ° Platform Solutions Developers Company Docs Sign in Advanced Vocal Synthesis Converse Naturally. Beyond Boundaries. Infinite Scale. Generate highly realistic human audio instantly, replicating vocal signatures…
+System Metriqs Real-time mapping of data streams and architectural consolidation. Designed for absolute clarity. Fodlecte Lome pastro allios saide oncesic omd cosfotidtila cert irot niridve const oormot. Heschins Lome s…
 ## Composition
 Use the attached HTML reference as the source of truth. Preserve the visible hierarchy, first-screen composition, section rhythm, density, and interaction tone before adapting copy or content.
-Key visible headings include: Converse Naturally. Beyond Boundaries. Infinite Scale.; Seamless Streaming; Vocal Cloning; Enterprise-Ready.
+Key visible headings include: System Metriqs; Fodlecte; Heschins; ertads; Vosging.
 ## Colors
-Anchor the palette in primary #EA580C, secondary #FFFFFF, accent #FDBA74, background #FFFFFF, surface #191C21, text-primary #111827. Keep background, surface, text, and border roles distinct so generated layouts retain the same contrast pattern as the source.
+Anchor the palette in primary #E48B59, secondary #ED7B46, accent #ED7B46, background #FFFFFF, surface #53617A, text-primary #111827. Keep background, surface, text, and border roles distinct so generated layouts retain the same contrast pattern as the source.
 ## Typography
-Use Geist for display moments and Geist for body copy unless the HTML clearly demands a compatible fallback. Labels and technical metadata should use JetBrains Mono or an equivalent mono face.
+Use Inter for display moments and Inter for body copy unless the HTML clearly demands a compatible fallback. Labels and technical metadata should use JetBrains Mono or an equivalent mono face.
 ## Layout
 Keep spacing deliberate and stable. Favor the same grid direction, max-width behavior, card density, and responsive stacking seen in the HTML. Do not replace distinctive source structures with generic SaaS sections.
 ## Components
-Authentication and CTA controls should preserve the source button hierarchy, input density, and focused conversion path.
+Dashboard, chart, and data panels should preserve their compact operational hierarchy, nested surfaces, and metric emphasis.
 ## Motion
 Preserve existing motion cues such as masked reveals, staggered entrance, hover lift, scroll-triggered transitions, and ambient movement. Keep easing smooth and restrained.
 ## WebGL & Effects

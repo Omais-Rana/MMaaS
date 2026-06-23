@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\GbfsSource;
 use App\Models\GbfsStation;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -15,14 +16,14 @@ class GbfsIntegrationService
      */
     public function syncStations(): void
     {
-        /** @var \Illuminate\Database\Eloquent\Collection<int, \App\Models\GbfsSource> $sources */
+        /** @var Collection<int, GbfsSource> $sources */
         $sources = GbfsSource::query()->where('is_active', true)->get();
 
         foreach ($sources as $source) {
             try {
                 $this->syncSourceStations($source);
             } catch (\Exception $e) {
-                Log::error("Failed to sync GBFS stations for source {$source->id}: " . $e->getMessage());
+                Log::error("Failed to sync GBFS stations for source {$source->id}: ".$e->getMessage());
             }
         }
     }
@@ -32,14 +33,14 @@ class GbfsIntegrationService
      */
     public function syncStatuses(): void
     {
-        /** @var \Illuminate\Database\Eloquent\Collection<int, \App\Models\GbfsSource> $sources */
+        /** @var Collection<int, GbfsSource> $sources */
         $sources = GbfsSource::query()->where('is_active', true)->get();
 
         foreach ($sources as $source) {
             try {
                 $this->syncSourceStatuses($source);
             } catch (\Exception $e) {
-                Log::error("Failed to sync GBFS statuses for source {$source->id}: " . $e->getMessage());
+                Log::error("Failed to sync GBFS statuses for source {$source->id}: ".$e->getMessage());
             }
         }
     }
@@ -59,25 +60,26 @@ class GbfsIntegrationService
 
         if (! $stationInfoUrl) {
             Log::warning("No station_information feed found for GBFS source {$source->id}");
+
             return;
         }
 
         // Fetch station information
         $response = Http::timeout(10)->get($stationInfoUrl);
 
-        if (!$response->successful()) {
+        if (! $response->successful()) {
             throw new \Exception("HTTP request failed with status {$response->status()}");
         }
 
         $infoResponse = $response->json();
         $stations = $infoResponse['data']['stations'] ?? [];
 
-        if (!is_array($stations)) {
+        if (! is_array($stations)) {
             return;
         }
 
         foreach ($stations as $stationData) {
-            if (!isset($stationData['station_id'])) {
+            if (! isset($stationData['station_id'])) {
                 continue;
             }
 
@@ -103,34 +105,35 @@ class GbfsIntegrationService
 
         if (! $stationStatusUrl) {
             Log::warning("No station_status feed found for GBFS source {$source->id}");
+
             return;
         }
 
         // Fetch station statuses
         $response = Http::timeout(10)->get($stationStatusUrl);
 
-        if (!$response->successful()) {
+        if (! $response->successful()) {
             throw new \Exception("HTTP request failed with status {$response->status()}");
         }
 
         $statusResponse = $response->json();
         $stations = $statusResponse['data']['stations'] ?? [];
 
-        if (!is_array($stations)) {
+        if (! is_array($stations)) {
             return;
         }
 
         // Determine TTL from response, fallback to 60 seconds
         $ttl = $statusResponse['ttl'] ?? 60;
         // If TTL is 0 or negative, set to 60s default
-        if (!is_numeric($ttl) || $ttl <= 0) {
+        if (! is_numeric($ttl) || $ttl <= 0) {
             $ttl = 60;
         }
 
         $lastUpdated = $statusResponse['last_updated'] ?? time();
 
         foreach ($stations as $stationStatus) {
-            if (!isset($stationStatus['station_id'])) {
+            if (! isset($stationStatus['station_id'])) {
                 continue;
             }
 
@@ -153,7 +156,7 @@ class GbfsIntegrationService
     {
         $response = Http::timeout(10)->get($source->url);
 
-        if (!$response->successful()) {
+        if (! $response->successful()) {
             throw new \Exception("Discovery HTTP request failed with status {$response->status()}");
         }
 
@@ -171,7 +174,7 @@ class GbfsIntegrationService
             }
         }
 
-        if (!is_array($feeds)) {
+        if (! is_array($feeds)) {
             return null;
         }
 

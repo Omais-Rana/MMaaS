@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Jobs\SyncSingleGbfsSourceJob;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -47,7 +48,7 @@ class GbfsSource extends Model
 
         static::saved(function (GbfsSource $source) {
             if ($source->wasRecentlyCreated || $source->wasChanged('url') || $source->wasChanged('is_active')) {
-                \App\Jobs\SyncSingleGbfsSourceJob::dispatch($source)->afterResponse();
+                SyncSingleGbfsSourceJob::dispatch($source)->afterResponse();
             }
         });
     }

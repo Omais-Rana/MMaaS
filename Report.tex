@@ -1,316 +1,239 @@
-\documentclass[12pt]{article}
+\documentclass[12pt,a4paper]{article}
 
-\usepackage[a4paper,margin=1in]{geometry}
+\usepackage[margin=1in]{geometry}
 \usepackage{hyperref}
 \usepackage{graphicx}
 \usepackage{booktabs}
-\usepackage{longtable}
-\usepackage{array}
 \usepackage{enumitem}
-\usepackage{amsmath}
-\usepackage{amssymb}
 \usepackage{microtype}
 \usepackage{setspace}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{amsmath}
+\usepackage{float}
 
-\title{MultiModal Solution for Fragmented Territory}
-\author{Technical Report}
-\date{May 20, 2026}
+\onehalfspacing
+
+\title{
+    \vspace{2cm}
+    \textbf{\Huge MultiModal Mobility Platform} \\
+    \vspace{0.5cm}
+    \Large Unifying Fragmented Territories through Data Integration \\
+    \vspace{2cm}
+}
+\author{
+    \textbf{Master 1 IoT} \\
+    Muhammad Omais Rana \\
+    \vspace{0.5cm}
+    \textbf{Supervisor:} Philippe Canalda \\
+    \vspace{1cm}
+}
+\date{\today}
 
 \begin{document}
+
 \maketitle
+\thispagestyle{empty}
+
+\newpage
 \tableofcontents
 \newpage
 
-\begin{abstract}
-This report documents a multimodal mobility system designed for fragmented territories and multi-operator environments. The platform ingests GTFS feeds, normalizes them into a multi-tenant data model, and provides route discovery with direct and transfer-based itineraries. It emphasizes operational resilience (large datasets, exceptions, noisy inputs), analytics for demand observation, and actionable administration via Filament. The system aligns with carbon-reduction goals through public transit prioritization, walking integration, and data-driven service optimization for underserved, discontinuous service regions.
-\end{abstract}
+\section{Introduction \& Context}
+The subject of this project is to conceptualize, design, and implement a unified, multi-modal Mobility as a Service (MaaS) platform. This platform is specifically tailored for regions where mobility services are heavily fragmented across various disconnected operators. By bridging these gaps, the platform aims to provide end-users with seamless, door-to-door journey planning that dynamically integrates buses, trains, and shared vehicles, ultimately encouraging a massive shift towards greener transportation.
 
-\section{Introduction}
-Fragmented territories are regions where public transport is operated by multiple agencies with discontinuous service coverage and heterogeneous data quality. This architecture targets these conditions by:
-\begin{itemize}[leftmargin=1.5em]
-    \item Supporting multi-tenant operators and customer and employee role separation.
-    \item Ingesting GTFS data with validation, merge semantics, and incremental updates.
-    \item Performing route search that mixes direct trips, walking connections, and transfers.
-    \item Rendering territory polygons and route shapes for map-based MaaS experiences.
+\section{Problematics \& Challenges}
+
+\subsection{Fragmented Territory}
+One of the most significant barriers to seamless public transportation is the geographic and administrative fragmentation of the territory. In regions like Bourgogne-Franche-Comté, the mobility landscape resembles a "mille-feuille" (layer cake) of Autorités Organisatrices de la Mobilité (AOMs) and Opérateurs de Mobilité (OMs). Each administrative block, whether a municipality, an agglomeration, or a broader regional council, manages its own specific transport network. 
+
+Because these networks are designed in silos, their service areas often end abruptly at administrative borders, creating severe discontinuities for passengers attempting to travel between neighboring towns.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{mille.png}
+    \caption{Map illustrating the fragmented boundaries of various AOMs and OMs.}
+    \label{fig:fragmented_map}
+\end{figure}
+
+To resolve this, the platform calculates overlapping transfer points, essentially stitching these disjointed regions together to form a continuous travel corridor.
+
+\begin{figure}[H]
+    \centering
+    % \includegraphics[width=0.8\textwidth]{mille_bridged.png}
+    \vspace{4cm} % Placeholder space
+    \caption{Diagram illustrating how fragmented territories and disparate transport networks are successfully bridged via multimodal hubs.}
+    \label{fig:mille_bridged}
+\end{figure}
+
+\subsection{Aggregation of Heterogeneous Data}
+Solving the fragmentation problem requires the aggregation of massive, \textbf{heterogeneous, multimodal data types}. A core tenet of this project is that the platform operates on \textbf{real data, not simulations}. Every route generated relies on actual production data published by transit authorities.
+
+This data is fundamentally split into distinct paradigms:
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{Static Data (GTFS):} Traditional public transit operates on predetermined schedules. This data is universally encoded using the General Transit Feed Specification (GTFS). GTFS is highly structured but inherently static, relying on massive sets of CSV files defining precise geographic stops, polyline shapes, and calendar-specific service exceptions.
+    \item \textbf{Dynamic Data (GBFS):} Modern micromobility (shared bikes, scooters, and cars) operates on a free-floating basis. This data is represented using the General Bikeshare Feed Specification (GBFS), which utilizes lightweight JSON APIs to broadcast live vehicle locations, battery levels, and availability states.
+    \item \textbf{Carpooling Data:} A third emerging data type involves peer-to-peer ad-hoc journeys, requiring a dynamic registry of driver commutes that must be reconciled against the fixed GTFS schedules.
 \end{itemize}
 
-\section{Technical Aspects}
-\subsection{Platform Stack and Runtime}
-\begin{itemize}[leftmargin=1.5em]
-    \item Backend: Laravel 12, PHP 8.3, queued jobs.
-    \item Admin UI: Filament v4 (Livewire-based SDUI).
-    \item Data: GTFS entities modeled in Eloquent with tenant scoping.
-    \item Caching: Laravel cache for heavy computations (route shapes, stop caches, territories).
-\end{itemize}
+The architectural challenge lies in building a pipeline capable of parsing gigabytes of static GTFS schedules in SQL databases while continuously polling live GBFS endpoints, and ultimately merging these datasets into a unified routing graph\footnote{Future implementations will also evaluate real-time transit standards such as GTFS-RT, SIRI, and NeTEx to provide live delay notifications and vehicle positions.}.
 
-\subsection{Data Model (Core Entities)}
-\begin{itemize}[leftmargin=1.5em]
-    \item \textbf{ScheduleImport}: Tracks GTFS upload, status, and statistics.
-    \item \textbf{Route, Trip, Stop, StopTime, Shape}: GTFS normalization with tenant scope.
-    \item \textbf{Calendar, CalendarDate}: Service validity and exceptions.
-    \item \textbf{RouteSearch}: Customer search telemetry for analytics.
-\end{itemize}
 
-\subsection{Multi-Tenancy and Access Control}
-A global scope is applied to key models (ScheduleImport, Route, Trip, Stop, StopTime, Calendar, CalendarDate), enforcing tenant isolation for sub-admins and employees while allowing superadmin access. Tenant assignment is injected during model creation, enabling consistent multi-operator separation.
 
-\subsection{Algorithmic Core}
-The platform\textquotesingle s technical core is algorithmic: GTFS parsing, route discovery with direct and transfer heuristics, calendar-aware service eligibility, walking leg insertion, and cached geometry clipping. These are detailed in the \textit{Main Algorithms} section.
+\newpage
 
-\section{Scientific Aspects and Research Framing}
-\subsection{Carbon Reduction Emphasis}
-The platform contributes to emissions reduction by:
-\begin{itemize}[leftmargin=1.5em]
-    \item Enabling accessible, multimodal itineraries that prioritize transit.
-    \item Integrating walking legs to reduce reliance on private vehicles.
-    \item Improving service clarity through accurate schedules and map-based visibility.
-    \item Enabling operational analytics that can guide green service expansion.
-\end{itemize}
+\section{Proposed Solution Architecture}
 
-\subsection{Operational Metrics Beyond Carbon}
-While carbon reduction is central, the report should also cover:
-\begin{itemize}[leftmargin=1.5em]
-    \item Time efficiency (door-to-door journey time).
-    \item Energy efficiency (mode shift and operational optimization).
-    \item Reliability and service continuity (reduced uncertainty).
-\end{itemize}
-These metrics create a broader evidence base for policy adoption and funding.
+\subsection{Global Infrastructure \& Data Flow}
+The solution is built on a robust multi-tenant architecture. The underlying infrastructure separates the hardware layers (database clusters, background queue workers) from the software application layer. The data flow acts as a Directed Acyclic Graph (DAG) where raw GTFS archives and live GBFS streams are ingested, normalized into a common relational schema, and then indexed for rapid spatial queries.
 
-\subsection{Research and Validation Orientation}
-The system is designed to support applied research questions in fragmented territories, including demand distribution, service accessibility, and coverage discontinuities. The combination of GTFS-derived baselines, search telemetry, and territory modeling enables longitudinal evaluation and policy-aligned reporting.
+\begin{figure}[h!]
+    \centering
+    % \includegraphics[width=0.9\textwidth]{infrastructure_dag.png}
+    \vspace{4cm} % Placeholder space
+    \caption{Global Diagram detailing hardware/software infrastructure and the directional flow of data from external sources to the end-user.}
+    \label{fig:infrastructure_dag}
+\end{figure}
 
-\section{System Overview}
-\subsection{GTFS Import Pipeline}
-The ingestion flow is built for resilience and large feed size:
-\begin{enumerate}[leftmargin=1.5em]
-    \item Upload GTFS archive via Filament.
-    \item Queue parsing job with extended timeouts and memory limits.
-    \item Extract and parse CSV files by entity, using:
+\subsection{Actor Authorities \& Multi-Tenancy}
+The architecture isolates data by cryptographically tagging every transport element with a \texttt{tenant\_id}. The system identifies three major actors, each wielding distinct authorities:
+\begin{enumerate}
+    \item \textbf{AOM (Superadmin):} The regional authority that possesses a global overview of the entire territory. The AOM is primarily responsible for the \textbf{management of territories and all subordinate OMs}. Crucially, the AOM also dictates high-level \textbf{Pricing power} across the network and analyzes aggregated \textbf{customer usage statistics} to evaluate the performance of the entire region.
+    \item \textbf{OM (Tenant Admin):} The specific mobility operator. They maintain full autonomy over their specific service lines, possessing the authority to upload their own GTFS schedules, manage employee roles, and track tenant-specific performance without relying on the AOM.
+    \item \textbf{End User (Customer/Guest):} Interacts exclusively with the unified search portal to consume the aggregated data.
+\end{enumerate}
+
+\begin{figure}[h!]
+    \centering
+    % \includegraphics[width=0.9\textwidth]{actors_authorities.png}
+    \vspace{4cm} % Placeholder space
+    \caption{Interaction diagram mapping the three major actors to their respective authorities and UI panels.}
+    \label{fig:actors_authorities}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    % \includegraphics[width=0.9\textwidth]{aom_dashboard.png}
+    \vspace{4cm} % Placeholder space
+    \caption{Screenshot of the AOM (Regional Administrator) dashboard interface, displaying overarching regional statistics and multi-tenant management features.}
+    \label{fig:aom_dashboard}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    % \includegraphics[width=0.9\textwidth]{om_dashboard.png}
+    \vspace{4cm} % Placeholder space
+    \caption{Screenshot of the OM (Mobility Operator) tenant dashboard, highlighting the GTFS upload module and localized fleet analytics.}
+    \label{fig:om_dashboard}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    % \includegraphics[width=0.9\textwidth]{end_user_interface.png}
+    \vspace{4cm} % Placeholder space
+    \caption{Screenshot of the End User public interface, showing the unified multimodal map and custom itinerary search capabilities.}
+    \label{fig:end_user_interface}
+\end{figure}
+
+\newpage
+
+\section{Routing Algorithms \& Data Processing}
+
+\subsection{Implementation Tech Stack}
+The backend is driven by \textbf{Laravel 12 (PHP 8.3)}, utilizing its expressive ORM and robust queuing system for background data ingestion. The administration panels are constructed using \textbf{Filament v4}, providing a rapid Server-Driven UI. A highly relational \textbf{MySQL} database relies on spatial indexing to quickly calculate Haversine distances between coordinates and transport nodes.
+
+\subsection{Custom Heuristic Routing Algorithm}
+Industry-standard transit algorithms like A* or Dijkstra rely on graph-theory. Converting a time-dependent GTFS network into a graph results in a massive "state explosion" that is highly inefficient to traverse within a standard relational database. Conversely, timetable-based algorithms like RAPTOR (Round-Based Public Transit Routing) avoid graphs but require the entire regional dataset to be pre-loaded into RAM—a significant architectural challenge for stateless PHP applications handling multiple tenants.
+
+Instead of fighting these architectural limitations, this platform leverages a deterministic, data-driven heuristic optimized for relational SQL databases.
+
+\begin{enumerate}[label=\textbf{\arabic*.}, leftmargin=*]
+    \item \textbf{Spatial Resolution:} The algorithm locates the nearest bus stops or shared vehicles within a defined walking radius from the user's origin.
+    \item \textbf{Trunk and Feeder Leg Construction:} 
     \begin{itemize}
-        \item \texttt{updateOrCreate} for merge semantics.
-        \item Batch inserts for shapes.
-        \item Cached trip and stop lookups for stop\_times.
+        \item It identifies major hubs (e.g., SNCF stations) near both the origin and destination.
+        \item A "Feeder" bus is located to transport the user to the initial hub.
+        \item A "Trunk" train is located to traverse the massive distance between the fragmented territories.
+        \item A final "Feeder" vehicle completes the journey to the workplace.
     \end{itemize}
-    \item Commit transaction; schedule post-processing (city enrichment).
+    \item \textbf{CO2 Emission Calculation:} As the algorithm compiles the valid legs of the journey, it applies a carbon coefficient based on the transport mode (e.g., $X$ grams/km for an electric train vs $Y$ grams/km for a diesel bus), providing the user with an exact ecological footprint for the chosen itinerary.
+    \item \textbf{GBFS Injection:} Live shared bicycles are evaluated as direct alternatives for short distances, scored against public transit based on total duration.
 \end{enumerate}
 
-\subsection{Route Search Services}
-The API exposes:
-\begin{itemize}[leftmargin=1.5em]
-    \item Stop search with accent-insensitive matching and location clustering.
-    \item Route discovery for direct trips and transfer-based journeys.
-    \item Route shapes and territory polygons for map visualization.
+\begin{figure}[h!]
+    \centering
+    % \includegraphics[width=0.8\textwidth]{itinerary_flow.png}
+    \vspace{4cm} % Placeholder space
+    \caption{Flow diagram detailing the step-by-step logic of the itinerary generation algorithm.}
+    \label{fig:itinerary_flow}
+\end{figure}
+
+\begin{figure}[h!]
+    \centering
+    % \includegraphics[width=0.8\textwidth]{algo_screenshot.png}
+    \vspace{4cm} % Placeholder space
+    \caption{Code snippet demonstrating the execution of the custom routing algorithm.}
+    \label{fig:algo_screenshot}
+\end{figure}
+
+\newpage
+
+\section{Deliverables \& Results}
+
+To ensure the long-term viability and academic reproducibility of this project, the following assets and contributions have been produced:
+
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{Platform (GitHub):} The entire source code of the backend, database migrations, and frontend map interfaces are version-controlled and available for further development.
+    \item \textbf{Demonstration Environment:} A fully functional live instance allowing users to perform multimodal searches crossing the boundaries of multiple real-world transit networks.
+    \item \textbf{Technical Documentation:} Comprehensive User's and Developer's guides covering MaaS navigation, GTFS ingestion, and local Docker configurations.
+    \item \textbf{Scientific Research Paper (Under Preparation):} An academic paper synthesizing the findings, methodological frameworks, and real-world impact of this multi-tenant routing architecture. This publication is intended to serve as the foundational research for a potential Ph.D. thesis exploring advanced Mobility as a Service paradigms.
+    \item \textbf{Conference Contribution:} Results and methodological frameworks from this project are being prepared for presentation at an upcoming mobility/IoT conference meeting.
 \end{itemize}
 
-\section{Main Algorithms}
-\subsection{GTFS Parsing and Normalization}
-\textbf{Approach:}
-\begin{itemize}[leftmargin=1.5em]
-    \item ZIP extraction into a temp directory.
-    \item CSV parsing with header normalization and data alignment.
-    \item Validation of required fields, graceful skipping of invalid stops.
-    \item Transactional writes for consistency.
-\end{itemize}
+\section{Future Perspectives}
 
-\textbf{Optimization:}
-\begin{itemize}[leftmargin=1.5em]
-    \item Shape points are inserted in batches to avoid memory spikes.
-    \item Trip and stop caches prevent repeated lookups during stop\_time creation.
-\end{itemize}
+\subsection{Carpooling Integration (MuCar)}
+While public transit forms the backbone of the platform, private vehicles remain ubiquitous in rural areas devoid of transit stops. A primary future objective is the integration of the "MuCar" module—a peer-to-peer carpooling network. Private drivers will register their commutes directly into the routing engine, allowing the algorithm to dynamically suggest a citizen's car as a "Feeder" leg to transport a passenger to the nearest major train station.
 
-\subsection{Stop City Enrichment (Reverse Geocoding)}
-\textbf{Goal:} Populate \texttt{Stop.city} without blocking GTFS imports.
-\begin{itemize}[leftmargin=1.5em]
-    \item First pass: reuse existing stops with same coordinates (within 100m).
-    \item Second pass: cluster remaining stops within 1 km and query Nominatim once per cluster.
-    \item Caching layer: short-term in-memory and 30-day persistent cache.
-\end{itemize}
+\begin{figure}[h!]
+    \centering
+    % \includegraphics[width=0.8\textwidth]{mucar_integration.png}
+    \vspace{4cm} % Placeholder space
+    \caption{Conceptual diagram illustrating the integration of the MuCar carpooling network into the existing GTFS/GBFS routing engine.}
+    \label{fig:mucar_diagram}
+\end{figure}
 
-\textbf{Scientific method:} Haversine distance for proximity grouping; rate limiting for API sustainability.
+\subsection{Unified Pricing and Ticketing}
+Achieving a true "Level 3" MaaS platform requires transitioning from route discovery to financial settlement. Future iterations will introduce global pricing bundles orchestrated by the AOM. A user will pay a single monthly subscription to the platform, and a complex financial clearinghouse algorithm will track validation metrics to fairly distribute the revenue back to the specific OMs.
 
-\subsection{Route-Finding Algorithms (Actual Implementation)}
-This system does not currently run a graph-wide shortest-path algorithm (for example, Dijkstra or RAPTOR) over a full time-expanded network. Instead, it implements a deterministic, data-driven routing pipeline built directly on GTFS stop\_times and trips. The algorithm is optimized for real-time use on large datasets without heavy precomputation.
-
-\subsubsection{1) Stop Resolution and Disambiguation}
-The first step is to map user inputs to concrete stop IDs. The algorithm prioritizes spatial precision:
-\begin{enumerate}[leftmargin=1.5em]
-    \item If GPS coordinates are available, select stop IDs within a proximity threshold.
-    \item Expand to sibling platforms sharing the same stop name within a short radius.
-    \item If coordinates are absent, fallback to exact stop name match, then prefix match.
-\end{enumerate}
-
-\subsubsection{2) Service Eligibility (Calendar and Exceptions)}
-Service validity is computed for the requested date using:
-\begin{itemize}[leftmargin=1.5em]
-    \item Base calendar rules: day-of-week inclusion within start and end dates.
-    \item Exception rules: calendar\_dates type 1 adds service; type 2 removes service.
-    \item Fallback: if no schedule data exists, all services are considered active.
-\end{itemize}
-
-\subsubsection{3) Direct Route Search (Exact Stops)}
-The algorithm queries stop\_times twice on the same trip:
-\begin{itemize}[leftmargin=1.5em]
-    \item Join stop\_times as origin (st1) and destination (st2).
-    \item Require st2.stop\_sequence greater than st1.stop\_sequence.
-    \item Enforce active service IDs and minimum departure time.
-\end{itemize}
-Routes are then de-duplicated by line (route short name plus operator) to avoid repetition and keep the nearest departure for each route.
-
-\subsubsection{4) Direct Route Search (Nearby Stops)}
-To support fragmented stop access:
-\begin{itemize}[leftmargin=1.5em]
-    \item A preloaded stop cache supports zero-query proximity scans.
-    \item Nearby origin and destination stops are merged with exact stops.
-    \item Two-pass priority: exact-origin to nearby-destination first, then nearby-origin.
-\end{itemize}
-
-\subsubsection{5) Transfer Search (One Transfer)}
-When direct routes are unavailable, the system performs a one-transfer search:
-\begin{enumerate}[leftmargin=1.5em]
-    \item Compute all candidate first legs from origin to any transfer stop.
-    \item Precompute all nearby transfer stops in-memory.
-    \item Run one batched query for all second legs to all destination candidates.
-    \item Match first and second legs in PHP, enforcing transfer time windows.
-\end{enumerate}
-
-\subsubsection{6) Walking Integration}
-Walking legs are integrated using Haversine distance and speed-based time estimates:
-\[
-    t_{walk} = \max\left(1, \frac{d_{km}}{v_{km/h}} \cdot 60\right)
-\]
-Walking legs are inserted:
-\begin{itemize}[leftmargin=1.5em]
-    \item From origin to the boarding stop (if not exactly at stop).
-    \item Between transfer stops (if transfer requires spatial movement).
-    \item From alighting stop to destination.
-\end{itemize}
-
-\subsubsection{7) Journey Scoring and Ranking}
-Journeys are scored using a weighted penalty model:
-\[
-    score = 10000 - 50 \cdot T - 200 \cdot X - 10 \cdot W
-\]
-where:
-\begin{itemize}[leftmargin=1.5em]
-    \item $T$ = total journey time in minutes,
-    \item $X$ = number of transfers,
-    \item $W$ = total walking distance (km).
-\end{itemize}
-Journeys are deduplicated by route identity plus transfer count, then sorted by score.
-
-\subsubsection{8) Midnight-Safe Time Arithmetic}
-Trip durations and waits are computed with a midnight rollover guard:
-\begin{itemize}[leftmargin=1.5em]
-    \item If arrival time is earlier than departure, add 24 hours.
-    \item Prevent negative durations that would distort scoring.
-\end{itemize}
-
-\subsubsection{9) Shape Clipping for Map Presentation}
-Route geometry is clipped to the trip segment only:
-\begin{itemize}[leftmargin=1.5em]
-    \item Find nearest shape points to origin and destination stops.
-    \item Slice the shape polyline between those indices.
-\end{itemize}
-This provides accurate map segments while reusing GTFS shapes.
-
-\subsubsection{10) Caching and Performance Strategy}
-\begin{itemize}[leftmargin=1.5em]
-    \item Stop cache: preloaded once per request, reused for all distance checks.
-    \item Shape cache: per-request in-memory caching of shape points by shape\_id.
-    \item Route shapes cache: persistent cache for map visualization.
-\end{itemize}
-
-\subsubsection{Position Relative to Dijkstra and RAPTOR}
-The current pipeline resembles a constrained, GTFS-join-based search rather than a full graph shortest-path. It is optimized for:
-\begin{itemize}[leftmargin=1.5em]
-    \item Quick response for fragmented datasets.
-    \item Minimal precomputation.
-    \item Controlled scope (direct plus one-transfer).
-\end{itemize}
-If a future roadmap includes full multimodal graph routing (Dijkstra, RAPTOR, or CSA), the existing stop cache, transfer handling, and exception-aware calendar logic provide a strong foundation.
-
-\subsection{Territory Polygon Generation}
-\textbf{Objective:} Represent each operator's spatial service footprint for MaaS browsing.
-\begin{itemize}[leftmargin=1.5em]
-    \item Collect stop points and representative shape points.
-    \item Build a concave shell-like polygon using:
-    \begin{itemize}
-        \item Convex hull baseline.
-        \item Centroid expansion.
-        \item Simplification and Chaikin smoothing.
-        \item Bounding box fallback if required.
-    \end{itemize}
-    \item Compute bounding boxes for map framing.
-\end{itemize}
-
-\section{Heterogeneous Data and Interoperability}
-\subsection{Static and Dynamic Feeds}
-The report should emphasize that the platform is built for heterogeneous data inputs. Static GTFS is the base, with a clear path to real-time extensions. This framing clarifies how fragmented territories can be unified even when operators publish different feed types.
-
-\subsection{Normalization and Quality Handling}
-A core capability is data normalization and resilient parsing. Data quality issues (missing stops, inconsistent naming, partial schedules) are handled without breaking the entire import, which is essential in fragmented or rural networks.
-
-\subsection{Open Framework Alignment}
-The report should explicitly position the platform as open and interoperable, avoiding vendor lock-in and enabling integration with public standards, regional data hubs, and operator systems.
-
-\section{IoT and Data Mining Layer (Planned Extension)}
-\subsection{Real-Time Telemetry}
-The system architecture anticipates ingesting IoT data streams (vehicle positions, delays, disruptions) to improve routing accuracy and operational awareness. This capability strengthens MaaS reliability in fragmented territories where service quality varies.
-
-\subsection{Analytics and Demand Signals}
-Aggregated search telemetry and operational logs can be mined for recurring demand patterns, underserved corridors, and time-based pressure points. These analytics support service planning and carbon reduction initiatives.
-
-\section{Governance and Multi-Operator Orchestration}
-\subsection{AOM and Operator Roles}
-A clear governance model should be included: authorities define policy and coordination, while operators publish data and fulfill service delivery. The multi-tenant architecture enforces this separation while enabling a shared MaaS layer.
-
-\subsection{Data Sharing Boundaries}
-The report should describe how tenant scoping preserves operator data boundaries while still enabling a unified user experience across territories.
-
-
-\section{Operator Catalog and Deployment Scope}
-The report should include a short section that the platform is designed to scale across multiple regional operators, with a repeatable onboarding process. It should highlight that the model is transferable to new territories without bespoke redevelopment.
-
-\section{Problems and Deliveries}
-A concise problem and delivery framing strengthens the report:
-\begin{itemize}[leftmargin=1.5em]
-    \item \textbf{Problem:} fragmented operators, inconsistent data, disconnected services.
-    \item \textbf{Delivery:} unified import pipeline, multi-operator routing, territory maps.
-    \item \textbf{Problem:} low reliability and unclear service coverage.
-    \item \textbf{Delivery:} calendar-aware routing with exception handling and map overlays.
-    \item \textbf{Problem:} limited visibility of demand.
-    \item \textbf{Delivery:} search telemetry and admin dashboards for operational insight.
-\end{itemize}
-
-\section{MaaS for Fragmented Territories}
-\subsection{Multi-Operator Integration}
-The multi-tenant model allows multiple operators to coexist while sharing the same MaaS interface. Each operator's service area can be visualized and queried without data leakage.
-
-\subsection{User Experience Across Disconnected Networks}
-Key MaaS value for fragmented territories:
-\begin{itemize}[leftmargin=1.5em]
-    \item Unified search across multiple agencies and schedules.
-    \item Transfer-aware routing between discontinuous lines.
-    \item Territory discovery by operator for transparency and trust.
-\end{itemize}
-
-\subsection{Resilience in Low-Data Environments}
-Fallbacks for missing calendars, stop ambiguity resolution, and exception handling allow viable routing even with partial GTFS quality.
-
-\section{Financial Aspect (Planned)}
-A subscription-based payment layer is planned to unify fare access across multiple operators. Instead of purchasing tickets or passes from each provider, customers will subscribe through the platform and receive bundled access to participating services. This concept is a core MaaS pillar for fragmented territories, reducing friction, simplifying onboarding, and supporting equitable access across disconnected networks.
-
-\subsection{Status and Scope}
-The payment plan, pricing tiers, and settlement mechanisms have not yet been implemented or fully defined. However, this capability is considered critical and will be treated as a first-class component of the platform roadmap.
-
-\subsection{Expected Benefits}
-\begin{itemize}[leftmargin=1.5em]
-    \item \textbf{User Experience}: one subscription replaces multiple tickets, reducing complexity.
-    \item \textbf{Network Efficiency}: centralized access encourages multimodal routing and higher transit usage.
-    \item \textbf{Operational Visibility}: unified subscription data can later support demand forecasting and service planning.
-\end{itemize}
+\newpage
 
 \section{Conclusion}
-This system provides a robust multimodal mobility layer for fragmented territories, combining GTFS ingestion, intelligent route search, and map-oriented territory modeling. Its architecture balances performance, data integrity, and operational clarity, directly supporting MaaS objectives and carbon reduction by encouraging public transit adoption and walking integration.
+The geographic and administrative fragmentation of mobility services poses a critical barrier to sustainable urban and rural transportation. This project successfully demonstrates that a centralized, software-driven architecture can overcome these physical borders without stripping autonomy from individual mobility operators. By adopting a strict multi-tenant infrastructure and utilizing real, heterogeneous data streams—combining static GTFS schedules with dynamic GBFS APIs—the platform actively weaves disparate networks into a unified travel corridor. 
+
+Through the implementation of a custom, CO2-aware routing algorithm that prioritizes privacy, end-users are provided with seamless multimodal itineraries that actively encourage a shift away from individual thermal vehicles. Ultimately, the integration of public transit, private micromobility, and future peer-to-peer carpooling within a single ecosystem lays a definitive technical foundation for the future of Mobility as a Service in fragmented regions.
+
+\newpage
+
+\section{References}
+
+\begin{thebibliography}{9}
+
+\bibitem{datagouv}
+Data.gouv.fr, \textit{Plateforme ouverte des données publiques françaises}. Transport and Mobility datasets. Available at: \url{https://transport.data.gouv.fr/}
+
+\bibitem{gtfs}
+MobilityData, \textit{General Transit Feed Specification (GTFS) Reference}. Detailed documentation on the static transit modeling standard.
+
+\bibitem{gbfs}
+MobilityData, \textit{General Bikeshare Feed Specification (GBFS)}. Documentation for dynamic micromobility status representation.
+
+\bibitem{maas_models}
+Hensher, D. A. (2017). \textit{Future bus transport contracts under a mobility as a service (MaaS) regime in the digital age: Are they likely to change?}. Transportation Research Part A: Policy and Practice. Provides extensive reading on mobility models and public-private transitions.
+
+\bibitem{routing_algo}
+Bast, H., et al. (2016). \textit{Route Planning in Transportation Networks}. Defines the standard complexities of algorithm design for time-expanded and time-dependent transit networks.
+
+\end{thebibliography}
 
 \end{document}

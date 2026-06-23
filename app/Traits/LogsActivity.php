@@ -3,6 +3,7 @@
 namespace App\Traits;
 
 use App\Models\Activity;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 
 trait LogsActivity
@@ -31,13 +32,13 @@ trait LogsActivity
         }
 
         // For User model, only log employee activities
-        if ($model instanceof \App\Models\User && $model->role !== 'employee') {
+        if ($model instanceof User && $model->role !== 'employee') {
             return;
         }
 
         $tenantId = $user->role === 'subadmin' ? $user->id : $user->tenant_id;
 
-        $type = strtolower(class_basename($model)) . '_' . $event;
+        $type = strtolower(class_basename($model)).'_'.$event;
         $description = self::getActivityDescription($event, $model);
 
         Activity::create([

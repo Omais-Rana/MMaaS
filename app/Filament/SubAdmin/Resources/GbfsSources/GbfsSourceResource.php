@@ -29,6 +29,7 @@ class GbfsSourceResource extends Resource
     {
         return GbfsSourcesTable::configure($table);
     }
+
     public static function getRelations(): array
     {
         return [

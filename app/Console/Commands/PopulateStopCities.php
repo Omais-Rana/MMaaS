@@ -24,12 +24,13 @@ class PopulateStopCities extends Command
 
         if ($stops->isEmpty()) {
             $this->info('All stops already have city information.');
+
             return 0;
         }
 
         $this->info("Processing {$stops->count()} stops...");
 
-        $populator = new StopCityPopulatorService();
+        $populator = new StopCityPopulatorService;
         $updated = $populator->populateCitiesForStops($stops);
 
         $this->info("Successfully updated {$updated} stops with city information.");

@@ -23,14 +23,14 @@ class ScheduleImportsTable
                     ->searchable(),
                 TextColumn::make('status')
                     ->badge()
-                    ->formatStateUsing(fn(string $state): string => __("schedules.status_{$state}"))
-                    ->color(fn(string $state): string => match ($state) {
+                    ->formatStateUsing(fn (string $state): string => __("schedules.status_{$state}"))
+                    ->color(fn (string $state): string => match ($state) {
                         'completed' => 'success',
                         'processing' => 'warning',
                         'failed' => 'danger',
                         default => 'secondary',
                     })
-                    ->icon(fn(string $state): Heroicon => match ($state) {
+                    ->icon(fn (string $state): Heroicon => match ($state) {
                         'completed' => Heroicon::CheckCircle,
                         'processing' => Heroicon::Clock,
                         'failed' => Heroicon::XCircle,
@@ -87,7 +87,7 @@ class ScheduleImportsTable
                     ->label('Update File')
                     ->icon('heroicon-s-arrow-up-tray')
                     ->color('warning')
-                    ->url(fn($record) => ScheduleImportResource::getUrl('edit', ['record' => $record])),
+                    ->url(fn ($record) => ScheduleImportResource::getUrl('edit', ['record' => $record])),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

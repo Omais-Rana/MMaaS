@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -13,7 +14,7 @@ class ApplyTenantScopes
     /**
      * Handle an incoming request.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  Closure(Request): (Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
@@ -23,7 +24,7 @@ class ApplyTenantScopes
             // If the authenticated user is a sub-admin, scope all queries
             if ($user->isSubAdmin()) {
                 // Apply global scope to User model for sub-admins
-                \App\Models\User::addGlobalScope('tenant', function (Builder $builder) use ($user) {
+                User::addGlobalScope('tenant', function (Builder $builder) use ($user) {
                     $builder->where(function ($query) use ($user) {
                         $query->where('tenant_id', $user->id)
                             ->orWhere('id', $user->id);

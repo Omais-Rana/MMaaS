@@ -9,6 +9,7 @@ use Filament\Resources\Pages\ListRecords;
 class ListSubAdmins extends ListRecords
 {
     protected static string $resource = SubAdminResource::class;
+
     protected static ?string $title = 'Manage Operators';
 
     protected function getHeaderActions(): array

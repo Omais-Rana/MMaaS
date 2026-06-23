@@ -1,8 +1,13 @@
 <?php
 
+use App\Providers\AppServiceProvider;
+use App\Providers\Filament\CustomerPanelProvider;
+use App\Providers\Filament\SubAdminPanelProvider;
+use App\Providers\Filament\SuperadminPanelProvider;
+
 return [
-    App\Providers\AppServiceProvider::class,
-    App\Providers\Filament\SuperadminPanelProvider::class,
-    App\Providers\Filament\SubAdminPanelProvider::class,
-    App\Providers\Filament\CustomerPanelProvider::class,
+    AppServiceProvider::class,
+    SuperadminPanelProvider::class,
+    SubAdminPanelProvider::class,
+    CustomerPanelProvider::class,
 ];

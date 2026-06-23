@@ -43,13 +43,13 @@ class CustomerPanelProvider extends PanelProvider
             ])
             ->userMenuItems([
                 Action::make('switch-language')
-                    ->label(fn(): string => (Auth::user()?->locale ?? 'en') === 'en' ? 'Switch to French' : 'Passer en anglais')
+                    ->label(fn (): string => (Auth::user()?->locale ?? 'en') === 'en' ? 'Switch to French' : 'Passer en anglais')
                     ->icon('heroicon-o-language')
-                    ->url(fn(): string => route('locale.toggle')),
+                    ->url(fn (): string => route('locale.toggle')),
             ])
             ->renderHook(
                 PanelsRenderHook::SIDEBAR_NAV_START,
-                fn(): string => view('filament.components.return-to-map-button')->render()
+                fn (): string => view('filament.components.return-to-map-button')->render()
             )
             ->discoverResources(in: app_path('Filament/Customer/Resources'), for: 'App\Filament\Customer\Resources')
             ->discoverPages(in: app_path('Filament/Customer/Pages'), for: 'App\Filament\Customer\Pages')

@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -27,7 +26,7 @@ class PermissionSeeder extends Seeder
         foreach ($modules as $module => $actions) {
             foreach ($actions as $action) {
                 $permission = Permission::firstOrCreate([
-                    'name' => $action . '_' . $module,
+                    'name' => $action.'_'.$module,
                     'guard_name' => 'web',
                 ]);
                 $createdPermissions[] = $permission;

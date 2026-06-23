@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\GbfsStation;
+use App\Models\ParkingSpot;
 use App\Models\RouteSearch;
 use App\Models\Stop;
 use Carbon\Carbon;
@@ -37,8 +39,8 @@ class RouteSearchController extends Controller
         // Use withoutGlobalScopes() to show stops from ALL operators (not just logged-in user's)
         $stops = Stop::withoutGlobalScopes()->where(function ($q) use ($normalizedQuery) {
             // Use LOWER and accent-insensitive comparison
-            $q->whereRaw('LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(stop_name, "é", "e"), "è", "e"), "ê", "e"), "à", "a"), "ô", "o"), "ù", "u"), "ç", "c")) LIKE ?', [$normalizedQuery . '%'])
-                ->orWhereRaw('LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(stop_name, "é", "e"), "è", "e"), "ê", "e"), "à", "a"), "ô", "o"), "ù", "u"), "ç", "c")) LIKE ?', ['% ' . $normalizedQuery . '%']);
+            $q->whereRaw('LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(stop_name, "é", "e"), "è", "e"), "ê", "e"), "à", "a"), "ô", "o"), "ù", "u"), "ç", "c")) LIKE ?', [$normalizedQuery.'%'])
+                ->orWhereRaw('LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(stop_name, "é", "e"), "è", "e"), "ê", "e"), "à", "a"), "ô", "o"), "ù", "u"), "ç", "c")) LIKE ?', ['% '.$normalizedQuery.'%']);
         })
             ->whereNotNull('stop_lat')
             ->whereNotNull('stop_lon')
@@ -51,7 +53,7 @@ class RouteSearchController extends Controller
                 DB::raw('MAX(stop_code) as stop_code'),
                 DB::raw('MAX(city) as city'),
                 DB::raw("CASE 
-                    WHEN LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(stop_name, 'é', 'e'), 'è', 'e'), 'ê', 'e'), 'à', 'a'), 'ô', 'o'), 'ù', 'u'), 'ç', 'c')) LIKE '" . $normalizedQuery . "%' THEN 1 
+                    WHEN LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(stop_name, 'é', 'e'), 'è', 'e'), 'ê', 'e'), 'à', 'a'), 'ô', 'o'), 'ù', 'u'), 'ç', 'c')) LIKE '".$normalizedQuery."%' THEN 1 
                     ELSE 2 
                 END as priority")
             )
@@ -150,7 +152,7 @@ class RouteSearchController extends Controller
         // Apply type=2 (removed) exceptions on top of whatever base we have
         $removedServices = $exceptions->where('exception_type', 2)->pluck('service_id')->toArray();
         if (! empty($removedServices)) {
-            $activeServiceIds = array_values(array_filter($activeServiceIds, fn($id) => ! in_array($id, $removedServices)));
+            $activeServiceIds = array_values(array_filter($activeServiceIds, fn ($id) => ! in_array($id, $removedServices)));
         }
 
         // Also add any type=1 services not yet in the list (e.g. when using calendar base)
@@ -280,7 +282,7 @@ class RouteSearchController extends Controller
                     'agency_name' => $route->operator_name ?? 'Transit Service',
                     'departure_time' => $departureTime,
                     'arrival_time' => substr($route->arrival_time, 0, 5),
-                    'duration' => round($route->duration_minutes) . ' min',
+                    'duration' => round($route->duration_minutes).' min',
                     'stops_count' => $route->stops_count,
                     'stops' => $stopsOnRoute,
                     'shape_pts' => $shapePoints,
@@ -293,7 +295,7 @@ class RouteSearchController extends Controller
                 ->values()
                 ->toArray();
 
-            $finalRoutes = collect($formattedRoutes)->merge($gbfsRoutes)->sortBy(function($r) {
+            $finalRoutes = collect($formattedRoutes)->merge($gbfsRoutes)->sortBy(function ($r) {
                 return (int) str_replace(' min', '', $r['duration']);
             })->values()->toArray();
 
@@ -305,23 +307,16 @@ class RouteSearchController extends Controller
 
         // No direct routes found - search for routes with transfers
         $transferRoutes = $this->findTransferRoutes(
-            $originStopIds,
-            $destStopIds,
-            $originName,
-            $destinationName,
-            $time,
-            $activeServiceIds,
-            $minimumDepartureTime,
-            $date,
-            $originLat,
-            $originLon,
-            $destLat,
-            $destLon
+            $originStopIds, $destStopIds, $originName, $destinationName, $time, $activeServiceIds, $minimumDepartureTime, $date, $originLat, $originLon, $destLat, $destLon
         );
 
-        $finalTransferRoutes = collect($transferRoutes)->merge($gbfsRoutes)->sortBy(function($r) {
+        $trunkRoutes = $this->findTrunkRoutes(
+            $originStopIds, $destStopIds, $originName, $destinationName, $time, $activeServiceIds, $minimumDepartureTime, $date, $originLat, $originLon, $destLat, $destLon
+        );
+
+        $finalTransferRoutes = collect($transferRoutes)->merge($trunkRoutes)->merge($gbfsRoutes)->sortBy(function ($r) {
             return (int) str_replace(' min', '', $r['duration']);
-        })->values()->toArray();
+        })->take(10)->values()->toArray();
 
         return response()->json([
             'routes' => $finalTransferRoutes,
@@ -352,7 +347,7 @@ class RouteSearchController extends Controller
         $maxWalkingDistance = 1.5;  // km
         $walkingSpeedKmh = 6.5;
         $minTransferTime = 5;    // minutes
-        $maxTransferWaitTime = 25;   // minutes
+        $maxTransferWaitTime = 120;   // minutes
 
         // FIX 1: Pre-load ALL stops into a PHP array (1 query replaces ~300 per-row DB calls).
         $stopCache = $this->preloadStopCache();
@@ -365,7 +360,7 @@ class RouteSearchController extends Controller
         }
 
         $journeys = [];
-        $sqlMinTime = $time . ':00';
+        $sqlMinTime = $time.':00';
 
         // STRATEGY 1: Direct routes from EXACT stops (NO walking, NO transfers) - HIGHEST PRIORITY
         // For exact origin stops, no walking buffer needed - use minimum time directly
@@ -418,7 +413,7 @@ class RouteSearchController extends Controller
 
         // Group direct routes by route name — keep best (least total walk) per route
         foreach ($directRoutes as $route) {
-            $routeKey = $route->route_short_name . '_' . $route->operator_name;
+            $routeKey = $route->route_short_name.'_'.$route->operator_name;
             $originWalkDist = $this->distancePointToStopFromCache($stopCache, $originRefLat, $originRefLon, $route->origin_stop_id);
             $destWalkDist = $this->distanceStopToPointFromCache($stopCache, $route->dest_stop_id, $destRefLat, $destRefLon);
             $totalWalkDist = $originWalkDist + $destWalkDist;
@@ -537,8 +532,8 @@ class RouteSearchController extends Controller
             $journey['score'] = 10000 - ($totalTimeMinutes * 50) - ($journey['transfers'] * 200) - ($totalWalkDist * 10);
 
             if ($minimumDepartureTime && $date) {
-                $leaveAtDateTime = Carbon::parse($date . ' ' . $journey['leave_at']);
-                $minimumDateTime = Carbon::parse($date . ' ' . $minimumDepartureTime);
+                $leaveAtDateTime = Carbon::parse($date.' '.$journey['leave_at']);
+                $minimumDateTime = Carbon::parse($date.' '.$minimumDepartureTime);
                 if ($leaveAtDateTime->lt($minimumDateTime)) {
                     continue;
                 }
@@ -642,7 +637,7 @@ class RouteSearchController extends Controller
         // Process nearby routes — keep best (least walk) per route line
         $nearbyRouteOptions = [];
         foreach ($nearbyDirectRoutes as $route) {
-            $routeKey = $route->route_short_name . '_' . $route->operator_name;
+            $routeKey = $route->route_short_name.'_'.$route->operator_name;
             $originWalkDist = $this->distancePointToStopFromCache($stopCache, $originRefLat, $originRefLon, $route->origin_stop_id);
             $destWalkDist = $this->distanceStopToPointFromCache($stopCache, $route->dest_stop_id, $destRefLat, $destRefLon);
             $totalWalkDist = $originWalkDist + $destWalkDist;
@@ -770,8 +765,8 @@ class RouteSearchController extends Controller
             $journey['score'] = 10000 - ($totalTimeMinutes * 50) - ($journey['transfers'] * 200) - ($totalWalkDist * 10);
 
             if ($minimumDepartureTime && $date) {
-                $leaveAtDateTime = Carbon::parse($date . ' ' . $journey['leave_at']);
-                $minimumDateTime = Carbon::parse($date . ' ' . $minimumDepartureTime);
+                $leaveAtDateTime = Carbon::parse($date.' '.$journey['leave_at']);
+                $minimumDateTime = Carbon::parse($date.' '.$minimumDepartureTime);
                 if ($leaveAtDateTime->lt($minimumDateTime)) {
                     continue;
                 }
@@ -818,7 +813,7 @@ class RouteSearchController extends Controller
                 'st_transfer.stop_sequence as transfer_sequence',
                 'u1.name as first_operator'
             )
-            ->orderByRaw('CASE WHEN st_origin.stop_id IN (' . implode(',', array_map('intval', $originStopIds)) . ') THEN 0 ELSE 1 END')
+            ->orderByRaw('CASE WHEN st_origin.stop_id IN ('.implode(',', array_map(fn($id) => "'".addslashes($id)."'", $originStopIds)).') THEN 0 ELSE 1 END')
             ->orderBy('st_origin.departure_time')
             ->limit(8000)
             ->get();
@@ -892,7 +887,7 @@ class RouteSearchController extends Controller
             $walkToTransferDist = $this->distancePointToStopFromCache($stopCache, $originRefLat, $originRefLon, $firstLeg->transfer_stop_id);
             $walkToTransferDuration = $this->calculateWalkingMinutes($walkToTransferDist, $walkingSpeedKmh);
             $bus1Duration = $this->timeDiffMinutes(substr($time, 0, 5), substr($firstLeg->transfer_arrival, 0, 5));
-            
+
             if ($walkToTransferDuration <= $bus1Duration + 3) {
                 continue; // Walking directly to transfer point is faster/same
             }
@@ -904,7 +899,9 @@ class RouteSearchController extends Controller
             // Collect matching second legs from pre-fetched data (0 DB queries) using raw arrays
             $secondLegOptions = [];
             foreach ($nearbyTransferIds as $nearbyStopId) {
-                if (!isset($secondLegsGrouped[$nearbyStopId])) continue;
+                if (! isset($secondLegsGrouped[$nearbyStopId])) {
+                    continue;
+                }
                 foreach ($secondLegsGrouped[$nearbyStopId] as $leg) {
                     if ($leg->second_departure >= $minDepartureTime && $leg->second_departure <= $maxDepartureTime) {
                         $secondLegOptions[] = $leg;
@@ -919,7 +916,7 @@ class RouteSearchController extends Controller
             foreach ($secondLegOptions as $option) {
                 $optWalkDist = $this->distanceStopToPointFromCache($stopCache, $option->final_stop_id, $destRefLat, $destRefLon);
                 $optWalkMin = (int) round($optWalkDist / $walkingSpeedKmh * 60);
-                $optArrival = strtotime('1970-01-01 ' . $option->final_arrival) + ($optWalkMin * 60);
+                $optArrival = strtotime('1970-01-01 '.$option->final_arrival) + ($optWalkMin * 60);
                 $optTransferWalk = $this->getWalkingDistanceFromCache($stopCache, $firstLeg->transfer_stop_id, $option->second_origin_stop_id);
                 if ($optArrival < $bestArrivalAtDest || ($optArrival === $bestArrivalAtDest && $optTransferWalk < $bestTransferWalk)) {
                     $bestArrivalAtDest = $optArrival;
@@ -932,7 +929,7 @@ class RouteSearchController extends Controller
                 // Deduplicate by (first_trip_id + transfer_stop + second_trip_id) so different
                 // transfer points on the same pair of trips are all evaluated independently.
                 // sortAndLimitJourneys will then pick the best-scoring one per departure hour.
-                $transferRouteKey = $firstLeg->trip_id . '_' . $firstLeg->transfer_stop_id . '_to_' . $secondLeg->second_trip_id;
+                $transferRouteKey = $firstLeg->trip_id.'_'.$firstLeg->transfer_stop_id.'_to_'.$secondLeg->second_trip_id;
                 if (isset($seenRoutes[$transferRouteKey])) {
                     continue;
                 }
@@ -953,7 +950,7 @@ class RouteSearchController extends Controller
                 // Check Leg 1 (is Bus 1 useless?)
                 $walkToSecondOriginDist = $this->distancePointToStopFromCache($stopCache, $originRefLat, $originRefLon, $secondLeg->second_origin_stop_id);
                 $walkToSecondOriginDuration = $this->calculateWalkingMinutes($walkToSecondOriginDist, $walkingSpeedKmh);
-                
+
                 $bus1Duration = $this->timeDiffMinutes(substr($time, 0, 5), substr($firstLeg->transfer_arrival, 0, 5)) + $transferWalkDuration;
                 if ($walkToSecondOriginDuration <= $bus1Duration + 3) {
                     continue; // Walking directly is faster/same as Bus 1
@@ -962,11 +959,11 @@ class RouteSearchController extends Controller
                 // Check Leg 2 (is Bus 2 useless?)
                 $walkToDestDist = $this->distanceStopToPointFromCache($stopCache, $firstLeg->transfer_stop_id, $destRefLat, $destRefLon);
                 $walkToDestDuration = $this->calculateWalkingMinutes($walkToDestDist, $walkingSpeedKmh);
-                
+
                 $bus2Duration = $this->timeDiffMinutes(substr($firstLeg->transfer_arrival, 0, 5), substr($secondLeg->final_arrival, 0, 5));
                 $finalWalkDist = $this->distanceStopToPointFromCache($stopCache, $secondLeg->final_stop_id, $destRefLat, $destRefLon);
                 $finalWalkDuration = $this->calculateWalkingMinutes($finalWalkDist, $walkingSpeedKmh);
-                
+
                 if ($walkToDestDuration <= $bus2Duration + $finalWalkDuration + 3) {
                     continue; // Walking directly is faster/same as Bus 2
                 }
@@ -1139,8 +1136,8 @@ class RouteSearchController extends Controller
                 $journey['score'] = 10000 - ($totalTimeMinutes * 50) - ($journey['transfers'] * 200) - (($originWalkDist + $transferWalkDist + $finalWalkDist) * 10);
 
                 if ($minimumDepartureTime && $date) {
-                    $leaveAtDateTime = Carbon::parse($date . ' ' . $journey['leave_at']);
-                    $minimumDateTime = Carbon::parse($date . ' ' . $minimumDepartureTime);
+                    $leaveAtDateTime = Carbon::parse($date.' '.$journey['leave_at']);
+                    $minimumDateTime = Carbon::parse($date.' '.$minimumDepartureTime);
                     if ($leaveAtDateTime->lt($minimumDateTime)) {
                         continue;
                     }
@@ -1171,13 +1168,14 @@ class RouteSearchController extends Controller
             $filteredJourneys = [];
             foreach ($foundJourneys as $journey) {
                 // Allow GBFS (bike/car) routes to pass through
-                if (!empty($journey['is_gbfs'])) {
+                if (! empty($journey['is_gbfs'])) {
                     $filteredJourneys[] = $journey;
+
                     continue;
                 }
 
                 $totalTimeMinutes = $this->timeDiffMinutes($journey['leave_at'], $journey['arrival_time']);
-                
+
                 // If the transit journey takes significantly longer than simply walking directly, drop it!
                 if ($totalTimeMinutes > ($directWalkDuration + 10)) {
                     continue;
@@ -1203,14 +1201,14 @@ class RouteSearchController extends Controller
      */
     private function sortAndLimitJourneys(array $journeys, int $limit): array
     {
-        usort($journeys, fn($a, $b) => ($b['score'] ?? 0) <=> ($a['score'] ?? 0));
+        usort($journeys, fn ($a, $b) => ($b['score'] ?? 0) <=> ($a['score'] ?? 0));
 
         $seen = [];
         $result = [];
 
         foreach ($journeys as $journey) {
             $firstTransit = collect($journey['legs'])->firstWhere('type', 'transit');
-            $routeKey = ($firstTransit['route_name'] ?? 'unknown') . '_' . ($journey['transfers'] ?? 0);
+            $routeKey = ($firstTransit['route_name'] ?? 'unknown').'_'.($journey['transfers'] ?? 0);
 
             if (! isset($seen[$routeKey])) {
                 $seen[$routeKey] = true;
@@ -1225,6 +1223,443 @@ class RouteSearchController extends Controller
         return $result;
     }
 
+    private function findTrunkRoutes(
+        $originStopIds,
+        $destStopIds,
+        $originName,
+        $destinationName,
+        $time,
+        $activeServiceIds,
+        $minimumDepartureTime = null,
+        $date = null,
+        ?float $originLat = null,
+        ?float $originLon = null,
+        ?float $destLat = null,
+        ?float $destLon = null
+    ) {
+        $foundJourneys = [];
+        if (!$originLat || !$destLat) return [];
+
+        $stopCache = $this->preloadStopCache();
+        $maxWalkingDistance = 1.5;  // km for local feeders
+        $trunkSearchRadius = 25.0;  // km for trunk stations
+
+        $nearbyOriginStops = $this->findNearbyStopIdsFromCache($stopCache, $originLat, $originLon, $trunkSearchRadius);
+        $nearbyDestStops = $this->findNearbyStopIdsFromCache($stopCache, $destLat, $destLon, $trunkSearchRadius);
+
+        $originNearbyIds = array_column($nearbyOriginStops, 'id');
+        $destNearbyIds = array_column($nearbyDestStops, 'id');
+
+        if (empty($originNearbyIds) || empty($destNearbyIds)) return [];
+
+        $sqlMinTime = date('H:i:s', strtotime($time) - (60 * 60)); // 1 hour before
+        $sqlMaxTime = date('H:i:s', strtotime($time) + (180 * 60)); // 3 hours after
+
+        // 1. Find Trunk Trips (Trains)
+        $trunkTrips = \DB::table('stop_times as st_origin')
+            ->join('trips as t', 'st_origin.trip_id', '=', 't.id')
+            ->join('routes as r', 't.route_id', '=', 'r.id')
+            ->join('users as u', 'r.tenant_id', '=', 'u.id')
+            ->join('stop_times as st_dest', function ($join) use ($destNearbyIds) {
+                $join->on('st_origin.trip_id', '=', 'st_dest.trip_id')
+                    ->whereIn('st_dest.stop_id', $destNearbyIds)
+                    ->whereRaw('st_dest.stop_sequence > st_origin.stop_sequence');
+            })
+            ->where('r.route_type', 2)
+            ->whereIn('st_origin.stop_id', $originNearbyIds)
+            ->whereIn('t.service_id', $activeServiceIds)
+            ->whereBetween('st_origin.departure_time', [$sqlMinTime, $sqlMaxTime])
+            ->select(
+                't.id as trunk_trip_id',
+                'st_origin.stop_id as trunk_origin_stop',
+                'st_origin.departure_time as trunk_departure',
+                'st_dest.stop_id as trunk_dest_stop',
+                'st_dest.arrival_time as trunk_arrival',
+                'st_origin.stop_sequence as origin_sequence',
+                'st_dest.stop_sequence as dest_sequence',
+                'r.route_short_name as trunk_route_name',
+                'r.route_long_name as trunk_route_long',
+                'r.route_type as trunk_route_type',
+                'r.route_color as trunk_color',
+                'r.route_text_color as trunk_text_color',
+                'u.name as trunk_operator',
+                't.shape_id as trunk_shape_id'
+            )
+            ->get();
+
+        if ($trunkTrips->isEmpty()) return [];
+
+        $trunkOriginStops = $trunkTrips->pluck('trunk_origin_stop')->unique()->toArray();
+        $trunkDestStops = $trunkTrips->pluck('trunk_dest_stop')->unique()->toArray();
+
+        // Expand to include nearby local stops for the trunk stations (for local buses to drop off)
+        $expandedTrunkOrigins = [];
+        foreach ($trunkOriginStops as $ts) {
+            $s = $stopCache[$ts] ?? null;
+            if ($s) {
+                $near = $this->findNearbyStopIdsFromCache($stopCache, (float)$s->stop_lat, (float)$s->stop_lon, $maxWalkingDistance);
+                $expandedTrunkOrigins = array_merge($expandedTrunkOrigins, array_column($near, 'id'));
+            }
+            $expandedTrunkOrigins[] = $ts;
+        }
+        $expandedTrunkOrigins = array_unique($expandedTrunkOrigins);
+
+        $expandedTrunkDests = [];
+        foreach ($trunkDestStops as $ts) {
+            $s = $stopCache[$ts] ?? null;
+            if ($s) {
+                $near = $this->findNearbyStopIdsFromCache($stopCache, (float)$s->stop_lat, (float)$s->stop_lon, $maxWalkingDistance);
+                $expandedTrunkDests = array_merge($expandedTrunkDests, array_column($near, 'id'));
+            }
+            $expandedTrunkDests[] = $ts;
+        }
+        $expandedTrunkDests = array_unique($expandedTrunkDests);
+
+        // Origin local stops
+        $localOriginStops = $this->findNearbyStopIdsFromCache($stopCache, $originLat, $originLon, $maxWalkingDistance);
+        $localOriginIds = array_unique(array_merge($originStopIds, array_column($localOriginStops, 'id')));
+
+        // Dest local stops
+        $localDestStops = $this->findNearbyStopIdsFromCache($stopCache, $destLat, $destLon, $maxWalkingDistance);
+        $localDestIds = array_unique(array_merge($destStopIds, array_column($localDestStops, 'id')));
+
+        // 2. Fetch Feeder 1 (Origin to Trunk Origin)
+        $feeder1Trips = \DB::table('stop_times as st_start')
+            ->join('trips as t', 'st_start.trip_id', '=', 't.id')
+            ->join('routes as r', 't.route_id', '=', 'r.id')
+            ->join('users as u', 'r.tenant_id', '=', 'u.id')
+            ->join('stop_times as st_end', function ($join) use ($expandedTrunkOrigins) {
+                $join->on('st_start.trip_id', '=', 'st_end.trip_id')
+                    ->whereIn('st_end.stop_id', $expandedTrunkOrigins)
+                    ->whereRaw('st_end.stop_sequence > st_start.stop_sequence');
+            })
+            ->whereIn('st_start.stop_id', $localOriginIds)
+            ->whereIn('t.service_id', $activeServiceIds)
+            ->whereBetween('st_start.departure_time', [$sqlMinTime, $sqlMaxTime])
+            ->select(
+                't.id as f1_trip_id',
+                'st_start.stop_id as f1_origin_stop',
+                'st_start.departure_time as f1_departure',
+                'st_end.stop_id as f1_dest_stop',
+                'st_end.arrival_time as f1_arrival',
+                'st_start.stop_sequence as f1_origin_sequence',
+                'st_end.stop_sequence as f1_dest_sequence',
+                'r.route_short_name as f1_route_name',
+                'r.route_long_name as f1_route_long',
+                'r.route_type as f1_route_type',
+                'r.route_color as f1_color',
+                'r.route_text_color as f1_text_color',
+                'u.name as f1_operator',
+                't.shape_id as f1_shape_id'
+            )
+            ->get();
+
+        $feeder1Grouped = []; // Group by f1_dest_stop
+        foreach ($feeder1Trips as $f1) {
+            $feeder1Grouped[$f1->f1_dest_stop][] = $f1;
+        }
+
+        // 3. Fetch Feeder 2 (Trunk Dest to Destination)
+        $feeder2Trips = \DB::table('stop_times as st_start')
+            ->join('trips as t', 'st_start.trip_id', '=', 't.id')
+            ->join('routes as r', 't.route_id', '=', 'r.id')
+            ->join('users as u', 'r.tenant_id', '=', 'u.id')
+            ->join('stop_times as st_end', function ($join) use ($localDestIds) {
+                $join->on('st_start.trip_id', '=', 'st_end.trip_id')
+                    ->whereIn('st_end.stop_id', $localDestIds)
+                    ->whereRaw('st_end.stop_sequence > st_start.stop_sequence');
+            })
+            ->whereIn('st_start.stop_id', $expandedTrunkDests)
+            ->whereIn('t.service_id', $activeServiceIds)
+            ->whereBetween('st_start.departure_time', [$sqlMinTime, date('H:i:s', strtotime($sqlMaxTime) + 7200)])
+            ->select(
+                't.id as f2_trip_id',
+                'st_start.stop_id as f2_origin_stop',
+                'st_start.departure_time as f2_departure',
+                'st_end.stop_id as f2_dest_stop',
+                'st_end.arrival_time as f2_arrival',
+                'st_start.stop_sequence as f2_origin_sequence',
+                'st_end.stop_sequence as f2_dest_sequence',
+                'r.route_short_name as f2_route_name',
+                'r.route_long_name as f2_route_long',
+                'r.route_type as f2_route_type',
+                'r.route_color as f2_color',
+                'r.route_text_color as f2_text_color',
+                'u.name as f2_operator',
+                't.shape_id as f2_shape_id'
+            )
+            ->get();
+
+        $feeder2Grouped = []; // Group by f2_origin_stop
+        foreach ($feeder2Trips as $f2) {
+            $feeder2Grouped[$f2->f2_origin_stop][] = $f2;
+        }
+
+        // 4. Assemble Journeys
+        $minTransferTime = 5; // minutes
+        $maxTransferTime = 120; // minutes
+        $walkingSpeedKmh = 6.5;
+
+        foreach ($trunkTrips as $trunk) {
+            // Find acceptable Feeder 1
+            $f1Options = [];
+            $trunkOriginStopObj = $stopCache[$trunk->trunk_origin_stop] ?? null;
+            if (!$trunkOriginStopObj) continue;
+
+            // Direct walk to Trunk?
+            $walkToTrunkDist = $this->distancePointToStopFromCache($stopCache, $originLat, $originLon, $trunk->trunk_origin_stop);
+            $walkToTrunkDuration = $this->calculateWalkingMinutes($walkToTrunkDist, $walkingSpeedKmh);
+            
+            if ($walkToTrunkDist <= $maxWalkingDistance) {
+                // Pseudo Feeder1 (Walk)
+                $f1Options[] = ['type' => 'walk', 'distance' => $walkToTrunkDist, 'duration' => $walkToTrunkDuration];
+            }
+
+            // Transit Feeder1
+            $nearbyTrunkOrigins = $this->findNearbyStopIdsFromCache($stopCache, (float)$trunkOriginStopObj->stop_lat, (float)$trunkOriginStopObj->stop_lon, $maxWalkingDistance);
+            $nearbyTrunkOriginIds = array_merge([$trunk->trunk_origin_stop], array_column($nearbyTrunkOrigins, 'id'));
+
+            foreach ($nearbyTrunkOriginIds as $nToId) {
+                if (isset($feeder1Grouped[$nToId])) {
+                    foreach ($feeder1Grouped[$nToId] as $f1) {
+                        $transferWalk = $this->getWalkingDistanceFromCache($stopCache, $f1->f1_dest_stop, $trunk->trunk_origin_stop);
+                        $transferWalkMin = $this->calculateWalkingMinutes($transferWalk, $walkingSpeedKmh);
+                        
+                        $f1Arrival = strtotime($f1->f1_arrival);
+                        $trunkDeparture = strtotime($trunk->trunk_departure);
+                        
+                        if ($f1Arrival + (($transferWalkMin + $minTransferTime) * 60) <= $trunkDeparture && 
+                            $f1Arrival + ($maxTransferTime * 60) >= $trunkDeparture) {
+                            $f1Options[] = ['type' => 'transit', 'leg' => $f1, 'transfer_walk' => $transferWalk, 'transfer_walk_min' => $transferWalkMin];
+                        }
+                    }
+                }
+            }
+
+            if (empty($f1Options)) continue;
+
+            // Find acceptable Feeder 2
+            $f2Options = [];
+            $trunkDestStopObj = $stopCache[$trunk->trunk_dest_stop] ?? null;
+            if (!$trunkDestStopObj) continue;
+
+            $walkFromTrunkDist = $this->distanceStopToPointFromCache($stopCache, $trunk->trunk_dest_stop, $destLat, $destLon);
+            $walkFromTrunkDuration = $this->calculateWalkingMinutes($walkFromTrunkDist, $walkingSpeedKmh);
+
+            if ($walkFromTrunkDist <= $maxWalkingDistance) {
+                $f2Options[] = ['type' => 'walk', 'distance' => $walkFromTrunkDist, 'duration' => $walkFromTrunkDuration];
+            }
+
+            $nearbyTrunkDests = $this->findNearbyStopIdsFromCache($stopCache, (float)$trunkDestStopObj->stop_lat, (float)$trunkDestStopObj->stop_lon, $maxWalkingDistance);
+            $nearbyTrunkDestIds = array_merge([$trunk->trunk_dest_stop], array_column($nearbyTrunkDests, 'id'));
+
+            foreach ($nearbyTrunkDestIds as $nTdId) {
+                if (isset($feeder2Grouped[$nTdId])) {
+                    foreach ($feeder2Grouped[$nTdId] as $f2) {
+                        $transferWalk = $this->getWalkingDistanceFromCache($stopCache, $trunk->trunk_dest_stop, $f2->f2_origin_stop);
+                        $transferWalkMin = $this->calculateWalkingMinutes($transferWalk, $walkingSpeedKmh);
+                        
+                        $trunkArrival = strtotime($trunk->trunk_arrival);
+                        $f2Departure = strtotime($f2->f2_departure);
+
+                        if ($trunkArrival + (($transferWalkMin + $minTransferTime) * 60) <= $f2Departure &&
+                            $trunkArrival + ($maxTransferTime * 60) >= $f2Departure) {
+                            $f2Options[] = ['type' => 'transit', 'leg' => $f2, 'transfer_walk' => $transferWalk, 'transfer_walk_min' => $transferWalkMin];
+                        }
+                    }
+                }
+            }
+
+            if (empty($f2Options)) continue;
+
+            // Take the best F1 and best F2 to form the journey
+            // Best F1: latest departure from origin
+            // Best F2: earliest arrival at dest
+            $bestF1 = null; $bestF1Score = -1;
+            foreach ($f1Options as $f1) {
+                if ($f1['type'] === 'walk') {
+                    // Score = pseudo departure time = trunk_departure - walk duration
+                    $score = strtotime($trunk->trunk_departure) - ($f1['duration'] * 60);
+                } else {
+                    $score = strtotime($f1['leg']->f1_departure);
+                }
+                if ($score > $bestF1Score) {
+                    $bestF1Score = $score;
+                    $bestF1 = $f1;
+                }
+            }
+
+            $bestF2 = null; $bestF2Score = PHP_INT_MAX;
+            foreach ($f2Options as $f2) {
+                if ($f2['type'] === 'walk') {
+                    $score = strtotime($trunk->trunk_arrival) + ($f2['duration'] * 60);
+                } else {
+                    // Arrival time of F2 + final walk to dest
+                    $f2WalkToDestDist = $this->distanceStopToPointFromCache($stopCache, $f2['leg']->f2_dest_stop, $destLat, $destLon);
+                    $f2WalkToDestMin = $this->calculateWalkingMinutes($f2WalkToDestDist, $walkingSpeedKmh);
+                    $score = strtotime($f2['leg']->f2_arrival) + ($f2WalkToDestMin * 60);
+                }
+                if ($score < $bestF2Score) {
+                    $bestF2Score = $score;
+                    $bestF2 = $f2;
+                }
+            }
+
+            // Build Journey Array
+            $legs = [];
+            // FEEDER 1
+            if ($bestF1['type'] === 'walk') {
+                $walkStart = date('H:i', strtotime($trunk->trunk_departure) - ($bestF1['duration'] * 60));
+                $legs[] = [
+                    'type' => 'walk',
+                    'from' => $originName,
+                    'to' => $this->getStopNameFromCache($stopCache, $trunk->trunk_origin_stop),
+                    'from_lat' => $originLat, 'from_lon' => $originLon,
+                    'to_lat' => (float)$trunkOriginStopObj->stop_lat, 'to_lon' => (float)$trunkOriginStopObj->stop_lon,
+                    'distance' => $bestF1['distance'],
+                    'duration' => $bestF1['duration'],
+                    'start_time' => $walkStart,
+                    'end_time' => substr($trunk->trunk_departure, 0, 5)
+                ];
+            } else {
+                $f1Leg = $bestF1['leg'];
+                // Walk to F1 Origin
+                $wDist = $this->distancePointToStopFromCache($stopCache, $originLat, $originLon, $f1Leg->f1_origin_stop);
+                if ($wDist > 0.05) {
+                    $wDur = $this->calculateWalkingMinutes($wDist, $walkingSpeedKmh);
+                    $wStart = date('H:i', strtotime($f1Leg->f1_departure) - ($wDur * 60));
+                    $f1OCoords = $this->getStopCoordsFromCache($stopCache, $f1Leg->f1_origin_stop);
+                    $legs[] = [
+                        'type' => 'walk', 'from' => $originName, 'to' => $this->getStopNameFromCache($stopCache, $f1Leg->f1_origin_stop),
+                        'from_lat' => $originLat, 'from_lon' => $originLon,
+                        'to_lat' => $f1OCoords['lat'] ?? null, 'to_lon' => $f1OCoords['lon'] ?? null,
+                        'distance' => $wDist, 'duration' => $wDur,
+                        'start_time' => $wStart, 'end_time' => substr($f1Leg->f1_departure, 0, 5)
+                    ];
+                }
+                
+                $f1Stops = $this->fetchTripStops($f1Leg->f1_trip_id, $f1Leg->f1_origin_sequence, $f1Leg->f1_dest_sequence);
+                $f1Shape = [];
+                if (!empty($f1Leg->f1_shape_id) && !empty($f1Stops)) {
+                    $f1Shape = $this->getClippedShapePoints($f1Leg->f1_shape_id, (float)$f1Stops[0]['lat'], (float)$f1Stops[0]['lon'], (float)end($f1Stops)['lat'], (float)end($f1Stops)['lon']);
+                }
+                $legs[] = [
+                    'type' => 'transit', 'route_name' => $f1Leg->f1_route_name, 'route_long_name' => $f1Leg->f1_route_long,
+                    'route_type' => $f1Leg->f1_route_type, 'route_color' => $f1Leg->f1_color, 'route_text_color' => $f1Leg->f1_text_color,
+                    'operator_name' => $f1Leg->f1_operator, 'from' => $this->getStopNameFromCache($stopCache, $f1Leg->f1_origin_stop),
+                    'to' => $this->getStopNameFromCache($stopCache, $f1Leg->f1_dest_stop),
+                    'departure_time' => substr($f1Leg->f1_departure, 0, 5), 'arrival_time' => substr($f1Leg->f1_arrival, 0, 5),
+                    'duration' => $this->timeDiffMinutes(substr($f1Leg->f1_departure,0,5), substr($f1Leg->f1_arrival,0,5)),
+                    'stops' => $f1Stops, 'shape_pts' => $f1Shape
+                ];
+
+                if ($bestF1['transfer_walk'] > 0.05) {
+                    $wDur = $bestF1['transfer_walk_min'];
+                    $legs[] = [
+                        'type' => 'walk', 'from' => $this->getStopNameFromCache($stopCache, $f1Leg->f1_dest_stop),
+                        'to' => $this->getStopNameFromCache($stopCache, $trunk->trunk_origin_stop),
+                        'distance' => $bestF1['transfer_walk'], 'duration' => $wDur,
+                        'start_time' => substr($f1Leg->f1_arrival, 0, 5),
+                        'end_time' => date('H:i', strtotime($f1Leg->f1_arrival) + ($wDur * 60))
+                    ];
+                }
+            }
+
+            // TRUNK
+            $trunkStops = $this->fetchTripStops($trunk->trunk_trip_id, $trunk->origin_sequence, $trunk->dest_sequence);
+            $trunkShape = [];
+            if (!empty($trunk->trunk_shape_id) && !empty($trunkStops)) {
+                $trunkShape = $this->getClippedShapePoints($trunk->trunk_shape_id, (float)$trunkStops[0]['lat'], (float)$trunkStops[0]['lon'], (float)end($trunkStops)['lat'], (float)end($trunkStops)['lon']);
+            }
+            $legs[] = [
+                'type' => 'transit', 'route_name' => $trunk->trunk_route_name, 'route_long_name' => $trunk->trunk_route_long,
+                'route_type' => $trunk->trunk_route_type, 'route_color' => $trunk->trunk_color, 'route_text_color' => $trunk->trunk_text_color,
+                'operator_name' => $trunk->trunk_operator, 'from' => $this->getStopNameFromCache($stopCache, $trunk->trunk_origin_stop),
+                'to' => $this->getStopNameFromCache($stopCache, $trunk->trunk_dest_stop),
+                'departure_time' => substr($trunk->trunk_departure, 0, 5), 'arrival_time' => substr($trunk->trunk_arrival, 0, 5),
+                'duration' => $this->timeDiffMinutes(substr($trunk->trunk_departure,0,5), substr($trunk->trunk_arrival,0,5)),
+                'stops' => $trunkStops, 'shape_pts' => $trunkShape
+            ];
+
+            // FEEDER 2
+            if ($bestF2['type'] === 'walk') {
+                $walkEnd = date('H:i', strtotime($trunk->trunk_arrival) + ($bestF2['duration'] * 60));
+                $legs[] = [
+                    'type' => 'walk', 'from' => $this->getStopNameFromCache($stopCache, $trunk->trunk_dest_stop),
+                    'to' => $destinationName, 'from_lat' => (float)$trunkDestStopObj->stop_lat, 'from_lon' => (float)$trunkDestStopObj->stop_lon,
+                    'to_lat' => $destLat, 'to_lon' => $destLon, 'distance' => $bestF2['distance'], 'duration' => $bestF2['duration'],
+                    'start_time' => substr($trunk->trunk_arrival, 0, 5), 'end_time' => $walkEnd
+                ];
+            } else {
+                $f2Leg = $bestF2['leg'];
+                if ($bestF2['transfer_walk'] > 0.05) {
+                    $wDur = $bestF2['transfer_walk_min'];
+                    $legs[] = [
+                        'type' => 'walk', 'from' => $this->getStopNameFromCache($stopCache, $trunk->trunk_dest_stop),
+                        'to' => $this->getStopNameFromCache($stopCache, $f2Leg->f2_origin_stop),
+                        'distance' => $bestF2['transfer_walk'], 'duration' => $wDur,
+                        'start_time' => substr($trunk->trunk_arrival, 0, 5),
+                        'end_time' => date('H:i', strtotime($trunk->trunk_arrival) + ($wDur * 60))
+                    ];
+                }
+
+                $f2Stops = $this->fetchTripStops($f2Leg->f2_trip_id, $f2Leg->f2_origin_sequence, $f2Leg->f2_dest_sequence);
+                $f2Shape = [];
+                if (!empty($f2Leg->f2_shape_id) && !empty($f2Stops)) {
+                    $f2Shape = $this->getClippedShapePoints($f2Leg->f2_shape_id, (float)$f2Stops[0]['lat'], (float)$f2Stops[0]['lon'], (float)end($f2Stops)['lat'], (float)end($f2Stops)['lon']);
+                }
+                $legs[] = [
+                    'type' => 'transit', 'route_name' => $f2Leg->f2_route_name, 'route_long_name' => $f2Leg->f2_route_long,
+                    'route_type' => $f2Leg->f2_route_type, 'route_color' => $f2Leg->f2_color, 'route_text_color' => $f2Leg->f2_text_color,
+                    'operator_name' => $f2Leg->f2_operator, 'from' => $this->getStopNameFromCache($stopCache, $f2Leg->f2_origin_stop),
+                    'to' => $this->getStopNameFromCache($stopCache, $f2Leg->f2_dest_stop),
+                    'departure_time' => substr($f2Leg->f2_departure, 0, 5), 'arrival_time' => substr($f2Leg->f2_arrival, 0, 5),
+                    'duration' => $this->timeDiffMinutes(substr($f2Leg->f2_departure,0,5), substr($f2Leg->f2_arrival,0,5)),
+                    'stops' => $f2Stops, 'shape_pts' => $f2Shape
+                ];
+
+                $wDist = $this->distanceStopToPointFromCache($stopCache, $f2Leg->f2_dest_stop, $destLat, $destLon);
+                if ($wDist > 0.05) {
+                    $wDur = $this->calculateWalkingMinutes($wDist, $walkingSpeedKmh);
+                    $wStart = substr($f2Leg->f2_arrival, 0, 5);
+                    $legs[] = [
+                        'type' => 'walk', 'from' => $this->getStopNameFromCache($stopCache, $f2Leg->f2_dest_stop), 'to' => $destinationName,
+                        'distance' => $wDist, 'duration' => $wDur,
+                        'start_time' => $wStart, 'end_time' => date('H:i', strtotime($wStart) + ($wDur * 60))
+                    ];
+                }
+            }
+
+            $journey = $this->buildJourney($legs, $time);
+            
+            // Score similar to findTransferRoutes
+            $totalTimeMinutes = $this->timeDiffMinutes($journey['leave_at'], $journey['arrival_time']);
+            // A small boost for trains to make them attractive
+            $journey['score'] = 12000 - ($totalTimeMinutes * 50) - ($journey['transfers'] * 200);
+
+            if ($minimumDepartureTime && $date) {
+                $leaveAtDateTime = \Carbon\Carbon::parse($date.' '.$journey['leave_at']);
+                $minDt = \Carbon\Carbon::parse($date.' '.$minimumDepartureTime);
+                if ($leaveAtDateTime->lt($minDt)) continue;
+            }
+
+            $foundJourneys[] = $journey;
+        }
+
+        // Sort by closest departure time to the selected search time
+        $searchTimeStr = strtotime($time);
+        usort($foundJourneys, function($a, $b) use ($searchTimeStr) {
+            $diffA = abs(strtotime($a['leave_at']) - $searchTimeStr);
+            $diffB = abs(strtotime($b['leave_at']) - $searchTimeStr);
+            return $diffA <=> $diffB;
+        });
+
+        // Take only the 2 closest journeys
+        $closestJourneys = array_slice($foundJourneys, 0, 2);
+
+        // Score them and limit to 2
+        return $this->sortAndLimitJourneys($closestJourneys, 2);
+    }
     private function findNearbyStops($stops, $maxDistance)
     {
         $nearby = [];
@@ -1293,7 +1728,7 @@ class RouteSearchController extends Controller
                 $clusterMaxDistance = max(0.06, $minDistance + 0.03);
 
                 $ids = $ranked
-                    ->filter(fn($row) => $row['distance'] <= $clusterMaxDistance)
+                    ->filter(fn ($row) => $row['distance'] <= $clusterMaxDistance)
                     ->pluck('id')
                     ->all();
 
@@ -1309,7 +1744,7 @@ class RouteSearchController extends Controller
                             'distance' => $this->haversineDistance($lat, $lon, (float) $stop->stop_lat, (float) $stop->stop_lon),
                         ];
                     })
-                    ->filter(fn($row) => $row['distance'] <= 0.35)
+                    ->filter(fn ($row) => $row['distance'] <= 0.35)
                     ->pluck('id')
                     ->all();
 
@@ -1333,7 +1768,7 @@ class RouteSearchController extends Controller
         }
 
         return Stop::withoutGlobalScopes()
-            ->where('stop_name', 'LIKE', $stopName . '%')
+            ->where('stop_name', 'LIKE', $stopName.'%')
             ->pluck('id')
             ->toArray();
     }
@@ -1507,7 +1942,7 @@ class RouteSearchController extends Controller
                 ->select('stops.stop_name', 'stops.stop_lat', 'stops.stop_lon', 'stop_times.arrival_time', 'stop_times.departure_time')
                 ->get()
                 ->values()
-                ->map(fn($s) => [
+                ->map(fn ($s) => [
                     'name' => $s->stop_name,
                     'lat' => $s->stop_lat,
                     'lon' => $s->stop_lon,
@@ -1534,8 +1969,8 @@ class RouteSearchController extends Controller
      */
     private function timeDiffMinutes(string $from, string $to): int
     {
-        $f = strtotime('1970-01-01 ' . $from);
-        $t = strtotime('1970-01-01 ' . $to);
+        $f = strtotime('1970-01-01 '.$from);
+        $t = strtotime('1970-01-01 '.$to);
 
         if ($t < $f) {
             $t += 86400;
@@ -1614,8 +2049,8 @@ class RouteSearchController extends Controller
             'leave_at' => $leaveAt, // When user should leave their location
             'departure_time' => $departureTime, // When first bus departs
             'arrival_time' => $journeyEnd, // When journey actually ends (including final walk)
-            'duration' => round($duration) . ' min',
-            'transfers' => count(array_filter($legs, fn($l) => $l['type'] === 'transit')) - 1,
+            'duration' => round($duration).' min',
+            'transfers' => count(array_filter($legs, fn ($l) => $l['type'] === 'transit')) - 1,
             'legs' => $legs,
         ];
     }
@@ -1755,7 +2190,7 @@ class RouteSearchController extends Controller
                 ->where('shape_id', $shapeId)
                 ->orderBy('shape_pt_sequence')
                 ->get(['shape_pt_lat', 'shape_pt_lon'])
-                ->map(fn($pt) => [(float) $pt->shape_pt_lat, (float) $pt->shape_pt_lon])
+                ->map(fn ($pt) => [(float) $pt->shape_pt_lat, (float) $pt->shape_pt_lon])
                 ->toArray();
         }
 
@@ -1809,7 +2244,7 @@ class RouteSearchController extends Controller
     {
         $cacheKey = $tenantId === null
             ? 'route_shapes:all'
-            : 'route_shapes:tenant:' . $tenantId;
+            : 'route_shapes:tenant:'.$tenantId;
 
         return Cache::remember($cacheKey, now()->addHours(12), function () use ($tenantId): array {
             $routeShapesQuery = DB::table('routes as r')
@@ -1900,7 +2335,7 @@ class RouteSearchController extends Controller
             $territories = collect();
             $gtfsGrouped = $rows->groupBy('tenant_id');
             $gbfsGrouped = $gbfsRows->groupBy('tenant_id');
-            
+
             $allTenantIds = $gtfsGrouped->keys()->concat($gbfsGrouped->keys())->unique();
 
             foreach ($allTenantIds as $tenantId) {
@@ -1916,14 +2351,19 @@ class RouteSearchController extends Controller
 
                 $services = collect();
                 if ($tenantRows->isNotEmpty()) {
-                    $services->push('bus');
+                    $tenantName = strtolower($tenantRows->first()->operator_name);
+                    if ($tenantName === 'sncf') {
+                        $services->push('train');
+                    } else {
+                        $services->push('bus');
+                    }
                 }
                 if ($tenantGbfsRows->isNotEmpty()) {
                     $services = $services->concat($tenantGbfsRows->pluck('type'))->unique();
                 }
 
-                $stopPoints = $tenantRows->map(fn($row) => [(float) $row->stop_lat, (float) $row->stop_lon])
-                    ->concat($tenantGbfsRows->map(fn($row) => [(float) $row->stop_lat, (float) $row->stop_lon]))
+                $stopPoints = $tenantRows->map(fn ($row) => [(float) $row->stop_lat, (float) $row->stop_lon])
+                    ->concat($tenantGbfsRows->map(fn ($row) => [(float) $row->stop_lat, (float) $row->stop_lon]))
                     ->all();
 
                 if (count($stopPoints) < 4) {
@@ -1946,15 +2386,22 @@ class RouteSearchController extends Controller
 
                 $dominantCity = $tenantRows
                     ->pluck('city')
-                    ->filter(fn($city) => filled($city))
+                    ->filter(fn ($city) => filled($city))
                     ->countBy()
                     ->sortDesc()
                     ->keys()
                     ->first();
 
+                $territoryName = $dominantCity ? $operatorName.' - '.$dominantCity : $operatorName.' network';
+                
+                if (stripos($operatorName, 'sncf') !== false) {
+                    $dominantCity = 'Bourgogne-Franche-Comté';
+                    $territoryName = 'SNCF - Bourgogne-Franche-Comté';
+                }
+
                 $territories->push([
                     'tenant_id' => (int) $tenantId,
-                    'name' => $dominantCity ? $operatorName . ' - ' . $dominantCity : $operatorName . ' network',
+                    'name' => $territoryName,
                     'city' => $dominantCity,
                     'operator_name' => $operatorName,
                     'stops_count' => $tenantRows->count() + $tenantGbfsRows->count(),
@@ -1993,7 +2440,7 @@ class RouteSearchController extends Controller
     {
         $uniquePoints = [];
         foreach ($points as [$lat, $lon]) {
-            $key = round($lat, 6) . '|' . round($lon, 6);
+            $key = round($lat, 6).'|'.round($lon, 6);
             $uniquePoints[$key] = [$lat, $lon];
         }
 
@@ -2051,7 +2498,7 @@ class RouteSearchController extends Controller
     {
         $uniquePoints = [];
         foreach ($points as [$lat, $lon]) {
-            $key = round($lat, 6) . '|' . round($lon, 6);
+            $key = round($lat, 6).'|'.round($lon, 6);
             $uniquePoints[$key] = [$lat, $lon];
         }
 
@@ -2171,15 +2618,22 @@ class RouteSearchController extends Controller
      */
     private function getShapePointsForTenantCluster(int $tenantId, array $clusterPoints): array
     {
-        $rows = DB::table('routes as r')
+        $shapeIds = DB::table('routes as r')
             ->join('trips as t', 'r.id', '=', 't.route_id')
-            ->join('shapes as sh', 't.shape_id', '=', 'sh.shape_id')
             ->where('r.tenant_id', $tenantId)
             ->whereNotNull('t.shape_id')
-            ->whereRaw('MOD(sh.shape_pt_sequence, 4) = 0 OR sh.shape_pt_sequence = 1')
             ->distinct()
+            ->pluck('t.shape_id');
+
+        if ($shapeIds->isEmpty()) {
+            return [];
+        }
+
+        $rows = DB::table('shapes')
+            ->whereIn('shape_id', $shapeIds)
+            ->whereRaw('MOD(shape_pt_sequence, 4) = 0 OR shape_pt_sequence = 1')
             ->limit(12000)
-            ->get(['sh.shape_pt_lat', 'sh.shape_pt_lon']);
+            ->get(['shape_pt_lat', 'shape_pt_lon']);
 
         $shapePoints = [];
         foreach ($rows as $row) {
@@ -2196,7 +2650,7 @@ class RouteSearchController extends Controller
     private function interpolateCircularMissingValues(array $values): array
     {
         $count = count($values);
-        $known = array_filter($values, fn($value): bool => $value !== null);
+        $known = array_filter($values, fn ($value): bool => $value !== null);
 
         if (empty($known)) {
             return array_fill(0, $count, 0.0);
@@ -2240,7 +2694,7 @@ class RouteSearchController extends Controller
             }
         }
 
-        return array_map(fn($value): float => (float) $value, $values);
+        return array_map(fn ($value): float => (float) $value, $values);
     }
 
     /**
@@ -2454,10 +2908,10 @@ class RouteSearchController extends Controller
                 }
             }
 
-            $clusters[] = collect($clusterIndexes)->map(fn($idx) => $rows[$idx]);
+            $clusters[] = collect($clusterIndexes)->map(fn ($idx) => $rows[$idx]);
         }
 
-        usort($clusters, fn($a, $b): int => $b->count() <=> $a->count());
+        usort($clusters, fn ($a, $b): int => $b->count() <=> $a->count());
 
         return $clusters;
     }
@@ -2525,8 +2979,8 @@ class RouteSearchController extends Controller
             return [];
         }
 
-        $lats = array_map(fn($point) => $point[0], $points);
-        $lons = array_map(fn($point) => $point[1], $points);
+        $lats = array_map(fn ($point) => $point[0], $points);
+        $lons = array_map(fn ($point) => $point[1], $points);
 
         $minLat = min($lats);
         $maxLat = max($lats);
@@ -2565,8 +3019,8 @@ class RouteSearchController extends Controller
             ];
         }
 
-        $lats = array_map(fn($point) => $point[0], $polygon);
-        $lons = array_map(fn($point) => $point[1], $polygon);
+        $lats = array_map(fn ($point) => $point[0], $polygon);
+        $lons = array_map(fn ($point) => $point[1], $polygon);
 
         return [
             'min_lat' => min($lats),
@@ -2575,24 +3029,25 @@ class RouteSearchController extends Controller
             'max_lon' => max($lons),
         ];
     }
+
     /**
      * Generate point-to-point GBFS routes (bikes and cars).
      */
     private function getGbfsRoutes(?float $originLat, ?float $originLon, ?float $destLat, ?float $destLon, string $time, string $originName, string $destName): array
     {
         $gbfsRoutes = [];
-        
+
         // Try to find a Bike route
         $bikeOrigin = $this->getNearestGbfsStation($originLat, $originLon, true, 'cycle');
         $bikeDest = $this->getNearestGbfsStation($destLat, $destLon, false, 'cycle');
-        
+
         if ($bikeOrigin && $bikeDest && $bikeOrigin->id !== $bikeDest->id) {
             $gbfsRoutes[] = $this->buildGbfsRoute($bikeOrigin, $bikeDest, $originLat, $originLon, $destLat, $destLon, $time, $originName, $destName, 'bike', '3b82f6', false);
         }
 
         // Try to find a Car route
         $carOrigin = $this->getNearestGbfsStation($originLat, $originLon, true, 'car');
-        
+
         if ($carOrigin) {
             $carDest = $this->getNearestGbfsStation($destLat, $destLon, false, 'car');
             $parkingDest = $this->getNearestParkingSpot($destLat, $destLon);
@@ -2630,12 +3085,12 @@ class RouteSearchController extends Controller
 
     private function getNearestParkingSpot(?float $lat, ?float $lon)
     {
-        if (!$lat || !$lon) {
+        if (! $lat || ! $lon) {
             return null;
         }
 
         // Within 2km radius
-        $parkingSpots = \App\Models\ParkingSpot::all();
+        $parkingSpots = ParkingSpot::all();
         $bestSpot = null;
         $minDist = 2.0;
 
@@ -2664,8 +3119,8 @@ class RouteSearchController extends Controller
         $walkDurB = (int) round(($walkDistB / 5.0) * 60);
 
         $totalDuration = $walkDurA + $rideDur + $walkDurB;
-        $departureTimeObj = \Carbon\Carbon::createFromFormat('H:i', substr($time, 0, 5));
-        
+        $departureTimeObj = Carbon::createFromFormat('H:i', substr($time, 0, 5));
+
         $legs = [];
         $currentTimeObj = clone $departureTimeObj;
 
@@ -2691,7 +3146,7 @@ class RouteSearchController extends Controller
         $legs[] = [
             'type' => $type,
             'from' => $stationA->name,
-            'to' => $isParkingDest ? $stationB->name . ' (Parking)' : $stationB->name,
+            'to' => $isParkingDest ? $stationB->name.' (Parking)' : $stationB->name,
             'from_lat' => $stationA->lat,
             'from_lon' => $stationA->lon,
             'to_lat' => $stationB->lat,
@@ -2700,7 +3155,7 @@ class RouteSearchController extends Controller
             'duration' => $rideDur,
             'start_time' => $currentTimeObj->format('H:i'),
             'end_time' => $endTimeObj->format('H:i'),
-            'route_name' => ($stationA->source->tenant->name ?? 'GBFS') . ' ' . ucfirst($type),
+            'route_name' => ($stationA->source->tenant->name ?? 'GBFS').' '.ucfirst($type),
             'route_color' => $color,
         ];
         $currentTimeObj = $endTimeObj;
@@ -2709,7 +3164,7 @@ class RouteSearchController extends Controller
             $endTimeObj = (clone $currentTimeObj)->addMinutes($walkDurB);
             $legs[] = [
                 'type' => 'walk',
-                'from' => $isParkingDest ? $stationB->name . ' (Parking)' : $stationB->name,
+                'from' => $isParkingDest ? $stationB->name.' (Parking)' : $stationB->name,
                 'to' => $destName,
                 'from_lat' => $stationB->lat,
                 'from_lon' => $stationB->lon,
@@ -2724,14 +3179,14 @@ class RouteSearchController extends Controller
         }
 
         return [
-            'route_name' => ($stationA->source->tenant->name ?? 'GBFS') . ' ' . ucfirst($type),
+            'route_name' => ($stationA->source->tenant->name ?? 'GBFS').' '.ucfirst($type),
             'route_short_name' => ucfirst($type),
             'route_color' => $color,
             'route_text_color' => 'ffffff',
             'agency_name' => $stationA->source->tenant->name ?? 'GBFS',
             'departure_time' => $departureTimeObj->format('H:i'),
             'arrival_time' => $currentTimeObj->format('H:i'),
-            'duration' => $totalDuration . ' min',
+            'duration' => $totalDuration.' min',
             'connection_type' => 'transfer',
             'is_gbfs' => true,
             'gbfs_type' => $type,
@@ -2739,17 +3194,17 @@ class RouteSearchController extends Controller
             'legs' => $legs,
         ];
     }
-    
+
     /**
      * Find the nearest GBFS station with availability.
      */
     private function getNearestGbfsStation(?float $lat, ?float $lon, bool $needsVehicle)
     {
-        if (!$lat || !$lon) {
+        if (! $lat || ! $lon) {
             return null;
         }
 
-        $stations = \App\Models\GbfsStation::with(['source', 'source.tenant'])
+        $stations = GbfsStation::with(['source', 'source.tenant'])
             ->whereHas('source', function ($query) {
                 $query->where('is_active', true);
             })->get();
@@ -2768,7 +3223,7 @@ class RouteSearchController extends Controller
                 // Determine availability
                 $isCar = $station->source->type === 'car';
                 $available = 0;
-                
+
                 if ($needsVehicle) {
                     if ($isCar) {
                         if (isset($status['vehicle_types_available'])) {
@@ -2782,14 +3237,14 @@ class RouteSearchController extends Controller
                         $available = $status['num_bikes_available'] ?? 0;
                     }
 
-                    if ($available > 0 || !empty($status['is_renting'])) {
+                    if ($available > 0 || ! empty($status['is_renting'])) {
                         $minDist = $dist;
                         $bestStation = $station;
                     }
                 } else {
                     // Needs dock
                     $docks = $status['num_docks_available'] ?? 0;
-                    if ($docks > 0 || !empty($status['is_returning'])) {
+                    if ($docks > 0 || ! empty($status['is_returning'])) {
                         $minDist = $dist;
                         $bestStation = $station;
                     }
@@ -2823,7 +3278,7 @@ class RouteSearchController extends Controller
 
         return response()->json([
             'stops' => $stops,
-            'gbfs_stations' => $gbfsStations
+            'gbfs_stations' => $gbfsStations,
         ]);
     }
 
@@ -2834,7 +3289,7 @@ class RouteSearchController extends Controller
             ->get();
 
         return response()->json([
-            'parking_spots' => $parkingSpots
+            'parking_spots' => $parkingSpots,
         ]);
     }
 }

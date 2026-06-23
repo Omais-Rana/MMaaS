@@ -65,7 +65,7 @@ class ShapesRelationManager extends RelationManager
                 SelectFilter::make('shape_id')
                     ->label('Shape ID')
                     ->options(
-                        fn(RelationManager $livewire): array => $livewire->getOwnerRecord()
+                        fn (RelationManager $livewire): array => $livewire->getOwnerRecord()
                             ->shapes()
                             ->distinct()
                             ->orderBy('shape_id')

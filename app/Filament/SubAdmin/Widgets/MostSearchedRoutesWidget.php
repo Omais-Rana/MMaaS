@@ -79,7 +79,7 @@ class MostSearchedRoutesWidget extends TableWidget
             ->groupBy(DB::raw('HOUR(search_time)'))
             ->orderBy('h')
             ->pluck('h', 'h')
-            ->mapWithKeys(fn($h) => [$h => "{$h}:00 – " . str_pad((int) $h + 1, 2, '0', STR_PAD_LEFT) . ':00'])
+            ->mapWithKeys(fn ($h) => [$h => "{$h}:00 – ".str_pad((int) $h + 1, 2, '0', STR_PAD_LEFT).':00'])
             ->toArray();
 
         $dateOptions = RouteSearch::where($customerScope)
@@ -93,7 +93,7 @@ class MostSearchedRoutesWidget extends TableWidget
         return $table
             ->query(RouteSearch::fromSub($innerQuery, 'route_searches'))
             ->heading('Most Searched Routes')
-            ->description("{$totalSearches} total " . str('search')->plural($totalSearches) . ' by customers')
+            ->description("{$totalSearches} total ".str('search')->plural($totalSearches).' by customers')
             ->filters([
                 SelectFilter::make('origin_name')
                     ->label('Start')
@@ -131,7 +131,7 @@ class MostSearchedRoutesWidget extends TableWidget
                 TextColumn::make('departure_hour')
                     ->label('Departs')
                     ->sortable()
-                    ->formatStateUsing(fn(string $state): string => "{$state}:00"),
+                    ->formatStateUsing(fn (string $state): string => "{$state}:00"),
                 TextColumn::make('total')
                     ->label('Searches')
                     ->badge()

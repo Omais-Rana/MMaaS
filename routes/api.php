@@ -1,9 +1,9 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\RouteSearchController;
 use App\Models\Stop;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 
 Route::post('/routes/search', [RouteSearchController::class, 'searchRoutes']);
 Route::get('/territories/{tenantId}/stops', [RouteSearchController::class, 'getTerritoryStops']);
@@ -13,7 +13,7 @@ Route::get('/stops/nearest', function (Request $request) {
     $lat = $request->input('lat');
     $lon = $request->input('lon');
 
-    if (!$lat || !$lon) {
+    if (! $lat || ! $lon) {
         return response()->json(['error' => 'Latitude and longitude required'], 400);
     }
 
@@ -27,7 +27,7 @@ Route::get('/stops/nearest', function (Request $request) {
         ->orderBy('distance')
         ->first();
 
-    if (!$nearestStop) {
+    if (! $nearestStop) {
         return response()->json(['error' => 'No stop found within 500m'], 404);
     }
 

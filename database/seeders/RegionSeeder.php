@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Region;
 use Illuminate\Database\Seeder;
 
 class RegionSeeder extends Seeder
@@ -30,7 +31,7 @@ class RegionSeeder extends Seeder
         ];
 
         foreach ($regions as $region) {
-            \App\Models\Region::updateOrCreate(
+            Region::updateOrCreate(
                 ['name' => $region['name']],
                 ['postal_code' => $region['postal_code']]
             );

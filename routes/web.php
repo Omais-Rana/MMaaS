@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\RouteSearchController;
+use App\Http\Controllers\Api\SharedVehicleController;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -33,7 +34,7 @@ Route::get('/login', function () use ($redirectAuthenticatedUserByRole) {
 })->name('login');
 
 // Unified registration - redirect to user registration
-Route::get('/register', fn() => redirect('/user/register'))->name('register');
+Route::get('/register', fn () => redirect('/user/register'))->name('register');
 
 // Dashboard route - redirect to appropriate panel based on role
 Route::get('/dashboard', function () use ($redirectAuthenticatedUserByRole) {
@@ -66,5 +67,5 @@ Route::prefix('api')->group(function () {
     Route::get('/territories/routes/all-shapes', [RouteSearchController::class, 'getRoutesWithShapesByTerritory']);
     Route::get('/routes/all-shapes', [RouteSearchController::class, 'getAllRoutesWithShapes']);
     Route::get('/routes/{routeName}/stops', [RouteSearchController::class, 'getRouteStops']);
-    Route::get('/shared-vehicles/stations', [App\Http\Controllers\Api\SharedVehicleController::class, 'getStations']);
+    Route::get('/shared-vehicles/stations', [SharedVehicleController::class, 'getStations']);
 });

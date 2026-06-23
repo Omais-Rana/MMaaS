@@ -152,7 +152,7 @@ class RoleResource extends Resource
                                 $options = [];
                                 foreach ($permissions as $module => $perms) {
                                     foreach ($perms as $permission) {
-                                        $options[$permission->id] = $module . ': ' . str_replace('_', ' ', ucwords($permission->name, '_'));
+                                        $options[$permission->id] = $module.': '.str_replace('_', ' ', ucwords($permission->name, '_'));
                                     }
                                 }
 

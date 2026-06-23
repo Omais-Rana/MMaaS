@@ -33,7 +33,7 @@ class GtfsParserService
     public function __construct(ScheduleImport $import)
     {
         $this->import = $import;
-        $this->extractPath = storage_path('app/temp/gtfs-' . uniqid());
+        $this->extractPath = storage_path('app/temp/gtfs-'.uniqid());
     }
 
     public function parse(string $filePath): array
@@ -92,7 +92,7 @@ class GtfsParserService
 
     protected function parseRoutes(): void
     {
-        $file = $this->extractPath . '/routes.txt';
+        $file = $this->extractPath.'/routes.txt';
 
         if (! file_exists($file)) {
             Log::warning('routes.txt not found in GTFS archive');
@@ -131,7 +131,7 @@ class GtfsParserService
 
     protected function parseStops(): void
     {
-        $file = $this->extractPath . '/stops.txt';
+        $file = $this->extractPath.'/stops.txt';
 
         if (! file_exists($file)) {
             Log::warning('stops.txt not found in GTFS archive');
@@ -182,7 +182,7 @@ class GtfsParserService
 
     protected function parseShapes(): void
     {
-        $file = $this->extractPath . '/shapes.txt';
+        $file = $this->extractPath.'/shapes.txt';
 
         if (! file_exists($file)) {
             Log::warning('shapes.txt not found in GTFS archive');
@@ -230,7 +230,7 @@ class GtfsParserService
 
     protected function parseTrips(): void
     {
-        $file = $this->extractPath . '/trips.txt';
+        $file = $this->extractPath.'/trips.txt';
 
         if (! file_exists($file)) {
             Log::warning('trips.txt not found in GTFS archive');
@@ -280,7 +280,7 @@ class GtfsParserService
 
     protected function parseStopTimes(): void
     {
-        $file = $this->extractPath . '/stop_times.txt';
+        $file = $this->extractPath.'/stop_times.txt';
 
         if (! file_exists($file)) {
             Log::warning('stop_times.txt not found in GTFS archive');
@@ -331,7 +331,7 @@ class GtfsParserService
 
     protected function parseCalendar(): void
     {
-        $file = $this->extractPath . '/calendar.txt';
+        $file = $this->extractPath.'/calendar.txt';
 
         if (! file_exists($file)) {
             Log::warning('calendar.txt not found in GTFS archive');
@@ -366,7 +366,7 @@ class GtfsParserService
 
     protected function parseCalendarDates(): void
     {
-        $file = $this->extractPath . '/calendar_dates.txt';
+        $file = $this->extractPath.'/calendar_dates.txt';
 
         if (! file_exists($file)) {
             Log::warning('calendar_dates.txt not found in GTFS archive');
@@ -474,7 +474,7 @@ class GtfsParserService
     {
         // GTFS dates are in YYYYMMDD format
         if (preg_match('/^(\d{4})(\d{2})(\d{2})$/', $date, $matches)) {
-            return $matches[1] . '-' . $matches[2] . '-' . $matches[3];
+            return $matches[1].'-'.$matches[2].'-'.$matches[3];
         }
 
         return now()->format('Y-m-d');
@@ -502,7 +502,7 @@ class GtfsParserService
                 continue;
             }
 
-            if (! $this->deleteDirectory($dir . DIRECTORY_SEPARATOR . $item)) {
+            if (! $this->deleteDirectory($dir.DIRECTORY_SEPARATOR.$item)) {
                 return false;
             }
         }
