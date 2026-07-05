@@ -1299,7 +1299,7 @@ class RouteSearchController extends Controller
         $sqlMaxTime = date('H:i:s', strtotime($time) + (180 * 60)); // 3 hours after
 
         // 1. Find Trunk Trips (Trains)
-        $trunkTrips = \DB::table('stop_times as st_origin')
+        $trunkTrips = DB::table('stop_times as st_origin')
             ->join('trips as t', 'st_origin.trip_id', '=', 't.id')
             ->join('routes as r', 't.route_id', '=', 'r.id')
             ->join('users as u', 'r.tenant_id', '=', 'u.id')
@@ -1369,7 +1369,7 @@ class RouteSearchController extends Controller
         $localDestIds = array_unique(array_merge($destStopIds, array_column($localDestStops, 'id')));
 
         // 2. Fetch Feeder 1 (Origin to Trunk Origin)
-        $feeder1Trips = \DB::table('stop_times as st_start')
+        $feeder1Trips = DB::table('stop_times as st_start')
             ->join('trips as t', 'st_start.trip_id', '=', 't.id')
             ->join('routes as r', 't.route_id', '=', 'r.id')
             ->join('users as u', 'r.tenant_id', '=', 'u.id')
@@ -1405,7 +1405,7 @@ class RouteSearchController extends Controller
         }
 
         // 3. Fetch Feeder 2 (Trunk Dest to Destination)
-        $feeder2Trips = \DB::table('stop_times as st_start')
+        $feeder2Trips = DB::table('stop_times as st_start')
             ->join('trips as t', 'st_start.trip_id', '=', 't.id')
             ->join('routes as r', 't.route_id', '=', 'r.id')
             ->join('users as u', 'r.tenant_id', '=', 'u.id')
@@ -1445,6 +1445,13 @@ class RouteSearchController extends Controller
         $maxTransferTime = 120; // minutes
         $walkingSpeedKmh = 6.5;
 
+        // Pre-fetch origin and destination GBFS bike stations
+        $originGbfsBike = $this->getNearestGbfsStation($originLat, $originLon, true, 'cycle');
+        $destGbfsBike = $this->getNearestGbfsStation($destLat, $destLon, false, 'cycle');
+        
+        $gbfsTrunkOriginCache = []; // trunk_origin_stop -> GBFS station with docks
+        $gbfsTrunkDestCache = [];   // trunk_dest_stop -> GBFS station with bikes
+
         foreach ($trunkTrips as $trunk) {
             $trunkOriginStopObj = $stopCache[$trunk->trunk_origin_stop] ?? null;
             $trunkDestStopObj = $stopCache[$trunk->trunk_dest_stop] ?? null;
@@ -1480,6 +1487,44 @@ class RouteSearchController extends Controller
             if ($walkToTrunkDist <= $maxWalkingDistance) {
                 // Pseudo Feeder1 (Walk)
                 $f1Options[] = ['type' => 'walk', 'distance' => $walkToTrunkDist, 'duration' => $walkToTrunkDuration];
+            }
+
+            // Pseudo Feeder1 (GBFS Cycle)
+            if ($originGbfsBike) {
+                if (!array_key_exists($trunk->trunk_origin_stop, $gbfsTrunkOriginCache)) {
+                    $gbfsTrunkOriginCache[$trunk->trunk_origin_stop] = $this->getNearestGbfsStation((float) $trunkOriginStopObj->stop_lat, (float) $trunkOriginStopObj->stop_lon, false, 'cycle');
+                }
+                $trunkGbfsBike = $gbfsTrunkOriginCache[$trunk->trunk_origin_stop];
+                
+                if ($trunkGbfsBike && $originGbfsBike->id !== $trunkGbfsBike->id) {
+                    $walkToBike = $this->haversineDistance($originLat, $originLon, $originGbfsBike->lat, $originGbfsBike->lon);
+                    $bikeRide = $this->haversineDistance($originGbfsBike->lat, $originGbfsBike->lon, $trunkGbfsBike->lat, $trunkGbfsBike->lon);
+                    $walkToTrunk = $this->haversineDistance($trunkGbfsBike->lat, $trunkGbfsBike->lon, (float) $trunkOriginStopObj->stop_lat, (float) $trunkOriginStopObj->stop_lon);
+                    
+                    // Only add if it's reasonably close (walk < 1.5km, ride > 0.5km to make it worth it)
+                    if ($walkToBike <= $maxWalkingDistance && $walkToTrunk <= $maxWalkingDistance && $bikeRide > 0.5) {
+                        $walkToBikeDur = $this->calculateWalkingMinutes($walkToBike, $walkingSpeedKmh);
+                        $bikeRideDur = (int) round($bikeRide * 4); // 15km/h = 4 min/km
+                        $walkToTrunkDur = $this->calculateWalkingMinutes($walkToTrunk, $walkingSpeedKmh);
+                        
+                        $totalGbfsFeederDur = $walkToBikeDur + $bikeRideDur + $walkToTrunkDur + 2; // +2 mins for unlock/lock
+                        
+                        $f1Options[] = [
+                            'type' => 'gbfs', 
+                            'sub_type' => 'cycle',
+                            'duration' => $totalGbfsFeederDur,
+                            'bikeOrigin' => $originGbfsBike,
+                            'bikeDest' => $trunkGbfsBike,
+                            'walk1_dist' => $walkToBike,
+                            'ride_dist' => $bikeRide,
+                            'walk2_dist' => $walkToTrunk,
+                            'walk1_min' => $walkToBikeDur,
+                            'ride_min' => $bikeRideDur,
+                            'walk2_min' => $walkToTrunkDur,
+                            'operator_name' => $originGbfsBike->source->tenant->name ?? 'Shared Bike'
+                        ];
+                    }
+                }
             }
 
             // Transit Feeder1
@@ -1521,6 +1566,43 @@ class RouteSearchController extends Controller
                 $f2Options[] = ['type' => 'walk', 'distance' => $walkFromTrunkDist, 'duration' => $walkFromTrunkDuration];
             }
 
+            // Pseudo Feeder2 (GBFS Cycle)
+            if ($destGbfsBike) {
+                if (!array_key_exists($trunk->trunk_dest_stop, $gbfsTrunkDestCache)) {
+                    $gbfsTrunkDestCache[$trunk->trunk_dest_stop] = $this->getNearestGbfsStation((float) $trunkDestStopObj->stop_lat, (float) $trunkDestStopObj->stop_lon, true, 'cycle');
+                }
+                $trunkGbfsBike = $gbfsTrunkDestCache[$trunk->trunk_dest_stop];
+                
+                if ($trunkGbfsBike && $destGbfsBike->id !== $trunkGbfsBike->id) {
+                    $walkFromTrunk = $this->haversineDistance((float) $trunkDestStopObj->stop_lat, (float) $trunkDestStopObj->stop_lon, $trunkGbfsBike->lat, $trunkGbfsBike->lon);
+                    $bikeRide = $this->haversineDistance($trunkGbfsBike->lat, $trunkGbfsBike->lon, $destGbfsBike->lat, $destGbfsBike->lon);
+                    $walkToDest = $this->haversineDistance($destGbfsBike->lat, $destGbfsBike->lon, $destLat, $destLon);
+                    
+                    if ($walkFromTrunk <= $maxWalkingDistance && $walkToDest <= $maxWalkingDistance && $bikeRide > 0.5) {
+                        $walkFromTrunkDur = $this->calculateWalkingMinutes($walkFromTrunk, $walkingSpeedKmh);
+                        $bikeRideDur = (int) round($bikeRide * 4); // 15km/h = 4 min/km
+                        $walkToDestDur = $this->calculateWalkingMinutes($walkToDest, $walkingSpeedKmh);
+                        
+                        $totalGbfsFeederDur = $walkFromTrunkDur + $bikeRideDur + $walkToDestDur + 2; // +2 mins
+                        
+                        $f2Options[] = [
+                            'type' => 'gbfs', 
+                            'sub_type' => 'cycle',
+                            'duration' => $totalGbfsFeederDur,
+                            'bikeOrigin' => $trunkGbfsBike,
+                            'bikeDest' => $destGbfsBike,
+                            'walk1_dist' => $walkFromTrunk,
+                            'ride_dist' => $bikeRide,
+                            'walk2_dist' => $walkToDest,
+                            'walk1_min' => $walkFromTrunkDur,
+                            'ride_min' => $bikeRideDur,
+                            'walk2_min' => $walkToDestDur,
+                            'operator_name' => $trunkGbfsBike->source->tenant->name ?? 'Shared Bike'
+                        ];
+                    }
+                }
+            }
+
             $nearbyTrunkDests = $this->findNearbyStopIdsFromCache($stopCache, (float) $trunkDestStopObj->stop_lat, (float) $trunkDestStopObj->stop_lon, $maxWalkingDistance);
             $nearbyTrunkDestIds = array_merge([$trunk->trunk_dest_stop], array_column($nearbyTrunkDests, 'id'));
 
@@ -1551,8 +1633,8 @@ class RouteSearchController extends Controller
             $bestF1 = null;
             $bestF1Score = -1;
             foreach ($f1Options as $f1) {
-                if ($f1['type'] === 'walk') {
-                    // Score = pseudo departure time = trunk_departure - walk duration
+                if ($f1['type'] === 'walk' || $f1['type'] === 'gbfs') {
+                    // Score = pseudo departure time = trunk_departure - feeder duration
                     $score = strtotime($trunk->trunk_departure) - ($f1['duration'] * 60);
                 } else {
                     $originWalkDist = $this->distancePointToStopFromCache($stopCache, $originLat, $originLon, $f1['leg']->f1_origin_stop);
@@ -1568,7 +1650,7 @@ class RouteSearchController extends Controller
             $bestF2 = null;
             $bestF2Score = PHP_INT_MAX;
             foreach ($f2Options as $f2) {
-                if ($f2['type'] === 'walk') {
+                if ($f2['type'] === 'walk' || $f2['type'] === 'gbfs') {
                     $score = strtotime($trunk->trunk_arrival) + ($f2['duration'] * 60);
                 } else {
                     // Arrival time of F2 + final walk to dest
@@ -1598,6 +1680,59 @@ class RouteSearchController extends Controller
                     'start_time' => $walkStart,
                     'end_time' => substr($trunk->trunk_departure, 0, 5),
                 ];
+            } elseif ($bestF1['type'] === 'gbfs') {
+                $walkStart = date('H:i', strtotime($trunk->trunk_departure) - ($bestF1['duration'] * 60));
+                
+                // 1. Walk to bike
+                $walkToBikeEnd = date('H:i', strtotime($walkStart) + ($bestF1['walk1_min'] * 60));
+                if ($bestF1['walk1_dist'] > 0.05) {
+                    $legs[] = [
+                        'type' => 'walk',
+                        'from' => $originName,
+                        'to' => $bestF1['bikeOrigin']->name,
+                        'from_lat' => $originLat, 'from_lon' => $originLon,
+                        'to_lat' => $bestF1['bikeOrigin']->lat, 'to_lon' => $bestF1['bikeOrigin']->lon,
+                        'distance' => $bestF1['walk1_dist'],
+                        'duration' => $bestF1['walk1_min'],
+                        'start_time' => $walkStart,
+                        'end_time' => $walkToBikeEnd,
+                    ];
+                }
+                
+                // 2. Bike ride
+                $bikeRideEnd = date('H:i', strtotime($walkToBikeEnd) + ($bestF1['ride_min'] * 60));
+                $legs[] = [
+                    'type' => 'bike',
+                    'route_name' => 'Bike',
+                    'route_color' => '3b82f6', // Blue for bikes
+                    'operator_name' => $bestF1['operator_name'],
+                    'from' => $bestF1['bikeOrigin']->name,
+                    'to' => $bestF1['bikeDest']->name,
+                    'from_lat' => $bestF1['bikeOrigin']->lat,
+                    'from_lon' => $bestF1['bikeOrigin']->lon,
+                    'to_lat' => $bestF1['bikeDest']->lat,
+                    'to_lon' => $bestF1['bikeDest']->lon,
+                    'distance' => $bestF1['ride_dist'],
+                    'duration' => $bestF1['ride_min'],
+                    'departure_time' => $walkToBikeEnd,
+                    'arrival_time' => $bikeRideEnd,
+                ];
+                
+                // 3. Walk to Trunk
+                $walkToTrunkEnd = date('H:i', strtotime($bikeRideEnd) + ($bestF1['walk2_min'] * 60));
+                if ($bestF1['walk2_dist'] > 0.05) {
+                    $legs[] = [
+                        'type' => 'walk',
+                        'from' => $bestF1['bikeDest']->name,
+                        'to' => $this->getStopNameFromCache($stopCache, $trunk->trunk_origin_stop),
+                        'from_lat' => $bestF1['bikeDest']->lat, 'from_lon' => $bestF1['bikeDest']->lon,
+                        'to_lat' => (float) $trunkOriginStopObj->stop_lat, 'to_lon' => (float) $trunkOriginStopObj->stop_lon,
+                        'distance' => $bestF1['walk2_dist'],
+                        'duration' => $bestF1['walk2_min'],
+                        'start_time' => $bikeRideEnd,
+                        'end_time' => $walkToTrunkEnd, // usually exactly equal to trunk_departure minus the 2 mins padding
+                    ];
+                }
             } else {
                 $f1Leg = $bestF1['leg'];
                 // Walk to F1 Origin
@@ -1667,6 +1802,59 @@ class RouteSearchController extends Controller
                     'to_lat' => $destLat, 'to_lon' => $destLon, 'distance' => $bestF2['distance'], 'duration' => $bestF2['duration'],
                     'start_time' => substr($trunk->trunk_arrival, 0, 5), 'end_time' => $walkEnd,
                 ];
+            } elseif ($bestF2['type'] === 'gbfs') {
+                $walkStart = substr($trunk->trunk_arrival, 0, 5);
+                
+                // 1. Walk from Trunk to Bike
+                $walkToBikeEnd = date('H:i', strtotime($walkStart) + ($bestF2['walk1_min'] * 60));
+                if ($bestF2['walk1_dist'] > 0.05) {
+                    $legs[] = [
+                        'type' => 'walk',
+                        'from' => $this->getStopNameFromCache($stopCache, $trunk->trunk_dest_stop),
+                        'to' => $bestF2['bikeOrigin']->name,
+                        'from_lat' => (float) $trunkDestStopObj->stop_lat, 'from_lon' => (float) $trunkDestStopObj->stop_lon,
+                        'to_lat' => $bestF2['bikeOrigin']->lat, 'to_lon' => $bestF2['bikeOrigin']->lon,
+                        'distance' => $bestF2['walk1_dist'],
+                        'duration' => $bestF2['walk1_min'],
+                        'start_time' => $walkStart,
+                        'end_time' => $walkToBikeEnd,
+                    ];
+                }
+                
+                // 2. Bike ride
+                $bikeRideEnd = date('H:i', strtotime($walkToBikeEnd) + ($bestF2['ride_min'] * 60));
+                $legs[] = [
+                    'type' => 'bike',
+                    'route_name' => 'Bike',
+                    'route_color' => '3b82f6', // Blue for bikes
+                    'operator_name' => $bestF2['operator_name'],
+                    'from' => $bestF2['bikeOrigin']->name,
+                    'to' => $bestF2['bikeDest']->name,
+                    'from_lat' => $bestF2['bikeOrigin']->lat,
+                    'from_lon' => $bestF2['bikeOrigin']->lon,
+                    'to_lat' => $bestF2['bikeDest']->lat,
+                    'to_lon' => $bestF2['bikeDest']->lon,
+                    'distance' => $bestF2['ride_dist'],
+                    'duration' => $bestF2['ride_min'],
+                    'departure_time' => $walkToBikeEnd,
+                    'arrival_time' => $bikeRideEnd,
+                ];
+                
+                // 3. Walk to Dest
+                $walkToDestEnd = date('H:i', strtotime($bikeRideEnd) + ($bestF2['walk2_min'] * 60));
+                if ($bestF2['walk2_dist'] > 0.05) {
+                    $legs[] = [
+                        'type' => 'walk',
+                        'from' => $bestF2['bikeDest']->name,
+                        'to' => $destinationName,
+                        'from_lat' => $bestF2['bikeDest']->lat, 'from_lon' => $bestF2['bikeDest']->lon,
+                        'to_lat' => $destLat, 'to_lon' => $destLon,
+                        'distance' => $bestF2['walk2_dist'],
+                        'duration' => $bestF2['walk2_min'],
+                        'start_time' => $bikeRideEnd,
+                        'end_time' => $walkToDestEnd,
+                    ];
+                }
             } else {
                 $f2Leg = $bestF2['leg'];
                 if ($bestF2['transfer_walk'] > 0.05) {
@@ -3326,15 +3514,15 @@ class RouteSearchController extends Controller
     /**
      * Find the nearest GBFS station with availability.
      */
-    private function getNearestGbfsStation(?float $lat, ?float $lon, bool $needsVehicle)
+    private function getNearestGbfsStation(?float $lat, ?float $lon, bool $needsVehicle, $type = 'cycle')
     {
         if (! $lat || ! $lon) {
             return null;
         }
 
         $stations = GbfsStation::with(['source', 'source.tenant'])
-            ->whereHas('source', function ($query) {
-                $query->where('is_active', true);
+            ->whereHas('source', function ($query) use ($type) {
+                $query->where('is_active', true)->where('type', $type);
             })->get();
 
         $bestStation = null;
