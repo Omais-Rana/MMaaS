@@ -2,8 +2,8 @@
 
 namespace App\Services\Routing;
 
-use App\Models\TransportNode;
 use App\Models\Itinerary;
+use App\Models\TransportNode;
 use App\Services\Gbfs\GbfsClient;
 
 class HeuristicRoutingEngine
@@ -27,17 +27,17 @@ class HeuristicRoutingEngine
         // 2. Trunk & Feeder Construction
         foreach ($originHubs as $oHub) {
             foreach ($destHubs as $dHub) {
-                
+
                 $feeder1 = $this->computeFeeder($origLat, $origLon, $oHub);
-                $trunk   = $this->computeTrunk($oHub, $dHub);
+                $trunk = $this->computeTrunk($oHub, $dHub);
                 $feeder2 = $this->computeFeeder($dHub, $destLat, $destLon);
 
                 if ($feeder1 && $trunk && $feeder2) {
                     $itinerary = Itinerary::merge($feeder1, $trunk, $feeder2);
-                    
+
                     // 3. Apply CO2 Emission Coefficients
                     $itinerary->co2_emissions = $this->carbonCalc->calculate($itinerary);
-                    
+
                     $itineraries[] = $itinerary;
                 }
             }

@@ -45,7 +45,7 @@ class DownloadFilteredSncfCommand extends Command
 
         $url = 'https://eu.ftp.opendatasoft.com/sncf/plandata/Export_OpenData_SNCF_GTFS_NewTripId.zip';
         $finalZipPath = 'imports/sncf-filtered-'.time().'.zip';
-        
+
         $tempZipPath = Storage::path('temp_sncf.zip');
         $extractDir = Storage::path('temp_sncf_extract');
         $filteredDir = Storage::path('temp_sncf_filtered');
@@ -236,7 +236,7 @@ class DownloadFilteredSncfCommand extends Command
             'status' => 'pending',
         ]);
 
-        $this->info("Dispatching import job...");
+        $this->info('Dispatching import job...');
         ProcessScheduleImport::dispatch($import, $finalZipPath);
 
         $this->info('Done! The filtered GTFS will now be imported in the background.');

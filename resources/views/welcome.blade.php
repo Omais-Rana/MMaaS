@@ -231,29 +231,32 @@
                     </div>
                 @endauth
                 
-                <div class="w-[1px] h-4 bg-[#D8DADF] hidden"></div>
+                <div class="w-[1px] h-4 bg-[#D8DADF]"></div>
                 
-                <!-- Toggle Sidebar Button (Legacy) -->
-                <button id="toggle-left-sidebar" class="text-[#4B5563] hover:text-[#111827] transition-colors hidden" title="Toggle Sidebar">
-                    <i class="fa-solid fa-chevron-left transition-transform" id="left-sidebar-chevron"></i>
-                </button>
             </div>
         </div>
+
+
 
         <!-- Sidebar Content Panels -->
         <div id="sidebar-content" class="flex flex-row gap-4 flex-1 pointer-events-none transition-all duration-300 items-stretch min-h-0">
             
+            <!-- Left Expand Strip -->
+            <div id="expand-left-sidebar" class="hidden flex flex-col pointer-events-auto bg-[#FFFFFF]/95 backdrop-blur-md shadow-2xl rounded-[16px] border border-[#D8DADF] w-[44px] items-center justify-start py-5 cursor-pointer hover:bg-gray-50 transition-all group shrink-0 h-[64px]" title="Expand Sidebar">
+                <i class="fa-solid fa-chevron-right text-[#4B5563] group-hover:text-[#111827] group-hover:scale-110 transition-all text-[16px]"></i>
+            </div>
+
             <!-- Left Column -->
-            <div class="flex flex-col w-[350px] gap-4 pointer-events-none max-h-full min-h-0">
+            <div id="left-column" class="flex flex-col w-[350px] gap-4 pointer-events-none h-full min-h-0 transition-all duration-300 opacity-100">
                 <!-- Territory Explorer -->
                 <div id="territory-wrapper" class="pointer-events-auto bg-[#FFFFFF]/95 backdrop-blur-md shadow-2xl rounded-[16px] border border-[#D8DADF] p-5 flex flex-col shrink min-h-0 transition-all duration-300">
-                    <div class="flex items-center justify-between cursor-pointer mb-2 shrink-0" id="toggle-territory">
+                    <div class="flex items-center justify-between mb-2 shrink-0">
                         <div>
                             <h2 class="text-[15px] font-[600] text-[#111827]">Service Explorer</h2>
                             <p class="text-[11px] text-[#4B5563] mt-0.5" id="territory-desc">Select a location to view options.</p>
                         </div>
-                        <button type="button" class="text-[#4B5563] hover:text-[#111827] transition-colors">
-                            <i class="fa-solid fa-chevron-up transition-transform" id="territory-chevron"></i>
+                        <button type="button" id="collapse-left-sidebar" class="text-[#4B5563] hover:text-[#111827] transition-colors" title="Collapse Sidebar">
+                            <i class="fa-solid fa-chevron-left transition-transform"></i>
                         </button>
                     </div>
                     
@@ -280,7 +283,7 @@
             </div>
 
             <!-- Right Column -->
-            <div class="flex flex-col w-[350px] gap-4 pointer-events-none max-h-full min-h-0">
+            <div class="flex flex-col w-[350px] gap-4 pointer-events-none h-full min-h-0">
                 <!-- Middle Pane (Service Lines) -->
                 <div id="middle-pane" class="hidden pointer-events-auto bg-[#FFFFFF]/95 backdrop-blur-md shadow-2xl rounded-[16px] border border-[#D8DADF] p-5 flex flex-col shrink min-h-0 max-h-full transition-all duration-300">
                     <div class="flex items-center justify-between cursor-pointer mb-2 shrink-0" id="toggle-middle-pane">
@@ -301,7 +304,10 @@
                 <div id="search-results-pane" class="hidden pointer-events-auto bg-[#FFFFFF]/95 backdrop-blur-md shadow-2xl rounded-[16px] border border-[#D8DADF] p-5 flex flex-col shrink min-h-0 max-h-full transition-all duration-300 relative">
                     <div class="flex justify-between items-center cursor-pointer mb-2 shrink-0" id="toggle-search-results">
                         <div>
-                            <h3 class="text-[14px] font-[600] text-[#111827] uppercase tracking-wider font-mono">Search Results</h3>
+                            <div class="flex items-center gap-2">
+                                <h3 class="text-[14px] font-[600] text-[#111827] uppercase tracking-wider font-mono">Search Results</h3>
+                                <button type="button" id="clear-search-btn" class="bg-[#F3F4F6] text-[#4B5563] hover:bg-[#E48B59] hover:text-white px-2 py-0.5 rounded-[6px] text-[10px] font-[600] uppercase tracking-wider transition-colors hidden shadow-sm border border-[#D8DADF]">Clear</button>
+                            </div>
                             <p class="text-[11px] text-[#4B5563] mt-1">Select a route for details.</p>
                         </div>
                         <div class="flex items-center gap-2">
@@ -617,8 +623,8 @@
                         <div class="font-[600] mb-3 text-[#E48B59]">Legend</div>
                         <div class="flex items-center gap-3 mb-2"><div class="w-[28px] h-[28px] flex items-center justify-center rounded-full bg-[#3b82f6] text-[#FFFFFF] shadow-md border-2 border-[#FFFFFF]"><i class="fa-solid fa-bus text-[12px]"></i></div> Bus Station</div>
                         <div class="flex items-center gap-3 mb-2"><div class="w-[28px] h-[28px] flex items-center justify-center rounded-full bg-[#cd0037] text-[#FFFFFF] shadow-md border-2 border-[#FFFFFF]"><i class="fa-solid fa-train text-[12px]"></i></div> Train Station</div>
-                        <div class="flex items-center gap-3 mb-2"><div class="w-[28px] h-[28px] flex items-center justify-center rounded-full bg-[#22c55e] text-[#FFFFFF] shadow-md border-2 border-[#FFFFFF]"><i class="fa-solid fa-bicycle text-[12px]"></i></div> Cycle Station</div>
-                        <div class="flex items-center gap-3 mb-2"><div class="w-[28px] h-[28px] flex items-center justify-center rounded-full bg-[#a855f7] text-[#FFFFFF] shadow-md border-2 border-[#FFFFFF]"><i class="fa-solid fa-car text-[12px]"></i></div> Car Station</div>
+                        <div class="flex items-center gap-3 mb-2"><div class="w-[28px] h-[28px] flex items-center justify-center rounded-full bg-[#a855f7] text-[#FFFFFF] shadow-md border-2 border-[#FFFFFF]"><i class="fa-solid fa-bicycle text-[12px]"></i></div> Cycle Station</div>
+                        <div class="flex items-center gap-3 mb-2"><div class="w-[28px] h-[28px] flex items-center justify-center rounded-full bg-[#f59e0b] text-[#FFFFFF] shadow-md border-2 border-[#FFFFFF]"><i class="fa-solid fa-car text-[12px]"></i></div> Car Station</div>
                         <label class="flex items-center gap-3 cursor-pointer select-none mt-4 pt-3 border-t border-[#D8DADF] group">
                             <div class="relative flex items-center justify-center">
                                 <input type="checkbox" id="toggle-parking" class="peer sr-only">
@@ -715,7 +721,17 @@
             const container = document.getElementById('route-cards-list');
             if (!container || !middlePane) return;
 
-            if (selectedTenantServices.size === 0) {
+            let hasOnlyTrains = true;
+            if (selectedTenantServices.size > 0) {
+                for (const svcKey of selectedTenantServices) {
+                    if (svcKey.split(':')[1] !== 'train') {
+                        hasOnlyTrains = false;
+                        break;
+                    }
+                }
+            }
+
+            if (selectedTenantServices.size === 0 || hasOnlyTrains) {
                 middlePane.classList.add('hidden');
                 return;
             } else {
@@ -740,16 +756,7 @@
                 return isSelected;
             });
 
-            let hasTrain = false;
-            for (const svcKey of selectedTenantServices) {
-                if (svcKey.split(':')[1] === 'train') hasTrain = true;
-            }
-
-            const activeTrainStations = hasTrain ? allTrainStations.filter(st => {
-                return selectedTenantServices.has(`${st.tenant_id}:train`);
-            }) : [];
-
-            const activeStations = [...activeGbfsStations, ...activeTrainStations];
+            const activeStations = activeGbfsStations;
 
             if (routeNames.length === 0 && activeStations.length === 0) {
                     container.innerHTML =
@@ -850,7 +857,17 @@
                     const section = document.createElement('div');
                     section.className = 'bg-[#FFFFFF] rounded-[8px] border border-[#D8DADF] shadow-sm overflow-hidden mb-4';
 
-                    const stations = groupedStations[operatorName];
+                    const stations = groupedStations[operatorName].sort((a, b) => {
+                        const aIsCar = a.source_type === 'car';
+                        const aAvail = !aIsCar ? (a.status.num_bikes_available || 0) : (a.status.num_vehicles_available || 0);
+                        const bIsCar = b.source_type === 'car';
+                        const bAvail = !bIsCar ? (b.status.num_bikes_available || 0) : (b.status.num_vehicles_available || 0);
+                        
+                        if (aAvail > 0 && bAvail === 0) return -1;
+                        if (aAvail === 0 && bAvail > 0) return 1;
+                        
+                        return a.name.localeCompare(b.name);
+                    });
                     section.innerHTML = `
                         <div class="sticky top-0 z-10 px-4 py-3 bg-[#FFFFFF] border-b border-[#D8DADF] flex justify-between items-center backdrop-blur-md bg-opacity-90">
                             <div class="text-[11px] font-[600] text-[#111827] uppercase tracking-wider font-mono">${operatorName.replace(/</g, '&lt;')}</div>
@@ -864,7 +881,7 @@
                         const isCar = st.source_type === 'car';
                         const available = !isCar ? (st.status.num_bikes_available || 0) : (st.status.num_vehicles_available || 0);
                         const hasAvail = available > 0;
-                        const availableColor = !isCar ? '#22c55e' : '#a855f7';
+                        const availableColor = !isCar ? '#22c55e' : '#22c55e';
                         const badgeColor = hasAvail ? availableColor : '#D8DADF';
                         const iconColorClass = hasAvail ? 'text-[#FFFFFF]' : 'text-[#4B5563]';
                         const iconHtml = isCar ? `<i class="fa-solid fa-car ${iconColorClass} text-[12px]"></i>` :
@@ -1137,7 +1154,7 @@
                                                     </div>
                                                 </div>
                                             `;
-                                            const markerColorClass = station.gbfs_type === 'car' ? 'bg-[#a855f7]' : 'bg-[#22c55e]';
+                                            const markerColorClass = station.gbfs_type === 'car' ? 'bg-[#f59e0b]' : 'bg-[#a855f7]';
                                             const iconClass = station.gbfs_type === 'car' ? 'fa-car' : 'fa-bicycle';
                                             const icon = L.divIcon({
                                                 html: `<div class="${markerColorClass} text-[#FFFFFF] w-[28px] h-[28px] rounded-full flex items-center justify-center text-[12px] border-2 border-[#FFFFFF] shadow-md transition-colors"><i class="fa-solid ${iconClass}"></i></div>`,
@@ -1582,6 +1599,7 @@
                 }
 
                 if (selectedGbfsTenantModes.size > 0 && allGbfsStations.length > 0) {
+                    if (!map.hasLayer(gbfsStationsLayer)) map.addLayer(gbfsStationsLayer);
                     const filteredStations = allGbfsStations.filter(st => {
                         return selectedGbfsTenantModes.has(`${st.tenant_id}:${st.source_type}`);
                     });
@@ -1591,7 +1609,7 @@
                         const isBike = st.source_type === 'cycle';
                         const available = isBike ? (st.status.num_bikes_available || 0) : (st.status.num_vehicles_available || 0);
                         const isAvailable = available > 0;
-                        const availableColor = isBike ? '#22c55e' : '#a855f7';
+                        const availableColor = isBike ? '#22c55e' : '#22c55e';
                         const color = isAvailable ? availableColor : '#D8DADF';
                         const iconColorClass = isAvailable ? 'text-[#FFFFFF]' : 'text-[#4B5563]';
                         const carIcon = `<i class="fa-solid fa-car ${iconColorClass} text-[12px]"></i>`;
@@ -1645,6 +1663,8 @@
 
                         gbfsMarkers[st.station_id] = marker;
                     });
+                } else {
+                    if (map.hasLayer(gbfsStationsLayer)) map.removeLayer(gbfsStationsLayer);
                 }
 
                 // Call renderBusInfoPanel at the end to render BOTH routes and stations
@@ -1756,32 +1776,55 @@
         const CO2_BUS_G_PER_KM = 32; // g CO2/km – Evolity CNG/GNV (Iveco Crealis)
         const CO2_SAVED_G_PER_KM = CO2_CAR_G_PER_KM - CO2_BUS_G_PER_KM; // 88g/km
 
-        function co2Badge(distKm) {
-            if (!distKm || distKm <= 0) return '';
-            const savedG = distKm * CO2_SAVED_G_PER_KM;
-            const savedLabel = savedG >= 1000 ?
-                (savedG / 1000).toFixed(2).replace(/\.?0+$/, '') + ' kg' :
-                Math.round(savedG) + ' g';
-            const busCo2G = distKm * CO2_BUS_G_PER_KM;
-            const busCo2Label = busCo2G >= 1000 ?
-                (busCo2G / 1000).toFixed(2).replace(/\.?0+$/, '') + ' kg' :
-                Math.round(busCo2G) + ' g';
-            return `<div class="inline-flex items-center gap-1.5 text-[#34D399] text-[11px] font-[600] font-mono tracking-tight bg-[#064E3B] px-2 py-0.5 rounded-[4px] border border-[#059669]" title="Trip emits ${busCo2Label} CO2 and saves ${savedLabel} vs car">
+        function getCo2Rates(mode) {
+            let emit = 0;
+            if (mode === 'bus' || mode === 'transit') emit = CO2_BUS_G_PER_KM;
+            else if (mode === 'train') emit = 10;
+            else if (mode === 'bike' || mode === 'bicycle' || mode === 'walk') emit = 0;
+            else if (mode === 'car') emit = CO2_CAR_G_PER_KM;
+            return { emit, save: Math.max(0, CO2_CAR_G_PER_KM - emit) };
+        }
+
+        function getLegMode(leg) {
+            if (leg.type === 'transit') {
+                if (leg.route_type == 2) return 'train';
+                if (leg.route_type == 0) return 'tram';
+                return 'bus';
+            }
+            return leg.type;
+        }
+
+        function co2BadgeHTML(emittedG, savedG) {
+            if (savedG <= 0) return '';
+            const totalCarEmit = emittedG + savedG;
+            const percentSaved = Math.round((savedG / totalCarEmit) * 100);
+
+            const emittedLabel = emittedG >= 1000 ?
+                (emittedG / 1000).toFixed(2).replace(/\.?0+$/, '') + ' kg' :
+                Math.round(emittedG) + ' g';
+                
+            return `<div class="inline-flex items-center gap-1.5 text-[#34D399] text-[11px] font-[600] font-mono tracking-tight bg-[#064E3B] px-2 py-0.5 rounded-[4px] border border-[#059669]" title="Trip emits ${emittedLabel} CO₂">
                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" />
                     <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
                 </svg>
-                <span>Saves ${savedLabel} CO₂</span>
+                <span>-${percentSaved}% CO₂</span>
             </div>`;
         }
 
-        function co2PopupLine(distKm) {
+        function co2Badge(distKm, mode = 'bus') {
             if (!distKm || distKm <= 0) return '';
-            const savedG = Math.round(distKm * CO2_SAVED_G_PER_KM);
-            const savedLabel = savedG >= 1000 ?
-                (savedG / 1000).toFixed(2).replace(/\.?0+$/, '') + ' kg' :
-                savedG + ' g';
-            return `<div style="margin-top:8px;padding:6px 8px;background:#064E3B;border-radius:6px;border:1px solid #059669;font-size:11px;color:#34D399;font-family:'JetBrains Mono', monospace;font-weight:600;letter-spacing:-0.5px">🌿 Evolity CNG &middot; ${(distKm).toFixed(1)} km &middot; Saves ${savedLabel} CO₂</div>`;
+            const rates = getCo2Rates(mode);
+            return co2BadgeHTML(distKm * rates.emit, distKm * rates.save);
+        }
+
+        function co2PopupLine(distKm, mode = 'bus') {
+            if (!distKm || distKm <= 0) return '';
+            const rates = getCo2Rates(mode);
+            if (rates.save <= 0) return '';
+
+            const percentSaved = Math.round((rates.save / CO2_CAR_G_PER_KM) * 100);
+            return `<br><span class="text-[#10b981] font-bold"><i class="fa-solid fa-leaf"></i> -${percentSaved}% CO₂</span>`;
         }
 
         // Initialize Map & Load shapes
@@ -1878,12 +1921,39 @@
             });
         }
 
-        setupAccordion('toggle-territory', 'territory-content', 'territory-chevron');
         setupAccordion('toggle-middle-pane', 'middle-pane-content', 'middle-pane-chevron');
         setupAccordion('toggle-search-results', 'search-results-content', 'search-results-chevron');
 
+        function restoreMapLayersFromSearch() {
+            if (window.activeBackgroundLayersBeforeSearch) {
+                window.activeBackgroundLayersBeforeSearch.forEach(layer => {
+                    if (!map.hasLayer(layer)) {
+                        map.addLayer(layer);
+                    }
+                });
+                window.activeBackgroundLayersBeforeSearch = null;
+            }
+            const clearBtn = document.getElementById('clear-search-btn');
+            if (clearBtn) clearBtn.classList.add('hidden');
+        }
+
+        document.getElementById('clear-search-btn').addEventListener('click', function(e) {
+            e.stopPropagation();
+            restoreMapLayersFromSearch();
+            
+            // Just clear the selected route and stops from the map
+            searchResultsLayer.clearLayers();
+            defaultRouteStopsLayer.clearLayers();
+            
+            // Remove selection state from all route cards
+            document.querySelectorAll('.route-card.is-selected').forEach(card => {
+                card.classList.remove('is-selected');
+            });
+        });
+
         // Toggle Search Results pane
-        document.getElementById('close-search-results').addEventListener('click', () => {
+        document.getElementById('close-search-results').addEventListener('click', (e) => {
+            e.stopPropagation();
             const searchPane = document.getElementById('search-results-pane');
             searchPane.classList.add('hidden');
             searchPane.classList.remove('flex');
@@ -1897,6 +1967,7 @@
             // clear map layers related to search
             searchResultsLayer.clearLayers();
             defaultRouteStopsLayer.clearLayers();
+            restoreMapLayersFromSearch();
 
             // redraw previously selected services if any
             renderBusInfoPanel();
@@ -1917,6 +1988,7 @@
 
             searchResultsLayer.clearLayers();
             defaultRouteStopsLayer.clearLayers();
+            restoreMapLayersFromSearch();
             allRoutesLayer.clearLayers();
             if (selectedDefaultPolyline) {
                 selectedDefaultPolyline.setStyle({
@@ -1959,22 +2031,29 @@
                 }
             });
 
-            const transferDistKm = route.legs.reduce((total, leg) => {
-                if (leg.type !== 'transit') {
-                    return total;
-                }
+            let totalEmittedG = 0;
+            let totalSavedG = 0;
 
-                if (leg.shape_pts && leg.shape_pts.length > 1) {
-                    return total + haversineKm(leg.shape_pts);
-                }
-
-                if (leg.stops && leg.stops.length > 1) {
+            route.legs.forEach(leg => {
+                let dist = 0;
+                if (leg.type === 'walk') {
+                    if (leg.duration) dist = leg.duration * 0.08; // 4.8 km/h
+                    else dist = 0.5; // fallback
+                } else if (leg.shape_pts && leg.shape_pts.length > 1) {
+                    dist = haversineKm(leg.shape_pts);
+                } else if (leg.stops && leg.stops.length > 1) {
                     const legPoints = leg.stops.map(stop => [parseFloat(stop.lat), parseFloat(stop.lon)]);
-                    return total + haversineKm(legPoints);
+                    dist = haversineKm(legPoints);
+                } else if (leg.distance) {
+                    dist = leg.distance;
                 }
-
-                return total;
-            }, 0);
+                
+                if (dist > 0) {
+                    const rates = getCo2Rates(getLegMode(leg));
+                    totalEmittedG += dist * rates.emit;
+                    totalSavedG += dist * rates.save;
+                }
+            });
 
             const badgesHtml = route.legs.map(leg => {
                 if (leg.type === 'walk') {
@@ -2036,9 +2115,10 @@
                                 <div class="font-mono text-[12px] font-[600] text-[#FFFFFF] w-12 pt-0.5 shrink-0">${leg.start_time}</div>
                                 <div>
                                     <div class="font-[600] text-[#FFFFFF] leading-snug text-[13px]">${leg.from}</div>
-                                    <div class="mt-1 flex items-center gap-2">
+                                    <div class="mt-1 flex items-center gap-2 flex-wrap">
                                         <span class="inline-block px-1.5 py-0.5 text-[10px] font-bold rounded uppercase tracking-wide font-mono shrink-0" style="${routeBadgeStyle}"><i class="fa-solid ${iconClass} mr-1"></i>${leg.operator_name ? leg.operator_name + ' ' : ''}${leg.route_name || leg.type}</span>
                                         <span class="text-[12px] font-[500] text-[#D8DADF] shrink-0"><i class="fa-solid ${iconClass}"></i> Ride ${leg.duration} min</span>
+                                        ${co2Badge(leg.distance, getLegMode(leg))}
                                     </div>
                                 </div>
                             </div>
@@ -2123,7 +2203,7 @@
                                 </div>
                                 <div class="flex items-center gap-2 mt-0.5 flex-wrap">
                                     <div class="text-[#D8DADF] font-[500] text-[12px] shrink-0">${totalMidStops} stops in total</div>
-                                    ${co2Badge(transferDistKm)}
+                                    ${co2BadgeHTML(totalEmittedG, totalSavedG)}
                                 </div>
                             </div>
                             <div class="flex items-center gap-1 text-[#D8DADF] hover:text-[#FFFFFF] transition-colors bg-[#FFFFFF]/10 px-2 py-1 rounded-[8px] border border-[#FFFFFF]/20 shrink-0">
@@ -2167,9 +2247,6 @@
             routesList.innerHTML = '';
             routesList.classList.add('hidden');
 
-            if (map.hasLayer(allRoutesLayer)) {
-                map.removeLayer(allRoutesLayer);
-            }
             searchResultsLayer.clearLayers();
             defaultRouteStopsLayer.clearLayers();
             
@@ -2446,6 +2523,19 @@
 
         window.showRouteOnMap = async function(routeIndex) {
             if (!currentRouteData || !currentRouteData[routeIndex]) return;
+
+            // Store and hide background layers
+            if (!window.activeBackgroundLayersBeforeSearch) {
+                window.activeBackgroundLayersBeforeSearch = [];
+                [allRoutesLayer, gbfsStationsLayer, territoryBusStopsLayer, territoryTrainStationsLayer, territoryGbfsStationsLayer, parkingLayer].forEach(layer => {
+                    if (map.hasLayer(layer)) {
+                        window.activeBackgroundLayersBeforeSearch.push(layer);
+                        map.removeLayer(layer);
+                    }
+                });
+            }
+            const clearBtn = document.getElementById('clear-search-btn');
+            if (clearBtn) clearBtn.classList.remove('hidden');
 
             const route = currentRouteData[routeIndex];
             searchResultsLayer.clearLayers();
@@ -2731,7 +2821,7 @@
                                 })
                                 .addTo(searchResultsLayer)
                                 .bindPopup(
-                                    `<strong><i class="fa-solid fa-bus text-[#7e7e7e]"></i> ${leg.route_name || leg.route_short_name || leg.route_long_name || 'Route'}</strong><br>${leg.from} → ${leg.to}${co2PopupLine(legMapDistKm)}`
+                                    `<strong><i class="fa-solid fa-bus text-[#7e7e7e]"></i> ${leg.route_name || leg.route_short_name || leg.route_long_name || 'Route'}</strong><br>${leg.from} → ${leg.to}${co2PopupLine(legMapDistKm, getLegMode(leg))}`
                                 );
                             shapePts.forEach(pt => bounds.push(pt));
                         }
@@ -2846,7 +2936,7 @@
                         })
                         .addTo(searchResultsLayer)
                         .bindPopup(
-                            `<strong><i class="fa-solid fa-bus text-[#7e7e7e]"></i> ${route.route_name || route.route_short_name || route.route_long_name || 'Route'}</strong>${co2PopupLine(directMapDistKm)}`
+                            `<strong><i class="fa-solid fa-bus text-[#7e7e7e]"></i> ${route.route_name || route.route_short_name || route.route_long_name || 'Route'}</strong>${co2PopupLine(directMapDistKm, route.is_car ? 'car' : (route.route_short_name === 'Bike' ? 'bike' : 'bus'))}`
                             );
                     shapePts.forEach(pt => bounds.push(pt));
                 }
@@ -2961,6 +3051,25 @@
                 });
             }
         };
+
+        // Left Sidebar Toggle Logic
+        const leftColumn = document.getElementById('left-column');
+        const sidebarContent = document.getElementById('sidebar-content');
+        const expandLeftSidebar = document.getElementById('expand-left-sidebar');
+        
+        document.getElementById('collapse-left-sidebar').addEventListener('click', () => {
+            leftColumn.classList.remove('w-[350px]', 'opacity-100');
+            leftColumn.classList.add('w-0', 'opacity-0', 'hidden');
+            expandLeftSidebar.classList.remove('hidden');
+            setTimeout(() => map.invalidateSize(), 300);
+        });
+
+        expandLeftSidebar.addEventListener('click', () => {
+            leftColumn.classList.remove('w-0', 'opacity-0', 'hidden');
+            leftColumn.classList.add('w-[350px]', 'opacity-100');
+            expandLeftSidebar.classList.add('hidden');
+            setTimeout(() => map.invalidateSize(), 300);
+        });
     </script>
 </body>
 
