@@ -1714,8 +1714,8 @@ class RouteSearchController extends Controller
                     'to_lon' => $bestF1['bikeDest']->lon,
                     'distance' => $bestF1['ride_dist'],
                     'duration' => $bestF1['ride_min'],
-                    'departure_time' => $walkToBikeEnd,
-                    'arrival_time' => $bikeRideEnd,
+                    'start_time' => $walkToBikeEnd,
+                    'end_time' => $bikeRideEnd,
                 ];
                 
                 // 3. Walk to Trunk
@@ -1836,8 +1836,8 @@ class RouteSearchController extends Controller
                     'to_lon' => $bestF2['bikeDest']->lon,
                     'distance' => $bestF2['ride_dist'],
                     'duration' => $bestF2['ride_min'],
-                    'departure_time' => $walkToBikeEnd,
-                    'arrival_time' => $bikeRideEnd,
+                    'start_time' => $walkToBikeEnd,
+                    'end_time' => $bikeRideEnd,
                 ];
                 
                 // 3. Walk to Dest

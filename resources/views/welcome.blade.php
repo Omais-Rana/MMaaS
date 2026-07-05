@@ -2079,9 +2079,9 @@
                 if (leg.type === 'walk') {
                     return `
                         <div class="relative pl-6 py-2">
-                            <div class="flex items-start gap-3">
-                                ${idx < route.legs.length - 1 ? '<div class="absolute left-[11px] top-4 bottom-[-10px] w-0.5 border-l-2 border-dotted border-[#9CA3AF]"></div>' : ''}
-                                <div class="absolute left-[-29px] top-1.5 w-[14px] h-[14px] rounded-full border-2 border-[#D8DADF] bg-[#53617A] z-10 shadow-sm"></div>
+                            <div class="relative flex items-start gap-3">
+                                ${idx < route.legs.length - 1 ? '<div class="absolute left-[-13px] top-4 bottom-[-10px] w-0.5 border-l-2 border-dotted border-[#9CA3AF]"></div>' : ''}
+                                <div class="absolute left-[-19px] top-1 w-[14px] h-[14px] rounded-full border-2 border-[#D8DADF] bg-[#53617A] z-10 shadow-sm"></div>
                                 <div class="font-mono text-[12px] font-[600] text-[#FFFFFF] w-12 pt-0.5 shrink-0">${leg.start_time || ''}</div>
                                 <div>
                                     <div class="font-[600] text-[#FFFFFF] leading-snug text-[13px]">${leg.from || 'Origin'}</div>
@@ -2092,7 +2092,7 @@
                             </div>
                             ${idx === route.legs.length - 1 ? `
                             <div class="relative flex items-start gap-3 mt-3">
-                                <div class="absolute left-[-29px] top-1.5 w-[14px] h-[14px] rounded-full border-2 border-[#D8DADF] bg-[#53617A] z-10 shadow-sm"></div>
+                                <div class="absolute left-[-19px] top-1 w-[14px] h-[14px] rounded-full border-2 border-[#D8DADF] bg-[#53617A] z-10 shadow-sm"></div>
                                 <div class="font-mono text-[12px] font-[600] text-[#FFFFFF] w-12 pt-0.5 shrink-0">${leg.end_time || ''}</div>
                                 <div class="font-[600] text-[#FFFFFF] leading-snug text-[13px]">${leg.to || 'Destination'}</div>
                             </div>
@@ -2111,7 +2111,7 @@
                             
                             <!-- Ride Start -->
                             <div class="relative flex items-start gap-3 mb-3">
-                                <div class="absolute left-[-29px] top-1.5 w-[14px] h-[14px] rounded-full border-2 border-[#D8DADF] bg-[#53617A] z-10 shadow-sm"></div>
+                                <div class="absolute left-[-19px] top-1 w-[14px] h-[14px] rounded-full border-2 border-[#D8DADF] bg-[#53617A] z-10 shadow-sm"></div>
                                 <div class="font-mono text-[12px] font-[600] text-[#FFFFFF] w-12 pt-0.5 shrink-0">${leg.start_time}</div>
                                 <div>
                                     <div class="font-[600] text-[#FFFFFF] leading-snug text-[13px]">${leg.from}</div>
@@ -2125,7 +2125,7 @@
                             
                             <!-- Ride End -->
                             <div class="relative flex items-start gap-3">
-                                <div class="absolute left-[-29px] top-1.5 w-[14px] h-[14px] rounded-full border-2 border-[#D8DADF] bg-[#53617A] z-10 shadow-sm"></div>
+                                <div class="absolute left-[-19px] top-1 w-[14px] h-[14px] rounded-full border-2 border-[#D8DADF] bg-[#53617A] z-10 shadow-sm"></div>
                                 <div class="font-mono text-[12px] font-[600] text-[#FFFFFF] w-12 pt-0.5 shrink-0">${leg.end_time}</div>
                                 <div class="font-[600] text-[#FFFFFF] leading-snug text-[13px]">${leg.to}</div>
                             </div>
