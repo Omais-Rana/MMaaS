@@ -1,61 +1,73 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# MultiModal Mobility Platform (MaaS)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Unifying Fragmented Territories through Data Integration.
 
-## About Laravel
+## 📖 Overview
+This project is a comprehensive **Mobility as a Service (MaaS)** platform designed to resolve the geographic and administrative fragmentation of public transportation networks. In regions like Bourgogne-Franche-Comté, the mobility landscape is a "mille-feuille" of independent Autorités Organisatrices de la Mobilité (AOMs) and Opérateurs de Mobilité (OMs). 
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+This platform bridges these disjointed networks by aggregating heterogeneous transit data into a unified, multi-tenant system. It empowers end-users with seamless, door-to-door multimodal itinerary planning that intelligently combines public transit (buses, trains) and live micromobility (shared bikes and cars) while calculating precise CO₂ emission savings.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## 🚀 Key Features
+- **Multi-Tenant Architecture**: Robust data isolation cryptographically tagging transport elements to specific operators (Tenants) and regional authorities.
+- **Heterogeneous Data Aggregation**: 
+  - Parses static **GTFS** (General Transit Feed Specification) schedules via background queue workers.
+  - Consumes live, dynamic **GBFS** (General Bikeshare Feed Specification) feeds for free-floating bikes and cars.
+- **Custom SQL-Optimized Routing Algorithm**: Instead of traditional RAM-heavy graph algorithms (like Dijkstra or RAPTOR) which face "state explosion", this platform employs a deterministic, data-driven heuristic algorithm. It leverages MySQL spatial indexing to dynamically calculate real-time multimodal journeys (e.g., Walk -> Shared Bike -> Train -> Walk).
+- **CO₂ Impact Tracking**: Dynamically calculates the ecological footprint of every generated route based on transport modes (electric train vs diesel bus).
+- **Server-Driven Admin Panels**: Fast and modular administrative dashboards built using Filament v4.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## 🛠️ Tech Stack
+- **Backend Framework**: Laravel 12 (PHP 8.3)
+- **Administration UI**: Filament v4 (Server-Driven UI)
+- **Database**: MySQL (optimized with Spatial Indexing for Haversine distances)
+- **Frontend Map**: Leaflet.js (custom vanilla JS implementations for route rendering)
+- **Data Ingestion**: Laravel Queues / Jobs
 
-## Learning Laravel
+## 👥 User Roles & Authorities
+The platform defines three primary actors with distinct authority levels:
+1. **AOM (Regional Superadmin)**: Manages territories, oversees subordinate OMs, analyzes global network usage, and dictates high-level pricing.
+2. **OM (Tenant Admin)**: Autonomous mobility operators who upload their own GTFS feeds, track localized fleet analytics, and manage their staff without relying on the AOM.
+3. **End User (Customer)**: Interacts with the unified public portal to search for multimodal journeys across all integrated territories.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## ⚙️ Installation & Setup
+To run this project locally, ensure you have PHP 8.3, Composer, and MySQL installed (or use Laravel Herd / Sail).
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+```bash
+# 1. Clone the repository
+git clone https://github.com/your-repo/multimodal-mobility.git
+cd multimodal-mobility
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+# 2. Install dependencies
+composer install
+npm install
+npm run build
 
-## Laravel Sponsors
+# 3. Environment configuration
+cp .env.example .env
+php artisan key:generate
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+# Configure your database credentials in the .env file
+# DB_CONNECTION=mysql
+# DB_HOST=127.0.0.1
+# DB_PORT=3306
+# DB_DATABASE=maas_db
+# DB_USERNAME=root
+# DB_PASSWORD=
 
-### Premium Partners
+# 4. Run Migrations & Seeders
+php artisan migrate --seed
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+# 5. Start Queue Workers (Crucial for GTFS parsing and GBFS syncing)
+php artisan queue:work
 
-## Contributing
+# 6. Serve the application
+php artisan serve
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## 🗺️ Roadmap & Future Perspectives
+- **MuCar (Carpooling Integration)**: Integration of a peer-to-peer carpooling network where citizen commutes can act as "Feeder" legs to major transit hubs.
+- **Unified Pricing & Ticketing (Level 3 MaaS)**: Transitioning from route discovery to financial settlement. Users will pay a single subscription, and a complex clearinghouse algorithm will distribute revenue to specific OMs based on validation metrics.
+- **Real-Time Delays (GTFS-RT / SIRI)**: Implement live vehicle tracking and delay notifications.
 
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## 🎓 Acknowledgements
+This project was developed by **Muhammad Omais Rana** (Master 1 IoT) under the supervision of **Philippe Canalda**. It serves as a foundational platform for unifying disparate mobility ecosystems, encouraging a massive shift towards greener transportation.
