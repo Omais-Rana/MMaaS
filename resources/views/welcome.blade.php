@@ -590,22 +590,10 @@
                     position: 'topright'
                 }).addTo(map);
 
-                // High-contrast light map with clear administrative boundaries and labels.
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                    subdomains: 'abcd',
-                    maxZoom: 20
-                }).addTo(map);
-
-                map.createPane('labelsPane');
-                map.getPane('labelsPane').style.zIndex = 450;
-                map.getPane('labelsPane').style.pointerEvents = 'none';
-
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                    subdomains: 'abcd',
-                    maxZoom: 20,
-                    pane: 'labelsPane',
+                // OpenStreetMap standard tile layer
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                    maxZoom: 19
                 }).addTo(map);
 
                 allRoutesLayer.addTo(map);
@@ -2302,10 +2290,11 @@
                             destination_name: dName,
                             date: date,
                             time: time,
-                            origin_lat: oCoords ? oCoords.lat : null,
-                            origin_lon: oCoords ? oCoords.lon : null,
-                            dest_lat: dCoords ? dCoords.lat : null,
-                            dest_lon: dCoords ? dCoords.lon : null
+                            origin_lat: oCoords ? (oCoords.lat != null ? oCoords.lat : oCoords[0]) : null,
+                            origin_lon: oCoords ? (oCoords.lon != null ? oCoords.lon : oCoords[1]) : null,
+                            dest_lat: dCoords ? (dCoords.lat != null ? dCoords.lat : dCoords[0]) : null,
+                            dest_lon: dCoords ? (dCoords.lon != null ? dCoords.lon : dCoords[1]) : null,
+                            include_carsharing: true
                         })
                     });
                     return await response.json();
@@ -2332,17 +2321,20 @@
 
                     const legs = [];
 
-                    if (originCoords && transitLeg.from_lat) {
-                        const distToStart = haversineKm([[originCoords[0], originCoords[1]], [transitLeg.from_lat, transitLeg.from_lon]]);
+                    const oLat = originCoords ? (originCoords.lat != null ? originCoords.lat : originCoords[0]) : null;
+                    const oLon = originCoords ? (originCoords.lon != null ? originCoords.lon : originCoords[1]) : null;
+
+                    if (oLat && oLon && transitLeg.from_lat) {
+                        const distToStart = haversineKm([[parseFloat(oLat), parseFloat(oLon)], [parseFloat(transitLeg.from_lat), parseFloat(transitLeg.from_lon)]]);
                         if (distToStart > 0.05) {
                             legs.push({
                                 type: 'walk',
                                 from: originName || 'Origin',
                                 to: transitLeg.from,
-                                from_lat: originCoords[0],
-                                from_lon: originCoords[1],
-                                to_lat: transitLeg.from_lat,
-                                to_lon: transitLeg.from_lon,
+                                from_lat: parseFloat(oLat),
+                                from_lon: parseFloat(oLon),
+                                to_lat: parseFloat(transitLeg.from_lat),
+                                to_lon: parseFloat(transitLeg.from_lon),
                                 distance: distToStart.toFixed(2),
                                 duration: Math.round(distToStart / 5.0 * 60)
                             });
@@ -2351,17 +2343,20 @@
 
                     legs.push(transitLeg);
 
-                    if (destCoords && transitLeg.to_lat) {
-                        const distToEnd = haversineKm([[transitLeg.to_lat, transitLeg.to_lon], [destCoords[0], destCoords[1]]]);
+                    const dLat = destCoords ? (destCoords.lat != null ? destCoords.lat : destCoords[0]) : null;
+                    const dLon = destCoords ? (destCoords.lon != null ? destCoords.lon : destCoords[1]) : null;
+
+                    if (dLat && dLon && transitLeg.to_lat) {
+                        const distToEnd = haversineKm([[parseFloat(transitLeg.to_lat), parseFloat(transitLeg.to_lon)], [parseFloat(dLat), parseFloat(dLon)]]);
                         if (distToEnd > 0.05) {
                             legs.push({
                                 type: 'walk',
                                 from: transitLeg.to,
                                 to: destName || 'Destination',
-                                from_lat: transitLeg.to_lat,
-                                from_lon: transitLeg.to_lon,
-                                to_lat: destCoords[0],
-                                to_lon: destCoords[1],
+                                from_lat: parseFloat(transitLeg.to_lat),
+                                from_lon: parseFloat(transitLeg.to_lon),
+                                to_lat: parseFloat(dLat),
+                                to_lon: parseFloat(dLon),
                                 distance: distToEnd.toFixed(2),
                                 duration: Math.round(distToEnd / 5.0 * 60)
                             });
@@ -2457,9 +2452,12 @@
 
                 currentRouteData = finalRoutes;
                 noResults.classList.add('hidden');
-                routesList.classList.remove('hidden');
+                const routeCountHeader = `<div class="flex items-center justify-between pb-2 mb-2 px-1 border-b border-[#FFFFFF]/10 text-[#D8DADF] text-[12px] font-mono">
+                    <span><i class="fa-solid fa-route text-[#10b981] mr-1.5"></i><strong>${finalRoutes.length}</strong> travel option${finalRoutes.length > 1 ? 's' : ''} found</span>
+                    <span class="text-[11px] text-[#9CA3AF]">Sorted by duration</span>
+                </div>`;
 
-                routesList.innerHTML = finalRoutes.map((route, index) => {
+                routesList.innerHTML = routeCountHeader + finalRoutes.map((route, index) => {
                     return renderTransferRoute(route, index);
                 }).join('');
 
